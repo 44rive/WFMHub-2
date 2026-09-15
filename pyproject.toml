@@ -1,0 +1,46 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "wfmhub2"
+version = "0.1.0"
+description = "Portable workforce intelligence platform"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "duckdb>=1.4,<2.0",
+  "polars>=1.33,<2.0",
+  "fastapi>=0.116,<1.0",
+  "uvicorn>=0.35,<1.0",
+  "pydantic-settings>=2.10,<3.0",
+  "ortools>=9.14,<10.0",
+  "openpyxl>=3.1,<4.0",
+  "XlsxWriter>=3.2,<4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9.0",
+  "pytest-cov>=6.2,<7.0",
+  "ruff>=0.12,<1.0",
+  "mypy>=1.17,<2.0",
+  "httpx>=0.28,<1.0",
+]
+
+[project.scripts]
+wfmhub2 = "wfmhub2.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wfmhub2"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
