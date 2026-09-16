@@ -1,0 +1,21 @@
+{
+  "name": "wfmhub-2",
+  "private": true,
+  "version": "0.2.0",
+  "packageManager": "pnpm@12.4.1",
+  "scripts": {
+    "dev:web": "pnpm --dir web dev",
+    "build:web": "pnpm --dir web build",
+    "typecheck:web": "pnpm --dir web typecheck",
+    "test:web": "pnpm --dir web test",
+    "check:web": "biome check web/src web/*.json web/*.ts",
+    "format:web": "biome format --write web/src web/*.json web/*.ts",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.13",
+    "@tauri-apps/cli": "2.11.4"
+  }
+}
