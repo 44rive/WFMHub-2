@@ -1,9 +1,4 @@
-import {
-  Outlet,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from '@tanstack/react-router'
+import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router'
 import { HomePage } from './pages/HomePage'
 
 const rootRoute = createRootRoute({

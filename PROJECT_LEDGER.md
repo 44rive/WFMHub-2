@@ -39,6 +39,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-005 | Heavy forecasting/ML/optimization libraries must not block core startup. | They increase size and native packaging risk and belong behind explicit capability checks. |
 | D-006 | Portable runtime binds to loopback and uses a per-launch token, restricted origins, explicit home, and owned sidecar lifecycle. | Loopback alone is not a sufficient desktop security/lifecycle boundary. |
 | D-007 | Import only business contracts/configuration from WFMHub-Portable, never operational or personal data. | Preserve privacy and reproducibility. |
+| D-008 | Tauri generates a 256-bit token, passes it to the owned sidecar through `WFMHUB2_SESSION_TOKEN`, and exposes connection details only through a narrow command. | Avoid fixed ports, generic shell access, and token exposure in process arguments or logs. |
 
 ## Evidence already collected
 
@@ -71,7 +72,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | --- | --- | --- |
 | Reproducible dependency locks | TODO | Frozen Python, pnpm, and Cargo installs from a clean checkout |
 | Python quality | TODO | Ruff, Pyright, and pytest on Python 3.14 |
-| Frontend quality | TODO | Biome, TypeScript, Vitest, and production build |
+| Frontend quality | PASS | Biome, TypeScript, 5 Vitest contract tests, and production build pass locally on Node 22/pnpm 12 |
 | Core storage probe | TODO | SQLite plus offline local DuckLake load, write, restart, and read |
 | Native-library probe | TODO | Packaged Polars, DuckDB, forecast, XGBoost, and OR-Tools smoke operations |
 | Secure engine launch | TODO | Loopback, per-launch token, restricted origin/host, explicit portable home |
@@ -115,3 +116,18 @@ only through a recorded decision with evidence.
 - Proved explicit local-extension DuckLake write/restart/read on Linux using a
   temporary standalone probe; the application-level and Windows gates remain
   open.
+
+### 2026-09-19 — Desktop walking skeleton implemented
+
+- Tauri now generates a per-launch token, passes explicit home/extension paths,
+  requests a dynamic loopback port, parses the readiness contract, retains the
+  child handle, and kills its owned engine on timeout or desktop exit.
+- React receives connection details through `get_engine_connection`; production
+  has no browser fallback. Browser development requires an explicit loopback URL
+  and token.
+- The home page now calls authenticated health and offline stack-probe endpoints
+  and displays the SQLite/DuckLake qualification results.
+- Local frontend Biome, TypeScript, 5 Vitest tests, and production build pass.
+- Rust formatting passes. Linux Rust compilation is blocked by missing GTK/GLib
+  development packages; Windows-target checking and full desktop lifecycle
+  remain qualification work, not claimed as passing.
