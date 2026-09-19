@@ -65,6 +65,20 @@ The engine supports an explicit local extension path via settings/environment an
 
 Release CI must verify the extension matches the bundled DuckDB version/platform.
 
+The current reviewed artifact is fixed to DuckDB/DuckLake `1.5.5` for
+`windows_amd64`. `scripts/stage_ducklake.ps1` downloads the official compressed
+artifact during the networked build and verifies these SHA-256 values before
+packaging:
+
+```text
+compressed:   4a5180e1654cbbc3fd58afe8c70b3f98187d18e8d8e8c9bf386c3d48e9b8a116
+decompressed: 4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0
+```
+
+The decompressed binary is not committed. A platform or DuckDB version change
+must add newly reviewed hashes and pass the compatibility probe; the staging
+script deliberately rejects unknown version/platform combinations.
+
 ## Frontend
 
 React/Vite output is static build content packaged inside the Tauri application. Node/pnpm do not ship to the user.
@@ -90,6 +104,28 @@ Release CI should validate on a clean Windows runner:
 9. run a representative DuckDB query;
 10. verify generated Excel handoff;
 11. verify shutdown cleans up the sidecar.
+
+The automated Windows workflow additionally blocks outbound traffic for the
+packaged engine during its initialization/health probe. This is useful evidence
+that the engine loads the local extension, but it is not a substitute for the
+final clean-workstation test: GitHub-hosted runners still contain developer
+runtimes and a preinstalled WebView2 environment.
+
+## Reproducible build commands
+
+From a clean checkout on Windows x64:
+
+```powershell
+uv sync --frozen --extra dev --python 3.14.7
+pnpm install --frozen-lockfile
+cargo metadata --manifest-path src-tauri/Cargo.toml --locked --format-version 1
+./scripts/build_portable.ps1
+```
+
+`build_portable.ps1` repeats the frozen checks, stages and probes DuckLake,
+exercises the native analytical stack, builds the sidecar, copies it with the
+Tauri target-triple suffix, and builds the desktop bundle. Missing, modified, or
+version-incompatible native artifacts fail before packaging.
 
 ## Package size
 

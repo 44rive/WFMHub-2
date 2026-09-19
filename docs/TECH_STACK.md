@@ -76,6 +76,10 @@ uv run wfmhub2
 
 The repository should commit `uv.lock` after dependency resolution is run in a networked development environment.
 
+`uv.lock`, the workspace `pnpm-lock.yaml`, and `src-tauri/Cargo.lock` are release
+inputs. CI and portable builds use frozen/locked modes; dependency updates are
+explicit changes rather than side effects of building.
+
 ### Ruff 0.16 line
 
 Python formatter/linter/import/code-modernization tool.

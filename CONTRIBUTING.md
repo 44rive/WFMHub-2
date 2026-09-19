@@ -13,17 +13,19 @@ WFMHub 2.0 is organized around workforce-management domains and a strict separat
 ## Python setup
 
 ```powershell
-uv sync --extra dev
-uv run ruff check src tests
-uv run pyright
-uv run pytest
+uv sync --frozen --extra dev --python 3.14.7
+uv run --frozen ruff format --check src tests scripts
+uv run --frozen ruff check src tests scripts
+uv run --frozen pyright
+uv run --frozen pytest
+uv run --frozen python scripts/probe_native_stack.py
 ```
 
 ## Frontend setup
 
 ```powershell
 corepack enable
-pnpm install
+pnpm install --frozen-lockfile
 pnpm check:web
 pnpm typecheck:web
 pnpm test:web
@@ -37,6 +39,49 @@ The packaged Python sidecar must exist under `src-tauri/binaries/` with the host
 ```powershell
 pnpm desktop:dev
 ```
+
+Rust source checks use the committed Cargo lock:
+
+```powershell
+cargo fmt --manifest-path src-tauri/Cargo.toml --check
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml --locked
+```
+
+## Windows stack qualification
+
+On a networked Windows x64 build machine, the portable build command uses all
+three committed locks, stages the reviewed DuckLake 1.5.5 artifact, verifies a
+local load/write/restart/read, exercises the heavy native dependencies, builds
+the PyInstaller sidecar, and builds the Tauri bundle:
+
+```powershell
+./scripts/build_portable.ps1
+```
+
+To retest an already staged extension without downloading it again:
+
+```powershell
+./scripts/build_portable.ps1 -UseStagedDuckLake
+```
+
+The generated extension binary, sidecar, bundles, runtime data, and evidence
+are build artifacts and must not be committed.
+
+## Updating dependencies
+
+Normal build and test commands are frozen. A deliberate dependency update must
+regenerate and review all affected locks:
+
+```powershell
+uv lock --python 3.14.7
+pnpm install --lockfile-only --force
+cargo generate-lockfile --manifest-path src-tauri/Cargo.toml
+```
+
+Do not merge a core runtime/data dependency change until the Windows stack
+qualification workflow passes and its package/startup evidence has been
+reviewed.
 
 ## Where code belongs
 

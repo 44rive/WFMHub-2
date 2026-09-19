@@ -8,7 +8,17 @@ hiddenimports = []
 datas = []
 binaries = []
 
-for package in ("duckdb", "polars", "ortools", "xgboost", "statsforecast", "mlforecast", "hierarchicalforecast"):
+for package in (
+    "duckdb",
+    "polars",
+    "ortools",
+    "xgboost",
+    "statsforecast",
+    "mlforecast",
+    "hierarchicalforecast",
+    "openpyxl",
+    "xlsxwriter",
+):
     package_datas, package_binaries, package_hidden = collect_all(package)
     datas += package_datas
     binaries += package_binaries
@@ -30,5 +40,8 @@ exe = EXE(
     analysis.datas,
     [],
     name="wfmhub-engine",
-    console=False,
+    # The desktop handshake consumes the machine-readable WFMHUB2_READY line
+    # from stdout. Tauri owns the child process, so this does not expose an
+    # interactive shell to the end user.
+    console=True,
 )

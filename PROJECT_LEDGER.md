@@ -63,6 +63,22 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   application or Windows gate pass.
 - The preserved local branch has 30 Python tests passing and frontend
   lint/build passing, but still has format and test typing cleanup outstanding.
+- Phase 0 now has generated Python (`uv.lock`), frontend (`pnpm-lock.yaml`), and
+  Rust (`src-tauri/Cargo.lock`) lockfiles. Local frozen Python 3.14.7 and pnpm
+  installs plus locked Cargo metadata/fetch succeeded; a clean Windows CI run is
+  still required before the reproducibility gate can pass.
+- The Python 3.14.7 native-stack probe completed real DuckDB, Polars,
+  StatsForecast, XGBoost, OR-Tools, and Excel round-trip operations. The full
+  development environment occupied approximately `1.51 GB`, including about
+  `302 MB` for Linux NCCL, `180 MB` for Polars runtime, `157 MB` for PyArrow,
+  `112 MB` for SciPy, `87 MB` for XGBoost, and `82 MB` for OR-Tools. This
+  confirms that heavy analytics/ML dependencies are a material packaging
+  concern.
+- The reviewed DuckDB/DuckLake 1.5.5 `windows_amd64` artifact is pinned by
+  compressed SHA-256 `4a5180e1654cbbc3fd58afe8c70b3f98187d18e8d8e8c9bf386c3d48e9b8a116`
+  and decompressed SHA-256
+  `4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0`.
+  The binary is build-staged and ignored, never committed.
 
 ## Phase 0 acceptance gates
 
@@ -98,12 +114,19 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Commit this ledger and repository instructions on the integration branch.
-2. Produce independent backend, desktop, and foundation qualification commits.
-3. Review and integrate those commits onto `integration/stack-qualification`.
-4. Run all Linux-available checks locally.
-5. Add a Windows clean-runner workflow for the build/launch/offline gates.
-6. Record every gate result here before starting the first WFM vertical slice.
+1. Review and integrate the backend, desktop, and foundation qualification
+   commits onto `integration/stack-qualification`.
+2. Resolve integration conflicts against the final readiness/token/lifecycle
+   contract and make every source-quality check pass.
+3. Run the stack-qualification workflow on a clean Windows runner without
+   weakening frozen-lock, artifact-hash, authentication, or outbound-network
+   assertions.
+4. Review uploaded package size, checksum, startup, storage, and native-stack
+   evidence; record each acceptance gate result here.
+5. Run the final extracted bundle on a clean/offline Windows workstation with
+   no developer runtimes and confirm WebView2 behavior.
+6. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
+   technology is explicitly replaced through a recorded decision.
 
 ## Session log
 
@@ -163,3 +186,28 @@ only through a recorded decision with evidence.
 - Rust formatting passes. Linux Rust compilation is blocked by missing GTK/GLib
   development packages; Windows-target checking and full desktop lifecycle
   remain qualification work, not claimed as passing.
+
+### 2026-09-19 — Qualification foundation prepared
+
+- Generated hash/integrity-bearing uv, pnpm, and Cargo locks with uv 0.12.17,
+  pnpm 12.4.1, and Rust 1.98.1. Verified frozen Python/pnpm installs and locked
+  Cargo metadata/fetch locally; clean-runner validation remains outstanding.
+- Added Linux source-quality and Windows portable qualification CI. Windows CI
+  stages and compatibility-tests the exact local DuckLake extension, exercises
+  the heavy native stack, builds PyInstaller and Tauri outputs, blocks packaged
+  engine outbound traffic, checks dynamic readiness/authentication, and records
+  hashes, sizes, and cold-start evidence.
+- Added fail-closed extension staging and probes. Unknown platform/version
+  combinations, hash mismatches, missing artifacts, DuckDB version mismatch,
+  failed restart/read, and absent Parquet output all stop packaging. The probe
+  passed locally with the matching DuckDB/DuckLake 1.5.5 Linux artifact;
+  Windows artifact execution still requires Windows CI.
+- Local Python 3.14.7 results: 5 tests pass and the native-stack probe passes.
+  Baseline application quality still fails with 2 Ruff-format findings, 5 Ruff
+  lint findings, 6 Pyright findings, Biome formatting/import/non-null findings,
+  the missing Vite CSS type declaration, and Rustfmt differences in the Tauri
+  shell. These belong to the backend and desktop integration commits rather
+  than the tooling-only foundation commit.
+- Windows extension compatibility, PyInstaller/Tauri packaging, authenticated
+  sidecar readiness, desktop lifecycle, and offline clean-machine execution
+  remain unproven until the workflow runs after backend/desktop integration.
