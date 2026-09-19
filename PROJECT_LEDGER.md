@@ -122,6 +122,14 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   CPython's Windows process handling, so owner liveness was lost or misread.
   The watchdog now uses a non-signalling Windows process query and has a
   cross-platform live/missing PID regression test.
+- Run `35467361420` passed every Linux and Windows gate, including the Win32
+  live/missing PID regression, exact ZIP expansion, cold launch of the extracted
+  desktop, frontend-initiated authenticated SQLite/DuckLake/Parquet activity,
+  outbound-blocked direct engine probing, and owned-process shutdown. The final
+  ZIP is 241,753,224 bytes with SHA-256
+  `c3cf1e020f949415efd1205db9bdc4459212b8406bc3e145df9077667614ed2b`.
+  Desktop-to-stable storage activity was 17.422 seconds; direct engine readiness
+  was 9.872 seconds. The pre-release is `v0.2.0-phase0.1`.
 - The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
   initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
   `355.1 MB` before installer compression. Observed cold readiness was
@@ -142,11 +150,11 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Core storage probe | PASS | SQLite plus offline local DuckLake load, write, restart, and read |
 | Native-library probe | PASS | Linux package executes Polars, DuckDB, StatsForecast, XGBoost, and OR-Tools operations |
 | Secure engine launch | PASS | Loopback, per-launch token, restricted origin/host, explicit portable home |
-| Desktop lifecycle | PASS | Linux Tauri starts engine, UI reaches authenticated health/storage PASS, graceful close kills both one-file processes |
+| Desktop lifecycle | PASS | Linux and extracted Windows Tauri shells start the engine, initiate authenticated storage work, and close without leaving engine processes |
 | Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
 | Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
-| Windows package | FAIL | Run `35465501042` proved a Windows-specific parent-watchdog defect after readiness; Win32 process-existence correction pending CI proof |
-| Operational budget | PASS | Linux size, cold start, idle memory, full-doctor peak, and extension load recorded above; optimization remains a release concern |
+| Windows package | PASS | Run `35467361420` built, expanded, hash-verified, launched, exercised offline storage, and cleanly stopped the exact 241,753,224-byte ZIP |
+| Operational budget | PASS | Linux metrics plus Windows 17.422 s desktop-to-storage and 9.872 s direct engine readiness are recorded; optimization remains a release concern |
 
 Phase 0 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
@@ -162,24 +170,21 @@ only through a recorded decision with evidence.
 - The optimized Linux package is still about 303 MB and cold desktop readiness
   is about 10 seconds. Treat optional/lazy analytics and PyInstaller one-folder
   mode as serious follow-up candidates, not cosmetic tuning.
-- Linux evidence does not establish Windows DLL discovery, WebView2 behavior,
-  firewall assertions, installer layout, or offline clean-machine behavior.
-- The first clean Windows packaging attempt failed before PyInstaller because
-  of build-script parameter passing. The correction and release-ZIP path require
-  a new green Windows run before any preview is published.
+- GitHub-hosted Windows evidence establishes packaged DLL discovery, WebView2
+  launch, firewall-blocked engine operation, and ZIP layout. It does not prove
+  behavior on a separate workstation with no developer runtimes installed.
+- The portable preview is unsigned and may trigger a Windows SmartScreen
+  warning. Code-signing policy remains a future release decision.
 
 ## Next executable steps
 
-1. Run the stack-qualification workflow on a clean Windows runner without
-   weakening frozen-lock, artifact-hash, authentication, or outbound-network
-   assertions.
-2. Review uploaded package size, checksum, startup, storage, and native-stack
-   evidence; record each acceptance gate result here.
-3. Run the final extracted bundle on a clean/offline Windows workstation with
+1. Run the final extracted bundle on a clean/offline Windows workstation with
    no developer runtimes and confirm WebView2 behavior.
-4. Decide explicit Windows package/startup/memory budgets and whether the core
+2. Decide explicit Windows package/startup/memory budgets and whether the core
    engine must split optional forecasting/optimization capabilities.
-5. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
+3. Decide code-signing and update/distribution policy before a public stable
+   release.
+4. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
    technology is explicitly replaced through a recorded decision.
 
 ## Session log
@@ -211,13 +216,23 @@ only through a recorded decision with evidence.
   destructive Unix PID-existence idiom on Windows. Replaced that probe with a
   non-signalling Win32 process-handle query and added a regression test that
   runs on both CI platforms.
+- Run `35467361420` passed end to end. The exact extracted ZIP launched the
+  desktop and sidecar, produced SQLite/DuckLake/Parquet activity in 17.422
+  seconds, passed authenticated offline engine probing with outbound traffic
+  blocked, and cleaned up its owned process tree. Local download verification
+  independently confirmed the outer checksum, five-member archive layout, and
+  all hashes in `SHA256SUMS.txt`.
+- Published GitHub pre-release `v0.2.0-phase0.1` from green commit `26dba65`:
+  <https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase0.1>. This closes
+  the Windows package gate, not the separate clean-workstation offline gate and
+  not Phase 0 as a whole.
 - Corrected the build invocation and added a versioned, checksummed portable
   ZIP with one `WFMHub-2` root. CI now expands the exact ZIP, launches the actual
   desktop entrypoint, requires authenticated SQLite/DuckLake/Parquet storage
   activity, checks clean sidecar shutdown, completes the authoritative direct
   HTTP probe with outbound traffic blocked, and uploads the ZIP separately.
-- This entry records implementation and the prior failure, not a gate pass. A
-  GitHub pre-release may be created only after the corrected Windows run passes.
+- The GitHub Release asset is the only supported downloadable preview. GitHub's
+  automatically generated source archives are not runnable portable packages.
 
 ### 2026-09-19 — Clean frozen installs qualified
 

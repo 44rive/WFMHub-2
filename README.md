@@ -318,6 +318,9 @@ End users must download the versioned Windows portable asset from GitHub
 Releases, not GitHub's automatically generated source-code ZIP. The source ZIP
 does not contain the compiled desktop, sidecar, or DuckLake binaries.
 
+Current qualified preview: [WFMHub 2 v0.2.0 Phase 0 Preview](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase0.1).
+This is a stack-qualification build, not the finished WFM product.
+
 See [docs/PORTABLE_DEPLOYMENT.md](docs/PORTABLE_DEPLOYMENT.md).
 
 ## Current baseline versions
