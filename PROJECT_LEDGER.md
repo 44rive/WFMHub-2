@@ -100,6 +100,11 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   frontend check: Windows checkout converted the files to CRLF and PowerShell
   passed literal `web/*.json` and `web/*.ts` paths to Biome. Packaging was not
   reached. Repository line endings and frontend check paths are now explicit.
+- Run `35458499945` passed every Linux and Windows source/native check and built
+  both release executables, then Tauri unnecessarily entered its MSI bundler
+  and failed on an installer-only icon lookup. The portable build now uses
+  Tauri's supported `--no-bundle` mode because the verified ZIP is the release
+  package; the next run must still prove the extracted ZIP itself.
 - The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
   initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
   `355.1 MB` before installer compression. Observed cold readiness was
@@ -123,7 +128,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Desktop lifecycle | PASS | Linux Tauri starts engine, UI reaches authenticated health/storage PASS, graceful close kills both one-file processes |
 | Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
 | Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
-| Windows package | FAIL | Run `35456417569` reached the build script but failed on invalid PowerShell argument splatting before PyInstaller/Tauri packaging |
+| Windows package | FAIL | Latest run `35458499945` built both release executables but failed in the unnecessary MSI bundler before portable ZIP assembly; corrected run pending |
 | Operational budget | PASS | Linux size, cold start, idle memory, full-doctor peak, and extension load recorded above; optimization remains a release concern |
 
 Phase 0 is complete only when all gates pass. A gate may be deliberately removed
@@ -173,6 +178,11 @@ only through a recorded decision with evidence.
 - The next run, `35458355085`, exposed a separate cross-platform check defect:
   CRLF checkout plus shell-specific globs made Biome fail before packaging.
   Added a repository line-ending contract and shell-independent explicit paths.
+- Run `35458499945` passed all Linux checks and all Windows source, DuckLake,
+  native-library, PyInstaller, frontend, and Rust compilation work. It failed
+  only after the desktop executable had been built, when the unused MSI bundler
+  required installer icon configuration. The release build now skips installer
+  bundling and feeds that exact executable into the portable ZIP assembler.
 - Corrected the build invocation and added a versioned, checksummed portable
   ZIP with one `WFMHub-2` root. CI now expands the exact ZIP, launches the actual
   desktop entrypoint, requires authenticated SQLite/DuckLake/Parquet storage

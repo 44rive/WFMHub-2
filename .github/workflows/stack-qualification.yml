@@ -193,7 +193,7 @@ jobs:
         shell: pwsh
         run: uv run --frozen python scripts/probe_native_stack.py --evidence qualification-evidence/native-stack-windows.json
 
-      - name: Build PyInstaller sidecar and Tauri bundle from frozen inputs
+      - name: Build PyInstaller sidecar and Tauri executable from frozen inputs
         shell: pwsh
         run: ./scripts/build_portable.ps1 -UseStagedDuckLake
 
@@ -223,11 +223,11 @@ jobs:
           $Files = @()
           $Candidates = @(
             "dist/wfmhub-engine.exe",
-            "packaging/duckdb_extensions/ducklake.duckdb_extension"
+            "packaging/duckdb_extensions/ducklake.duckdb_extension",
+            "src-tauri/target/release/wfmhub-2.exe",
+            "src-tauri/target/release/wfmhub-engine.exe"
           )
           $Candidates += Get-ChildItem dist/WFMHub-2-v*-windows-x64-portable.zip* -File |
-            Select-Object -ExpandProperty FullName
-          $Candidates += Get-ChildItem src-tauri/target/release/bundle -File -Recurse |
             Select-Object -ExpandProperty FullName
           foreach ($Candidate in $Candidates) {
             if (Test-Path $Candidate -PathType Leaf) {

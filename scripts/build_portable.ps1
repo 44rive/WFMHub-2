@@ -61,8 +61,12 @@ Write-Host "[6/8] Build frontend and validate the locked Rust graph"
 pnpm build:web
 cargo metadata --manifest-path src-tauri/Cargo.toml --locked --format-version 1 | Out-Null
 
-Write-Host "[7/8] Build Tauri desktop bundle"
-pnpm exec tauri build --ci
+Write-Host "[7/8] Build the Tauri desktop executable"
+# The distributable is our independently verified portable ZIP, not an MSI or
+# NSIS installer. Skipping Tauri's installer bundlers avoids installer-only
+# requirements and keeps the executable consumed here identical to the one we
+# place in the ZIP.
+pnpm exec tauri build --ci --no-bundle
 
 Write-Host "[8/8] Assemble and verify the portable release ZIP"
 & (Join-Path $Root "scripts/package_portable.ps1") -TargetTriple $TargetTriple
