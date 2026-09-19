@@ -55,6 +55,11 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   fails its own extension precondition.
 - The API currently uses module-global settings rather than the CLI `--home`,
   and no CORS/session-token boundary is implemented.
+- An independent Linux probe with DuckDB 1.5.5 successfully loaded an explicit
+  local DuckLake extension, wrote a Zstd Parquet-backed table, closed, reopened,
+  and read the same 100 rows. DuckLake data inlining had to be disabled to prove
+  a physical Parquet write. This is positive technology evidence, not yet an
+  application or Windows gate pass.
 - The preserved local branch has 30 Python tests passing and frontend
   lint/build passing, but still has format and test typing cleanup outstanding.
 
@@ -107,3 +112,6 @@ only through a recorded decision with evidence.
 - Chose stack qualification as the blocking milestone.
 - Created isolated integration/backend/desktop/foundation worktrees.
 - Added the durable ledger contract and initial evidence.
+- Proved explicit local-extension DuckLake write/restart/read on Linux using a
+  temporary standalone probe; the application-level and Windows gates remain
+  open.
