@@ -1,0 +1,72 @@
+# Python environments, caches, coverage, and build output
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.nox/
+.tox/
+build/
+dist/
+*.egg-info/
+
+# JavaScript package stores and build output
+node_modules/
+.pnpm-store/
+web/dist/
+web/.vite/
+web/coverage/
+*.tsbuildinfo
+
+# Rust and Tauri output
+target/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/binaries/*
+!src-tauri/binaries/.gitkeep
+
+# Build-staged native artifacts (downloaded and verified by scripts)
+packaging/duckdb_extensions/*
+!packaging/duckdb_extensions/README.md
+
+# Runtime state and operational data: never commit these
+data/
+Feed/
+Reports/
+feed/
+reports/
+*.sqlite
+*.sqlite3
+*.duckdb
+*.ducklake
+*.parquet
+*.log
+
+# Local qualification evidence
+qualification-evidence/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# IDE and OS files
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+Desktop.ini

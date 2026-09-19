@@ -16,6 +16,22 @@ Initial engineering targets, subject to benchmark refinement:
 
 These are product budgets, not promises independent of source-file size and hardware.
 
+## Phase 0 desktop baseline
+
+The 2026-09-19 Linux qualification run recorded:
+
+- Python sidecar: 303,345,488 bytes;
+- uncompressed Tauri shell + sidecar + DuckLake: about 355.1 MB;
+- cold desktop-to-engine readiness: about 10.25 seconds;
+- total idle RSS across the desktop/WebKit/engine tree: about 527 MiB;
+- packaged full native-stack doctor: 11.34 seconds, about 385 MiB peak RSS;
+- explicit local DuckLake load: 38.1 ms median across five warm-host runs.
+
+This proves measurability and launch feasibility. The startup and memory values
+are still high for an operational desktop and should be treated as optimization
+work, especially before bundling optional planning/forecasting capabilities into
+the always-on RTA core. Windows measurements remain mandatory.
+
 ## Benchmark scales
 
 Synthetic fixtures should cover at least:

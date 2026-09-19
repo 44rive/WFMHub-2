@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import sqlite3
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
-
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS source_manifest (
@@ -64,6 +65,11 @@ CREATE TABLE IF NOT EXISTS scenario (
     assumptions_json TEXT NOT NULL,
     result_json TEXT
 );
+
+CREATE TABLE IF NOT EXISTS system_probe (
+    probe_key TEXT PRIMARY KEY,
+    probe_value TEXT NOT NULL
+);
 """
 
 
@@ -78,7 +84,7 @@ def initialize(path: Path) -> None:
 
 
 @contextmanager
-def connect(path: Path) -> Iterator[sqlite3.Connection]:
+def connect(path: Path) -> Generator[sqlite3.Connection]:
     conn = sqlite3.connect(path, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")

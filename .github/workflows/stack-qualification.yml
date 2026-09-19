@@ -1,0 +1,241 @@
+name: Stack qualification
+
+on:
+  push:
+    branches:
+      - main
+      - "integration/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stack-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.14.7"
+  UV_VERSION: "0.12.17"
+  PNPM_VERSION: "12.4.1"
+  NODE_VERSION: "22"
+  DUCKDB_VERSION: "1.5.5"
+  DUCKLAKE_SHA256: "4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0"
+
+jobs:
+  source-quality:
+    name: Linux source and frozen-lock checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Install Tauri Linux prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            libdbus-1-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install exact Python
+        run: uv python install "$PYTHON_VERSION"
+
+      - name: Sync frozen Python dependencies
+        run: uv sync --frozen --extra dev --python "$PYTHON_VERSION"
+
+      - name: Python quality and tests
+        run: |
+          uv run --frozen ruff format --check src tests scripts
+          uv run --frozen ruff check src tests scripts
+          uv run --frozen pyright
+          uv run --frozen pytest
+
+      - name: Exercise native analytical stack
+        run: uv run --frozen python scripts/probe_native_stack.py --evidence qualification-evidence/native-stack-linux.json
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Sync frozen frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend quality and build
+        run: |
+          pnpm check:web
+          pnpm typecheck:web
+          pnpm test:web
+          pnpm build:web
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Rust quality and locked build
+        run: |
+          # Source checks do not consume release-staged native artifacts. The
+          # Windows package build below validates the real sidecar/resources.
+          export TAURI_CONFIG='{"bundle":{"externalBin":[],"resources":[]}}'
+          cargo fmt --manifest-path src-tauri/Cargo.toml --check
+          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+
+      - name: Upload source qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-qualification-evidence
+          path: qualification-evidence/
+          if-no-files-found: warn
+
+  windows-portable:
+    name: Windows x64 portable stack
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install exact Python and frozen dependencies
+        shell: pwsh
+        run: |
+          uv python install $env:PYTHON_VERSION
+          uv sync --frozen --extra dev --python $env:PYTHON_VERSION
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Sync frozen frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: clippy,rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Verify all source layers on Windows
+        shell: pwsh
+        run: |
+          uv run --frozen ruff format --check src tests scripts
+          uv run --frozen ruff check src tests scripts
+          uv run --frozen pyright
+          uv run --frozen pytest
+          pnpm check:web
+          pnpm typecheck:web
+          pnpm test:web
+          pnpm build:web
+          cargo fmt --manifest-path src-tauri/Cargo.toml --check
+          $env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":[]}}'
+          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+
+      - name: Stage pinned DuckLake and prove local compatibility
+        shell: pwsh
+        run: |
+          ./scripts/stage_ducklake.ps1 -DuckDBVersion $env:DUCKDB_VERSION -Platform windows_amd64
+          uv run --frozen python scripts/verify_ducklake.py `
+            --extension packaging/duckdb_extensions/ducklake.duckdb_extension `
+            --expected-duckdb $env:DUCKDB_VERSION `
+            --expected-sha256 $env:DUCKLAKE_SHA256 `
+            --evidence qualification-evidence/ducklake-windows.json
+
+      - name: Exercise Windows native analytical stack
+        shell: pwsh
+        run: uv run --frozen python scripts/probe_native_stack.py --evidence qualification-evidence/native-stack-windows.json
+
+      - name: Build PyInstaller sidecar and Tauri bundle from frozen inputs
+        shell: pwsh
+        run: ./scripts/build_portable.ps1 -UseStagedDuckLake
+
+      - name: Smoke packaged engine with outbound network blocked
+        shell: pwsh
+        run: |
+          ./scripts/smoke_engine.ps1 `
+            -EnginePath dist/wfmhub-engine.exe `
+            -ExtensionPath packaging/duckdb_extensions/ducklake.duckdb_extension `
+            -HomePath "$env:RUNNER_TEMP/wfmhub2-portable-home" `
+            -EvidencePath qualification-evidence/packaged-engine.json `
+            -BlockOutbound
+
+      - name: Record package-size and checksum evidence
+        shell: pwsh
+        run: |
+          $Files = @()
+          $Candidates = @(
+            "dist/wfmhub-engine.exe",
+            "packaging/duckdb_extensions/ducklake.duckdb_extension"
+          )
+          $Candidates += Get-ChildItem src-tauri/target/release/bundle -File -Recurse |
+            Select-Object -ExpandProperty FullName
+          foreach ($Candidate in $Candidates) {
+            if (Test-Path $Candidate -PathType Leaf) {
+              $Item = Get-Item $Candidate
+              $Files += [ordered]@{
+                path = $Item.FullName
+                bytes = $Item.Length
+                sha256 = (Get-FileHash -Algorithm SHA256 -Path $Item.FullName).Hash.ToLowerInvariant()
+              }
+            }
+          }
+          New-Item -ItemType Directory -Force qualification-evidence | Out-Null
+          $Files | ConvertTo-Json | Set-Content qualification-evidence/package-files.json -Encoding utf8
+          $Files | Format-Table path, bytes | Out-String | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload Windows qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-stack-qualification-evidence
+          path: |
+            qualification-evidence/
+            packaging/duckdb_extensions/ducklake.manifest.json
+          if-no-files-found: warn

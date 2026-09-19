@@ -1,5 +1,7 @@
+from ipaddress import ip_address
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +12,32 @@ class Settings(BaseSettings):
     host: str = "127.0.0.1"
     port: int = 8765
     ducklake_extension: Path | None = None
+    cors_origins: tuple[str, ...] = (
+        "tauri://localhost",
+        "http://tauri.localhost",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    )
+
+    @field_validator("host")
+    @classmethod
+    def host_must_be_loopback(cls, value: str) -> str:
+        if value == "localhost":
+            return value
+        try:
+            is_loopback = ip_address(value).is_loopback
+        except ValueError as exc:
+            raise ValueError("host must be a loopback IP address or localhost") from exc
+        if not is_loopback:
+            raise ValueError("host must be a loopback address")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def port_must_be_valid(cls, value: int) -> int:
+        if not 0 <= value <= 65535:
+            raise ValueError("port must be between 0 and 65535")
+        return value
 
     @property
     def data_dir(self) -> Path:
