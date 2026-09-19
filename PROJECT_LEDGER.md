@@ -66,9 +66,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 - The preserved local branch has 30 Python tests passing and frontend
   lint/build passing, but still has format and test typing cleanup outstanding.
 - Phase 0 now has generated Python (`uv.lock`), frontend (`pnpm-lock.yaml`), and
-  Rust (`src-tauri/Cargo.lock`) lockfiles. Local frozen Python 3.14.7 and pnpm
-  installs plus locked Cargo metadata/fetch succeeded; a clean Windows CI run is
-  still required before the reproducibility gate can pass.
+  Rust (`src-tauri/Cargo.lock`) lockfiles. A detached clean checkout with no
+  staged native artifacts completed the frozen Python 3.14.7 and pnpm installs,
+  locked Cargo checks/tests, and all source-quality suites. Windows packaging
+  remains a separate platform gate.
 - The Python 3.14.7 native-stack probe completed real DuckDB, Polars,
   StatsForecast, XGBoost, OR-Tools, and Excel round-trip operations. The full
   development environment occupied approximately `1.51 GB`, including about
@@ -103,7 +104,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 
 | Gate | Status | Required evidence |
 | --- | --- | --- |
-| Reproducible dependency locks | TODO | Frozen Python, pnpm, and Cargo installs from a clean checkout |
+| Reproducible dependency locks | PASS | Frozen Python 3.14.7, pnpm, and locked Cargo installs/checks passed from a detached clean checkout with no staged native artifacts |
 | Python quality | PASS | Ruff, Pyright, and pytest on Python 3.14 |
 | Frontend quality | PASS | Biome, TypeScript, 5 Vitest contract tests, and production build pass locally on Node 22/pnpm 12 |
 | Rust quality | PASS | rustfmt, Clippy with warnings denied, and Rust tests |
@@ -135,21 +136,36 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Commit the integrated qualification work and run all frozen installs plus
-   source checks from a clean local worktree.
-2. Run the stack-qualification workflow on a clean Windows runner without
+1. Run the stack-qualification workflow on a clean Windows runner without
    weakening frozen-lock, artifact-hash, authentication, or outbound-network
    assertions.
-3. Review uploaded package size, checksum, startup, storage, and native-stack
+2. Review uploaded package size, checksum, startup, storage, and native-stack
    evidence; record each acceptance gate result here.
-4. Run the final extracted bundle on a clean/offline Windows workstation with
+3. Run the final extracted bundle on a clean/offline Windows workstation with
    no developer runtimes and confirm WebView2 behavior.
-5. Decide explicit Windows package/startup/memory budgets and whether the core
+4. Decide explicit Windows package/startup/memory budgets and whether the core
    engine must split optional forecasting/optimization capabilities.
-6. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
+5. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
    technology is explicitly replaced through a recorded decision.
 
 ## Session log
+
+### 2026-09-19 — Clean frozen installs qualified
+
+- Checked out commit `a74b38c` into a detached clean worktree with none of the
+  ignored native release artifacts present.
+- `uv sync --frozen --extra dev --python 3.14.7`,
+  `corepack pnpm install --frozen-lockfile`, and locked Cargo resolution all
+  completed from that checkout. Ruff, strict Pyright, 17 Python tests, Biome,
+  TypeScript, 5 frontend tests, the production frontend build, rustfmt, Clippy
+  with warnings denied, and 5 Rust tests passed.
+- Found and corrected a source-only CI override defect: Tauri needs
+  `resources: []` to clear the configured release resource map. An empty object
+  merges with that map and incorrectly requires a staged DuckLake binary during
+  Rust source checks. Release packaging continues to require and validate the
+  real binary.
+- The reproducible-lock gate is now closed. Windows packaging and a clean
+  offline Windows runtime remain the two blocking Phase 0 gates.
 
 ### 2026-09-19 — Integrated Linux desktop stack qualified
 

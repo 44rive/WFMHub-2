@@ -43,7 +43,7 @@ pnpm desktop:dev
 Rust source checks use the committed Cargo lock:
 
 ```powershell
-$env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":{}}}'
+$env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":[]}}'
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml --locked
