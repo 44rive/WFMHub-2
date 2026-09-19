@@ -88,6 +88,23 @@ def test_host_and_cors_are_restricted(tmp_path: Path) -> None:
     assert "access-control-allow-origin" not in denied.headers
 
 
+def test_vite_development_origin_matches_desktop_configuration(tmp_path: Path) -> None:
+    app = create_app(Settings(home=tmp_path), "per-launch-secret")
+
+    with TestClient(app, base_url="http://localhost") as client:
+        response = client.options(
+            "/api/stack/probe",
+            headers={
+                "Origin": "http://127.0.0.1:5173",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "X-WFMHub-Token",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
 def test_empty_session_token_is_rejected(tmp_path: Path) -> None:
     settings = Settings(home=tmp_path)
     try:

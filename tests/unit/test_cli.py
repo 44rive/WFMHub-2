@@ -47,15 +47,15 @@ def test_ephemeral_socket_and_readiness_line_report_actual_port_without_token(
     server_socket = reserve_server_socket(settings)
     try:
         actual_port = int(server_socket.getsockname()[1])
-        line = readiness_line(settings, actual_port)
+        line = readiness_line(actual_port)
     finally:
         server_socket.close()
 
     assert actual_port > 0
     assert line.startswith("WFMHUB2_READY ")
     payload = cast(dict[str, object], json.loads(line.removeprefix("WFMHUB2_READY ")))
-    assert payload["host"] == "127.0.0.1"
     assert payload["port"] == actual_port
+    assert set(payload) == {"port"}
     assert "token" not in line.lower()
     assert "secret" not in line.lower()
 

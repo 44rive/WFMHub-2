@@ -129,6 +129,9 @@ only through a recorded decision with evidence.
   XGBoost 3.4.1, and OR-Tools 9.15 operations. A live engine launch selected an
   ephemeral port, emitted readiness, served health, accepted the correct token for
   the protected probe, and terminated cleanly.
+- Integration review aligned the backend/Tauri readiness contract to a strict
+  port-only JSON payload and aligned allowed development origins with Vite's
+  configured `127.0.0.1:5173` endpoint.
 - These results do **not** close the Windows/Python 3.14/PyInstaller/Tauri gates.
   The tested extension came from the Linux development cache and is not a release
   artifact. Clean Windows offline packaging remains mandatory.

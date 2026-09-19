@@ -7,7 +7,6 @@ from pathlib import Path
 
 import uvicorn
 
-from wfmhub2 import __version__
 from wfmhub2.api.main import create_app
 from wfmhub2.core.settings import Settings
 from wfmhub2.doctor import DoctorReport, run_doctor
@@ -79,17 +78,15 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def readiness_payload(settings: Settings, actual_port: int) -> dict[str, object]:
-    return {
-        "host": settings.host,
-        "port": actual_port,
-        "version": __version__,
-    }
+def readiness_payload(actual_port: int) -> dict[str, object]:
+    # Keep the Tauri handshake deliberately minimal. The parser rejects unknown
+    # fields so secrets or operational details cannot accidentally enter it.
+    return {"port": actual_port}
 
 
-def readiness_line(settings: Settings, actual_port: int) -> str:
+def readiness_line(actual_port: int) -> str:
     payload = json.dumps(
-        readiness_payload(settings, actual_port),
+        readiness_payload(actual_port),
         sort_keys=True,
         separators=(",", ":"),
     )
@@ -142,7 +139,7 @@ def _serve(settings: Settings, session_token: str) -> None:
         reload=False,
         access_log=False,
     )
-    server = ReadinessServer(config, readiness_line(settings, actual_port))
+    server = ReadinessServer(config, readiness_line(actual_port))
     server.run(sockets=[server_socket])
 
 
