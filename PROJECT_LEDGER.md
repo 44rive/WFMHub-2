@@ -42,6 +42,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-008 | Tauri generates a 256-bit token, passes it to the owned sidecar through `WFMHUB2_SESSION_TOKEN`, and exposes connection details only through a narrow command. | Avoid fixed ports, generic shell access, and token exposure in process arguments or logs. |
 | D-009 | The packaged engine watches the desktop PID in addition to Tauri retaining the immediate child handle. | PyInstaller one-file mode has a supervisor/child process tree; killing only the supervisor can orphan the API. |
 | D-010 | Package only modules/native assets exercised by the engine, with explicit exclusions for unused GUI, test, GPU, and optional analytics layers. | `collect_all()` produced a 596 MB sidecar and bundled unrelated Spark/Dask/test/plotting code. |
+| D-011 | End users receive a versioned GitHub Release ZIP, never GitHub's source-code ZIP. | The source archive excludes all ignored native build artifacts and cannot satisfy `unzip -> run`. |
 
 ## Evidence already collected
 
@@ -91,6 +92,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   launch, exited cleanly, and left no engine supervisor or worker process.
 - Read-only portable-home qualification now produces one sanitized actionable
   message in the desktop instead of a traceback or unexplained exit code.
+- GitHub Actions run `35456417569` proved all Linux checks and all Windows
+  source/native probes, then failed before packaging because
+  `build_portable.ps1` used array splatting for named PowerShell parameters.
+  No Windows executable or portable asset was produced by that run.
 - The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
   initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
   `355.1 MB` before installer compression. Observed cold readiness was
@@ -114,7 +119,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Desktop lifecycle | PASS | Linux Tauri starts engine, UI reaches authenticated health/storage PASS, graceful close kills both one-file processes |
 | Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
 | Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
-| Windows package | TODO | PyInstaller sidecar and Tauri package built from clean runner |
+| Windows package | FAIL | Run `35456417569` reached the build script but failed on invalid PowerShell argument splatting before PyInstaller/Tauri packaging |
 | Operational budget | PASS | Linux size, cold start, idle memory, full-doctor peak, and extension load recorded above; optimization remains a release concern |
 
 Phase 0 is complete only when all gates pass. A gate may be deliberately removed
@@ -133,6 +138,9 @@ only through a recorded decision with evidence.
   mode as serious follow-up candidates, not cosmetic tuning.
 - Linux evidence does not establish Windows DLL discovery, WebView2 behavior,
   firewall assertions, installer layout, or offline clean-machine behavior.
+- The first clean Windows packaging attempt failed before PyInstaller because
+  of build-script parameter passing. The correction and release-ZIP path require
+  a new green Windows run before any preview is published.
 
 ## Next executable steps
 
@@ -149,6 +157,22 @@ only through a recorded decision with evidence.
    technology is explicitly replaced through a recorded decision.
 
 ## Session log
+
+### 2026-09-19 — Runnable GitHub release path corrected
+
+- Compared the old WFMHub-Portable delivery contract with WFMHub-2. The old
+  product published a complete runtime ZIP as a GitHub Release asset and
+  explicitly rejected GitHub's source ZIP; WFMHub-2 had no equivalent asset.
+- Recorded Windows run `35456417569`: Linux passed, Windows dependency/source,
+  DuckLake, and native probes passed, then packaging failed because an argument
+  array was incorrectly used for named PowerShell parameter splatting.
+- Corrected the build invocation and added a versioned, checksummed portable
+  ZIP with one `WFMHub-2` root. CI now expands the exact ZIP, launches the actual
+  desktop entrypoint, requires authenticated SQLite/DuckLake/Parquet storage
+  activity, checks clean sidecar shutdown, completes the authoritative direct
+  HTTP probe with outbound traffic blocked, and uploads the ZIP separately.
+- This entry records implementation and the prior failure, not a gate pass. A
+  GitHub pre-release may be created only after the corrected Windows run passes.
 
 ### 2026-09-19 — Clean frozen installs qualified
 

@@ -18,6 +18,8 @@ Conceptual Windows x64 release:
 WFMHub-2/
 ├─ WFMHub.exe
 ├─ wfmhub-engine.exe
+├─ README-FIRST.txt
+├─ SHA256SUMS.txt
 ├─ Feed/
 ├─ Reports/
 ├─ data/
@@ -29,7 +31,13 @@ WFMHub-2/
    └─ ducklake.duckdb_extension
 ```
 
-Exact Tauri sidecar file names inside the bundle include the target triple during build.
+The sidecar build input includes the target triple; Tauri copies it to the
+release directory as `wfmhub-engine.exe`, which is the runtime name packaged
+beside `WFMHub.exe`.
+The build emits `dist/WFMHub-2-v<version>-windows-x64-portable.zip` plus an
+adjacent `.sha256`, expands the ZIP, verifies its exact member list and payload
+hashes, and records archive evidence before reporting success. GitHub's
+automatic source-code ZIP is not a runnable portable release.
 
 ## Build-time vs runtime dependencies
 
@@ -130,8 +138,16 @@ cargo metadata --manifest-path src-tauri/Cargo.toml --locked --format-version 1
 
 `build_portable.ps1` repeats the frozen checks, stages and probes DuckLake,
 exercises the native analytical stack, builds the sidecar, copies it with the
-Tauri target-triple suffix, and builds the desktop bundle. Missing, modified, or
-version-incompatible native artifacts fail before packaging.
+Tauri target-triple suffix, builds the desktop, and invokes the verified ZIP
+packager. Missing, modified, empty, or version-incompatible artifacts fail
+before packaging.
+
+Windows CI extracts that exact ZIP, launches `WFMHub.exe`, requires the UI to
+initiate authenticated SQLite/DuckLake/Parquet storage activity and remain
+healthy through a stabilization window, then verifies desktop-sidecar shutdown.
+The following direct authenticated engine smoke is the authoritative completed
+HTTP probe and runs with outbound traffic blocked. Only that ZIP is eligible to
+become a GitHub Release asset.
 
 ## Package size
 

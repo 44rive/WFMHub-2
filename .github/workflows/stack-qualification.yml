@@ -165,6 +165,7 @@ jobs:
       - name: Verify all source layers on Windows
         shell: pwsh
         run: |
+          $PSNativeCommandUseErrorActionPreference = $true
           uv run --frozen ruff format --check src tests scripts
           uv run --frozen ruff check src tests scripts
           uv run --frozen pyright
@@ -196,13 +197,23 @@ jobs:
         shell: pwsh
         run: ./scripts/build_portable.ps1 -UseStagedDuckLake
 
-      - name: Smoke packaged engine with outbound network blocked
+      - name: Expand and smoke the exact portable release ZIP
         shell: pwsh
         run: |
+          $Archives = @(Get-ChildItem dist/WFMHub-2-v*-windows-x64-portable.zip -File)
+          if ($Archives.Count -ne 1) {
+            throw "Expected exactly one portable release ZIP, found $($Archives.Count)"
+          }
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          Expand-Archive -LiteralPath $Archives[0].FullName -DestinationPath $ExtractRoot
+          $PortableRoot = Join-Path $ExtractRoot "WFMHub-2"
+          ./scripts/smoke_desktop.ps1 `
+            -DesktopPath (Join-Path $PortableRoot "WFMHub.exe") `
+            -EvidencePath qualification-evidence/packaged-desktop.json
           ./scripts/smoke_engine.ps1 `
-            -EnginePath dist/wfmhub-engine.exe `
-            -ExtensionPath packaging/duckdb_extensions/ducklake.duckdb_extension `
-            -HomePath "$env:RUNNER_TEMP/wfmhub2-portable-home" `
+            -EnginePath (Join-Path $PortableRoot "wfmhub-engine.exe") `
+            -ExtensionPath (Join-Path $PortableRoot "duckdb_extensions/ducklake.duckdb_extension") `
+            -HomePath $PortableRoot `
             -EvidencePath qualification-evidence/packaged-engine.json `
             -BlockOutbound
 
@@ -214,6 +225,8 @@ jobs:
             "dist/wfmhub-engine.exe",
             "packaging/duckdb_extensions/ducklake.duckdb_extension"
           )
+          $Candidates += Get-ChildItem dist/WFMHub-2-v*-windows-x64-portable.zip* -File |
+            Select-Object -ExpandProperty FullName
           $Candidates += Get-ChildItem src-tauri/target/release/bundle -File -Recurse |
             Select-Object -ExpandProperty FullName
           foreach ($Candidate in $Candidates) {
@@ -229,6 +242,16 @@ jobs:
           New-Item -ItemType Directory -Force qualification-evidence | Out-Null
           $Files | ConvertTo-Json | Set-Content qualification-evidence/package-files.json -Encoding utf8
           $Files | Format-Table path, bytes | Out-String | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Upload portable release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WFMHub-2-windows-x64-portable
+          path: |
+            dist/WFMHub-2-v*-windows-x64-portable.zip
+            dist/WFMHub-2-v*-windows-x64-portable.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
 
       - name: Upload Windows qualification evidence
         if: always()

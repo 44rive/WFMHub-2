@@ -290,6 +290,10 @@ The target Windows release is still portable/offline:
 WFMHub-2/
 ├─ WFMHub.exe                 Tauri desktop shell
 ├─ wfmhub-engine.exe          bundled Python/FastAPI sidecar
+├─ README-FIRST.txt
+├─ SHA256SUMS.txt
+├─ duckdb_extensions/
+│  └─ ducklake.duckdb_extension
 ├─ Feed/
 ├─ Reports/
 └─ data/
@@ -309,6 +313,10 @@ End users should require:
 - no internet connection during normal operation.
 
 Node, Rust, uv, and PyInstaller are build-time tools only. The packaged DuckLake extension is loaded locally in offline releases.
+
+End users must download the versioned Windows portable asset from GitHub
+Releases, not GitHub's automatically generated source-code ZIP. The source ZIP
+does not contain the compiled desktop, sidecar, or DuckLake binaries.
 
 See [docs/PORTABLE_DEPLOYMENT.md](docs/PORTABLE_DEPLOYMENT.md).
 

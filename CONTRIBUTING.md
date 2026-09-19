@@ -71,8 +71,12 @@ To retest an already staged extension without downloading it again:
 ./scripts/build_portable.ps1 -UseStagedDuckLake
 ```
 
-The generated extension binary, sidecar, bundles, runtime data, and evidence
-are build artifacts and must not be committed.
+The build also creates and verifies
+`dist/WFMHub-2-v<version>-windows-x64-portable.zip` and its adjacent `.sha256`;
+archive/member evidence is written to
+`qualification-evidence/portable-archive.json`. The generated ZIP, extension
+binary, sidecar, bundles, runtime data, and evidence are build artifacts and
+must not be committed.
 
 ## Updating dependencies
 
