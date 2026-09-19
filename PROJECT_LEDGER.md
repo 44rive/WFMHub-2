@@ -1,0 +1,109 @@
+# WFMHub 2 Project Ledger
+
+Last updated: 2026-09-19
+
+This is the durable project handoff. Read it before exploring the repository.
+Update it after material work so the next human or AI session starts from known
+state instead of repeating discovery.
+
+## Mission and current milestone
+
+Build a trustworthy, portable WFM decision layer, beginning with an RTA product
+and expanding only after the governed evidence and operational workflow work.
+
+**Active milestone: Phase 0 — stack qualification.** Prove the complete desktop
+walking skeleton on a clean Windows environment before adding more WFM features.
+
+## Repository and branch state
+
+| Ref | Purpose | State |
+| --- | --- | --- |
+| `origin/main` at `ec49670` | 2026 greenfield/Tauri/DuckLake major update | Architecture seed; not release-ready |
+| local `main` at `e943a05` | Pre-update governed contracts and storage work | Preserve; four commits ahead of the old baseline, one unstaged time cleanup |
+| `integration/stack-qualification` | Authoritative Phase 0 integration branch | Active |
+| `integration/stack-backend` | Isolated Python/storage worker branch | Active during Phase 0 |
+| `integration/stack-desktop` | Isolated Tauri/frontend worker branch | Active during Phase 0 |
+| `integration/stack-foundation` | Isolated locks/CI/tooling worker branch | Active during Phase 0 |
+
+Do not merge the upstream repository replacement directly into the preserved
+local `main`. Integrate reviewed logical changes on the qualification branch.
+
+## Settled decisions
+
+| ID | Decision | Reason |
+| --- | --- | --- |
+| D-001 | Qualify the full stack before WFM feature development. | Dependency resolution does not prove launch, offline behavior, or shutdown. |
+| D-002 | Preserve and selectively port prior governed WFM work. | It contains source contracts, exact mappings, KPI evidence, migrations, and tests absent from the major update. |
+| D-003 | Do not use one null-heavy universal interval fact. | Demand/service, forecast/requirement, schedule, and attendance have different grains and authorities. |
+| D-004 | SQLite is the control plane; DuckLake/Parquet is provisional for analytical history. | DuckLake remains contingent on offline Windows packaging, recovery, correction, and performance evidence. |
+| D-005 | Heavy forecasting/ML/optimization libraries must not block core startup. | They increase size and native packaging risk and belong behind explicit capability checks. |
+| D-006 | Portable runtime binds to loopback and uses a per-launch token, restricted origins, explicit home, and owned sidecar lifecycle. | Loopback alone is not a sufficient desktop security/lifecycle boundary. |
+| D-007 | Import only business contracts/configuration from WFMHub-Portable, never operational or personal data. | Preserve privacy and reproducibility. |
+
+## Evidence already collected
+
+- The complete major-update tree, documentation, source, tests, packaging, and
+  dependency definitions were reviewed.
+- Python 3.14 Windows x64 wheels resolve for the declared Python dependency set.
+  This proves availability, not PyInstaller compatibility.
+- The major-update baseline has 5 lightweight Python tests passing under the
+  available Python 3.12 environment; its declared runtime is Python 3.14.
+- Baseline Python Ruff checks fail with 5 findings.
+- Baseline frontend Vitest passes, but Biome, TypeScript, and production build
+  fail. No lockfiles are committed.
+- No bundled DuckLake extension is present, so the documented portable build
+  fails its own extension precondition.
+- The API currently uses module-global settings rather than the CLI `--home`,
+  and no CORS/session-token boundary is implemented.
+- The preserved local branch has 30 Python tests passing and frontend
+  lint/build passing, but still has format and test typing cleanup outstanding.
+
+## Phase 0 acceptance gates
+
+Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
+
+| Gate | Status | Required evidence |
+| --- | --- | --- |
+| Reproducible dependency locks | TODO | Frozen Python, pnpm, and Cargo installs from a clean checkout |
+| Python quality | TODO | Ruff, Pyright, and pytest on Python 3.14 |
+| Frontend quality | TODO | Biome, TypeScript, Vitest, and production build |
+| Core storage probe | TODO | SQLite plus offline local DuckLake load, write, restart, and read |
+| Native-library probe | TODO | Packaged Polars, DuckDB, forecast, XGBoost, and OR-Tools smoke operations |
+| Secure engine launch | TODO | Loopback, per-launch token, restricted origin/host, explicit portable home |
+| Desktop lifecycle | TODO | Tauri starts engine, receives readiness, UI reaches health, close kills engine |
+| Portable persistence | TODO | Writable co-located data survives restart; read-only location fails clearly |
+| Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
+| Windows package | TODO | PyInstaller sidecar and Tauri package built from clean runner |
+| Operational budget | TODO | Record package size, cold start, idle memory, extension load time |
+
+Phase 0 is complete only when all gates pass. A gate may be deliberately removed
+only through a recorded decision with evidence.
+
+## Current risks and fallbacks
+
+- If DuckLake cannot load reliably offline or recover safely, use the preserved
+  immutable-generation DuckDB/Parquet implementation.
+- If Python 3.14/PyInstaller fails on Windows, test and document Python 3.13 as
+  the compatibility baseline.
+- If heavy analytical libraries make core launch too large or slow, split them
+  into optional/lazy capabilities and keep the RTA core minimal.
+- Fixed port `8765` can collide; readiness and connection details must be owned
+  by the desktop launcher rather than hard-coded in React.
+
+## Next executable steps
+
+1. Commit this ledger and repository instructions on the integration branch.
+2. Produce independent backend, desktop, and foundation qualification commits.
+3. Review and integrate those commits onto `integration/stack-qualification`.
+4. Run all Linux-available checks locally.
+5. Add a Windows clean-runner workflow for the build/launch/offline gates.
+6. Record every gate result here before starting the first WFM vertical slice.
+
+## Session log
+
+### 2026-09-19 — Phase 0 opened
+
+- Compared the major update with the preserved governed implementation.
+- Chose stack qualification as the blocking milestone.
+- Created isolated integration/backend/desktop/foundation worktrees.
+- Added the durable ledger contract and initial evidence.
