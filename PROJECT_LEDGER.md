@@ -113,6 +113,15 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   desktop a realistic one-file cold-start window, then always tests the
   extracted engine with a separate clean home and outbound traffic blocked so
   it can distinguish desktop integration from engine/package behavior.
+- Run `35465501042` isolated the Windows runtime failure. The untouched desktop
+  stayed alive and created SQLite plus its DuckLake catalog, while the engine
+  disappeared before producing Parquet. The direct packaged engine emitted
+  readiness in about 14 seconds and then refused the first health connection.
+  Root cause: the parent watchdog used the Unix `os.kill(pid, 0)` existence
+  idiom on Windows. That idiom is invalid and potentially destructive under
+  CPython's Windows process handling, so owner liveness was lost or misread.
+  The watchdog now uses a non-signalling Windows process query and has a
+  cross-platform live/missing PID regression test.
 - The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
   initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
   `355.1 MB` before installer compression. Observed cold readiness was
@@ -136,7 +145,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Desktop lifecycle | PASS | Linux Tauri starts engine, UI reaches authenticated health/storage PASS, graceful close kills both one-file processes |
 | Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
 | Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
-| Windows package | FAIL | Run `35464407642` produced a verified ZIP but its first extracted-desktop smoke timed out without storage activity; isolated engine/desktop rerun pending |
+| Windows package | FAIL | Run `35465501042` proved a Windows-specific parent-watchdog defect after readiness; Win32 process-existence correction pending CI proof |
 | Operational budget | PASS | Linux size, cold start, idle memory, full-doctor peak, and extension load recorded above; optimization remains a release concern |
 
 Phase 0 is complete only when all gates pass. A gate may be deliberately removed
@@ -197,6 +206,11 @@ only through a recorded decision with evidence.
   portable root first, then independently tests packaged-engine startup with
   outbound traffic blocked even if the desktop fails; the desktop startup
   watchdog is now 120 seconds instead of 30.
+- Run `35465501042` confirmed the packaged engine starts in about 14 seconds but
+  exits immediately after readiness because it used an invalid and potentially
+  destructive Unix PID-existence idiom on Windows. Replaced that probe with a
+  non-signalling Win32 process-handle query and added a regression test that
+  runs on both CI platforms.
 - Corrected the build invocation and added a versioned, checksummed portable
   ZIP with one `WFMHub-2` root. CI now expands the exact ZIP, launches the actual
   desktop entrypoint, requires authenticated SQLite/DuckLake/Parquet storage

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import cast
 
@@ -9,6 +10,7 @@ from wfmhub2.cli import (
     build_parser,
     error_line,
     parent_pid_from_environment,
+    process_exists,
     readiness_line,
     reserve_server_socket,
     session_token_from_args,
@@ -89,7 +91,7 @@ def test_parent_watchdog_pid_is_validated(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setenv("WFMHUB2_PARENT_PID", "43127")
     assert parent_pid_from_environment() == 43127
 
-    for invalid in ("0", "-1", "not-a-pid"):
+    for invalid in ("0", "-1", "4294967296", "not-a-pid"):
         monkeypatch.setenv("WFMHUB2_PARENT_PID", invalid)
         try:
             parent_pid_from_environment()
@@ -97,6 +99,11 @@ def test_parent_watchdog_pid_is_validated(monkeypatch: MonkeyPatch) -> None:
             assert "positive process ID" in str(exc)
         else:
             raise AssertionError("invalid desktop parent PID must not be accepted")
+
+
+def test_parent_watchdog_detects_live_and_missing_processes() -> None:
+    assert process_exists(os.getpid())
+    assert not process_exists(2_147_483_647)
 
 
 def test_portable_home_error_is_machine_readable_and_actionable() -> None:

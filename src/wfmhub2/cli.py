@@ -1,10 +1,12 @@
 import argparse
+import ctypes
 import json
 import os
 import socket
 import threading
 import time
 from collections.abc import Sequence
+from ctypes import wintypes
 from pathlib import Path
 
 import uvicorn
@@ -181,12 +183,39 @@ def parent_pid_from_environment() -> int | None:
         parent_pid = int(raw_parent_pid)
     except ValueError as exc:
         raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID") from exc
-    if parent_pid <= 1:
+    if parent_pid <= 1 or parent_pid > 0xFFFFFFFF:
         raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID")
     return parent_pid
 
 
-def _process_exists(process_id: int) -> bool:
+def process_exists(process_id: int) -> bool:
+    if os.name == "nt":
+        # The POSIX `kill(pid, 0)` liveness idiom is invalid on Windows and can
+        # be destructive there. Query a process handle without signalling it.
+        process_query_limited_information = 0x1000
+        still_active = 259
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # pyright: ignore[reportAttributeAccessIssue]
+        open_process = kernel32.OpenProcess
+        open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        open_process.restype = wintypes.HANDLE
+        get_exit_code_process = kernel32.GetExitCodeProcess
+        get_exit_code_process.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        get_exit_code_process.restype = wintypes.BOOL
+        close_handle = kernel32.CloseHandle
+        close_handle.argtypes = [wintypes.HANDLE]
+        close_handle.restype = wintypes.BOOL
+
+        handle = open_process(process_query_limited_information, False, process_id)
+        if not handle:
+            return False
+        try:
+            exit_code = wintypes.DWORD()
+            if not get_exit_code_process(handle, ctypes.byref(exit_code)):
+                return False
+            return exit_code.value == still_active
+        finally:
+            close_handle(handle)
+
     try:
         os.kill(process_id, 0)
     except OSError:
@@ -199,7 +228,7 @@ def start_parent_watchdog(server: uvicorn.Server, parent_pid: int | None) -> Non
         return
 
     def watch_parent() -> None:
-        while _process_exists(parent_pid):
+        while process_exists(parent_pid):
             time.sleep(0.1)
         server.should_exit = True
 
