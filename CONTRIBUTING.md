@@ -43,10 +43,16 @@ pnpm desktop:dev
 Rust source checks use the committed Cargo lock:
 
 ```powershell
+$env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":{}}}'
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
 cargo test --manifest-path src-tauri/Cargo.toml --locked
+Remove-Item Env:TAURI_CONFIG
 ```
+
+The test-only Tauri override avoids requiring release-staged native artifacts
+for source checks. `scripts/build_portable.ps1` uses the normal configuration
+and validates the real sidecar and DuckLake resource.
 
 ## Windows stack qualification
 

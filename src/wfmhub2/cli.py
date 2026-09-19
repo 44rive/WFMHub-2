@@ -2,6 +2,8 @@ import argparse
 import json
 import os
 import socket
+import threading
+import time
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -12,6 +14,12 @@ from wfmhub2.core.settings import Settings
 from wfmhub2.doctor import DoctorReport, run_doctor
 from wfmhub2.storage.lakehouse import initialize as initialize_lakehouse
 from wfmhub2.storage.sqlite import initialize as initialize_sqlite
+
+ERROR_PREFIX = "WFMHUB2_ERROR "
+PORTABLE_HOME_ERROR = (
+    "The portable WFMHub folder is not writable. Move WFMHub to a writable "
+    "folder or grant write access."
+)
 
 
 def init_storage(settings: Settings, *, require_offline: bool = False) -> None:
@@ -93,6 +101,15 @@ def readiness_line(actual_port: int) -> str:
     return f"WFMHUB2_READY {payload}"
 
 
+def error_line(code: str, message: str) -> str:
+    payload = json.dumps(
+        {"code": code, "message": message},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return f"{ERROR_PREFIX}{payload}"
+
+
 def reserve_server_socket(settings: Settings) -> socket.socket:
     family = socket.AF_INET6 if ":" in settings.host else socket.AF_INET
     server_socket = socket.socket(family, socket.SOCK_STREAM)
@@ -127,7 +144,12 @@ def _print_human_report(report: DoctorReport) -> None:
         print(f"  {check.name}: {check.status}{suffix}")
 
 
-def _serve(settings: Settings, session_token: str) -> None:
+def _serve(
+    settings: Settings,
+    session_token: str,
+    *,
+    parent_pid: int | None = None,
+) -> None:
     init_storage(settings)
     app = create_app(settings, session_token)
     server_socket = reserve_server_socket(settings)
@@ -140,6 +162,7 @@ def _serve(settings: Settings, session_token: str) -> None:
         access_log=False,
     )
     server = ReadinessServer(config, readiness_line(actual_port))
+    start_parent_watchdog(server, parent_pid)
     server.run(sockets=[server_socket])
 
 
@@ -150,7 +173,44 @@ def session_token_from_args(args: argparse.Namespace, parser: argparse.ArgumentP
     return session_token
 
 
-def main(argv: Sequence[str] | None = None) -> None:
+def parent_pid_from_environment() -> int | None:
+    raw_parent_pid = os.environ.get("WFMHUB2_PARENT_PID")
+    if raw_parent_pid is None:
+        return None
+    try:
+        parent_pid = int(raw_parent_pid)
+    except ValueError as exc:
+        raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID") from exc
+    if parent_pid <= 1:
+        raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID")
+    return parent_pid
+
+
+def _process_exists(process_id: int) -> bool:
+    try:
+        os.kill(process_id, 0)
+    except OSError:
+        return False
+    return True
+
+
+def start_parent_watchdog(server: uvicorn.Server, parent_pid: int | None) -> None:
+    if parent_pid is None:
+        return
+
+    def watch_parent() -> None:
+        while _process_exists(parent_pid):
+            time.sleep(0.1)
+        server.should_exit = True
+
+    threading.Thread(
+        target=watch_parent,
+        name="wfmhub2-parent-watchdog",
+        daemon=True,
+    ).start()
+
+
+def _main(argv: Sequence[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     settings = settings_from_args(args)
@@ -174,7 +234,19 @@ def main(argv: Sequence[str] | None = None) -> None:
             raise SystemExit(1)
         return
 
-    _serve(settings, session_token_from_args(args, parser))
+    _serve(
+        settings,
+        session_token_from_args(args, parser),
+        parent_pid=parent_pid_from_environment(),
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    try:
+        _main(argv)
+    except PermissionError:
+        print(error_line("portable_home_not_writable", PORTABLE_HOME_ERROR), flush=True)
+        raise SystemExit(2) from None
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
-use std::{env, sync::Mutex, time::Duration};
+use std::{env, path::Path, sync::Mutex, time::Duration};
 use tauri::{path::BaseDirectory, Manager, RunEvent, State};
 use tauri_plugin_shell::{
     process::{CommandChild, CommandEvent},
@@ -8,6 +8,8 @@ use tauri_plugin_shell::{
 };
 
 const READY_PREFIX: &str = "WFMHUB2_READY ";
+const ERROR_PREFIX: &str = "WFMHUB2_ERROR ";
+const PORTABLE_HOME_ERROR: &str = "The portable WFMHub folder is not writable. Move WFMHub to a writable folder or grant write access.";
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -74,6 +76,13 @@ struct ReadyPayload {
     port: u16,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ErrorPayload {
+    code: String,
+    message: String,
+}
+
 fn parse_readiness_line(line: &[u8]) -> Result<Option<u16>, String> {
     let decoded = String::from_utf8_lossy(line);
     let Some(payload) = decoded.trim().strip_prefix(READY_PREFIX) else {
@@ -85,6 +94,19 @@ fn parse_readiness_line(line: &[u8]) -> Result<Option<u16>, String> {
         return Err("engine readiness payload contained port 0".to_owned());
     }
     Ok(Some(ready.port))
+}
+
+fn parse_error_line(line: &[u8]) -> Result<Option<String>, String> {
+    let decoded = String::from_utf8_lossy(line);
+    let Some(payload) = decoded.trim().strip_prefix(ERROR_PREFIX) else {
+        return Ok(None);
+    };
+    let failure: ErrorPayload = serde_json::from_str(payload)
+        .map_err(|error| format!("invalid engine error payload: {error}"))?;
+    if failure.code != "portable_home_not_writable" || failure.message != PORTABLE_HOME_ERROR {
+        return Err("engine reported an unrecognized startup error".to_owned());
+    }
+    Ok(Some(failure.message))
 }
 
 fn generate_session_token() -> String {
@@ -122,6 +144,25 @@ fn stop_engine(state: &EngineState) {
     }
 }
 
+fn resolve_ducklake_extension(app: &tauri::App, home: &Path) -> Result<std::path::PathBuf, String> {
+    let portable = home.join("duckdb_extensions/ducklake.duckdb_extension");
+    if portable.is_file() {
+        return Ok(portable);
+    }
+
+    let bundled = app
+        .path()
+        .resolve(
+            "duckdb_extensions/ducklake.duckdb_extension",
+            BaseDirectory::Resource,
+        )
+        .map_err(|error| format!("DuckLake resource path could not be resolved: {error}"))?;
+    if !bundled.is_file() {
+        return Err("the bundled DuckLake extension is missing".to_owned());
+    }
+    Ok(bundled)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -130,20 +171,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![get_engine_connection])
         .setup(|app| {
             let session_token = generate_session_token();
-            let extension_path = match app.path().resolve(
-                "duckdb_extensions/ducklake.duckdb_extension",
-                BaseDirectory::Resource,
-            ) {
-                Ok(path) => path,
-                Err(error) => {
-                    fail_engine(
-                        app.state::<EngineState>().inner(),
-                        format!("DuckLake resource path could not be resolved: {error}"),
-                    );
-                    return Ok(());
-                }
-            };
-
             // Portable mode keeps data next to WFMHub.exe. A future installed/server
             // edition can override this contract without changing the Python domains.
             let home = match env::current_exe()
@@ -156,6 +183,13 @@ pub fn run() {
                         app.state::<EngineState>().inner(),
                         "WFMHub executable home could not be resolved",
                     );
+                    return Ok(());
+                }
+            };
+            let extension_path = match resolve_ducklake_extension(app, &home) {
+                Ok(path) => path,
+                Err(error) => {
+                    fail_engine(app.state::<EngineState>().inner(), error);
                     return Ok(());
                 }
             };
@@ -172,17 +206,20 @@ pub fn run() {
                     return Ok(());
                 }
             };
-            let command = sidecar.env("WFMHUB2_SESSION_TOKEN", &session_token).args([
-                "--home",
-                &home_arg,
-                "--ducklake-extension",
-                &extension_arg,
-                "serve",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "0",
-            ]);
+            let command = sidecar
+                .env("WFMHUB2_SESSION_TOKEN", &session_token)
+                .env("WFMHUB2_PARENT_PID", std::process::id().to_string())
+                .args([
+                    "--home",
+                    &home_arg,
+                    "--ducklake-extension",
+                    &extension_arg,
+                    "serve",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    "0",
+                ]);
 
             let (mut events, child) = match command.spawn() {
                 Ok(process) => process,
@@ -219,7 +256,17 @@ pub fn run() {
                                     connection.mark_ready(port, readiness_token.clone());
                                 }
                             }
-                            Ok(None) => {}
+                            Ok(None) => match parse_error_line(&line) {
+                                Ok(Some(message)) => {
+                                    fail_engine(state.inner(), message);
+                                    stop_engine(state.inner());
+                                }
+                                Ok(None) => {}
+                                Err(error) => {
+                                    fail_engine(state.inner(), error);
+                                    stop_engine(state.inner());
+                                }
+                            },
                             Err(error) => {
                                 fail_engine(state.inner(), error);
                                 stop_engine(state.inner());
@@ -293,6 +340,22 @@ mod tests {
         assert!(parse_readiness_line(br#"WFMHUB2_READY {"port":0}"#).is_err());
         assert!(parse_readiness_line(b"WFMHUB2_READY not-json").is_err());
         assert!(parse_readiness_line(br#"WFMHUB2_READY {"port":43127,"token":"leak"}"#).is_err());
+    }
+
+    #[test]
+    fn accepts_only_the_known_sanitized_startup_error() {
+        let line = format!(
+            r#"WFMHUB2_ERROR {{"code":"portable_home_not_writable","message":"{PORTABLE_HOME_ERROR}"}}"#
+        );
+        assert_eq!(
+            parse_error_line(line.as_bytes()).unwrap(),
+            Some(PORTABLE_HOME_ERROR.to_owned())
+        );
+        assert!(parse_error_line(
+            br#"WFMHUB2_ERROR {"code":"unexpected","message":"sensitive details"}"#
+        )
+        .is_err());
+        assert_eq!(parse_error_line(b"ordinary engine log").unwrap(), None);
     }
 
     #[test]

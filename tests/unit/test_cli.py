@@ -5,7 +5,10 @@ from typing import cast
 from pytest import MonkeyPatch
 
 from wfmhub2.cli import (
+    PORTABLE_HOME_ERROR,
     build_parser,
+    error_line,
+    parent_pid_from_environment,
     readiness_line,
     reserve_server_socket,
     session_token_from_args,
@@ -77,3 +80,31 @@ def test_production_session_token_comes_from_child_environment(
     monkeypatch.setenv("WFMHUB2_SESSION_TOKEN", "environment-launch-secret")
 
     assert session_token_from_args(args, parser) == "environment-launch-secret"
+
+
+def test_parent_watchdog_pid_is_validated(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.delenv("WFMHUB2_PARENT_PID", raising=False)
+    assert parent_pid_from_environment() is None
+
+    monkeypatch.setenv("WFMHUB2_PARENT_PID", "43127")
+    assert parent_pid_from_environment() == 43127
+
+    for invalid in ("0", "-1", "not-a-pid"):
+        monkeypatch.setenv("WFMHUB2_PARENT_PID", invalid)
+        try:
+            parent_pid_from_environment()
+        except RuntimeError as exc:
+            assert "positive process ID" in str(exc)
+        else:
+            raise AssertionError("invalid desktop parent PID must not be accepted")
+
+
+def test_portable_home_error_is_machine_readable_and_actionable() -> None:
+    line = error_line("portable_home_not_writable", PORTABLE_HOME_ERROR)
+    payload = cast(dict[str, object], json.loads(line.removeprefix("WFMHUB2_ERROR ")))
+
+    assert payload == {
+        "code": "portable_home_not_writable",
+        "message": PORTABLE_HOME_ERROR,
+    }
+    assert "writable" in PORTABLE_HOME_ERROR

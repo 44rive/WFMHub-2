@@ -25,9 +25,8 @@ WFMHub-2/
 │  └─ lake/
 │     ├─ catalog.ducklake
 │     └─ files/
-└─ _system/
-   └─ duckdb_extensions/
-      └─ ducklake.duckdb_extension
+└─ duckdb_extensions/
+   └─ ducklake.duckdb_extension
 ```
 
 Exact Tauri sidecar file names inside the bundle include the target triple during build.
@@ -56,6 +55,11 @@ PyInstaller produces `wfmhub-engine.exe` containing the Python runtime and appli
 Tauri packages it as an `externalBin` sidecar and starts it on application launch.
 
 The engine binds to `127.0.0.1` only.
+
+PyInstaller one-file mode uses a supervisor plus a Python worker process. Tauri
+retains and stops the supervisor, while the engine also watches the owning
+desktop PID so a normal close or desktop crash cannot leave the API worker
+orphaned.
 
 ## DuckLake extension
 
@@ -87,7 +91,9 @@ React/Vite output is static build content packaged inside the Tauri application.
 
 Portable mode defaults data paths relative to the executable/application home so the folder can be moved as one unit.
 
-WFMHub should detect/warn about unsupported writable locations such as read-only folders. A future installed edition may optionally use a per-user application-data directory.
+WFMHub detects unsupported read-only locations before readiness and shows an
+actionable message without exposing a traceback. A future installed edition may
+optionally use a per-user application-data directory.
 
 ## Offline smoke test
 
@@ -132,6 +138,13 @@ version-incompatible native artifacts fail before packaging.
 WFMHub 2.0 will be materially larger than the original portable tool because OR-Tools, XGBoost, forecasting libraries and the Python runtime contain native binaries. That is an acceptable tradeoff if the product remains simple to deploy and operate.
 
 Package size is a secondary metric; startup, refresh speed, reliability and zero-install operation are primary.
+
+The Phase 0 Linux qualification sidecar is 303.3 MB after removing unused
+test, GUI, GPU, and optional analytical modules from the PyInstaller graph. The
+complete uncompressed shell + engine + DuckLake files are about 355.1 MB, cold
+readiness was about 10.25 seconds, and total desktop-process idle RSS was about
+527 MiB on the qualification host. Windows evidence is still required; these
+figures are a baseline to improve, not a release-size waiver.
 
 ## Offline DuckLake extension contract
 

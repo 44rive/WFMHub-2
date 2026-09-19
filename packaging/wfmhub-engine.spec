@@ -2,34 +2,28 @@
 # Run through scripts/build_portable.ps1 so the resulting executable is renamed
 # with the Tauri target triple before bundling.
 
-from PyInstaller.utils.hooks import collect_all
+from pathlib import Path
 
-hiddenimports = []
-datas = []
-binaries = []
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
-for package in (
-    "duckdb",
-    "polars",
-    "ortools",
-    "xgboost",
-    "statsforecast",
-    "mlforecast",
-    "hierarchicalforecast",
-    "openpyxl",
-    "xlsxwriter",
-):
-    package_datas, package_binaries, package_hidden = collect_all(package)
-    datas += package_datas
-    binaries += package_binaries
-    hiddenimports += package_hidden
+ROOT = Path(SPECPATH).parent.resolve()
 
 analysis = Analysis(
-    ["src/wfmhub2/cli.py"],
-    pathex=["src"],
-    binaries=binaries,
-    datas=datas,
-    hiddenimports=hiddenimports,
+    [str(ROOT / "src" / "wfmhub2" / "cli.py")],
+    pathex=[str(ROOT / "src")],
+    binaries=collect_dynamic_libs("xgboost"),
+    datas=collect_data_files("xgboost", includes=["VERSION"]),
+    hiddenimports=[],
+    excludes=[
+        "PIL",
+        "matplotlib",
+        "nvidia",
+        "openpyxl",
+        "pytest",
+        "sklearn",
+        "tkinter",
+        "xlsxwriter",
+    ],
     noarchive=False,
 )
 pyz = PYZ(analysis.pure)

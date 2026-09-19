@@ -11,6 +11,18 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+function Get-DescendantProcessIds {
+  param([int]$ParentProcessId)
+
+  $Children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $ParentProcessId" |
+    Select-Object -ExpandProperty ProcessId
+  foreach ($ChildProcessId in $Children) {
+    [int]$ChildProcessId
+    Get-DescendantProcessIds -ParentProcessId $ChildProcessId
+  }
+}
+
 $EnginePath = (Resolve-Path $EnginePath).Path
 $ExtensionPath = (Resolve-Path $ExtensionPath).Path
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -23,6 +35,7 @@ New-Item -ItemType Directory -Force -Path $HomePath | Out-Null
 $RuleName = "WFMHub2-Phase0-$([guid]::NewGuid().ToString('N'))"
 $FirewallInstalled = $false
 $Engine = $null
+$Owner = $null
 $OutputLog = Join-Path $HomePath "engine.stdout.log"
 $ErrorLog = Join-Path $HomePath "engine.stderr.log"
 $StartedAt = [DateTimeOffset]::UtcNow
@@ -30,6 +43,7 @@ $TokenBytes = New-Object byte[] 32
 [System.Security.Cryptography.RandomNumberGenerator]::Fill($TokenBytes)
 $SessionToken = [Convert]::ToHexString($TokenBytes).ToLowerInvariant()
 $PriorSessionToken = $env:WFMHUB2_SESSION_TOKEN
+$PriorParentPid = $env:WFMHUB2_PARENT_PID
 
 try {
   if ($BlockOutbound) {
@@ -37,13 +51,21 @@ try {
     $FirewallInstalled = $true
   }
 
+  $PowerShellExecutable = (Get-Process -Id $PID).Path
+  $Owner = Start-Process `
+    -FilePath $PowerShellExecutable `
+    -ArgumentList @("-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 120") `
+    -WindowStyle Hidden `
+    -PassThru
   $env:WFMHUB2_SESSION_TOKEN = $SessionToken
+  $env:WFMHUB2_PARENT_PID = $Owner.Id.ToString()
   $Engine = Start-Process -FilePath $EnginePath -ArgumentList @(
     "--home", $HomePath,
     "--ducklake-extension", $ExtensionPath,
     "serve", "--host", "127.0.0.1", "--port", "0"
   ) -RedirectStandardOutput $OutputLog -RedirectStandardError $ErrorLog -PassThru
   $env:WFMHUB2_SESSION_TOKEN = $PriorSessionToken
+  $env:WFMHUB2_PARENT_PID = $PriorParentPid
 
   $Deadline = [DateTimeOffset]::UtcNow.AddSeconds($TimeoutSeconds)
   $Ready = $null
@@ -97,6 +119,9 @@ try {
 
   $ReadyAt = [DateTimeOffset]::UtcNow
   $Engine.Refresh()
+  $EngineTreeIds = @($Engine.Id) + @(Get-DescendantProcessIds -ParentProcessId $Engine.Id)
+  $EngineTree = $EngineTreeIds |
+    ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }
   $Evidence = [ordered]@{
     engine_path = $EnginePath
     engine_bytes = (Get-Item $EnginePath).Length
@@ -111,9 +136,29 @@ try {
     stack_probe = $Probe
     outbound_blocked = $FirewallInstalled
     cold_start_milliseconds = [math]::Round(($ReadyAt - $StartedAt).TotalMilliseconds)
-    working_set_bytes = $Engine.WorkingSet64
-    private_memory_bytes = $Engine.PrivateMemorySize64
+    process_tree_ids = $EngineTreeIds
+    working_set_bytes = ($EngineTree | Measure-Object -Property WorkingSet64 -Sum).Sum
+    private_memory_bytes = ($EngineTree | Measure-Object -Property PrivateMemorySize64 -Sum).Sum
   }
+
+  Stop-Process -Id $Owner.Id
+  $Owner.WaitForExit()
+  $WatchdogDeadline = [DateTimeOffset]::UtcNow.AddSeconds(10)
+  do {
+    $Engine.Refresh()
+    if (-not $Engine.HasExited) {
+      Start-Sleep -Milliseconds 100
+    }
+  } while (-not $Engine.HasExited -and [DateTimeOffset]::UtcNow -lt $WatchdogDeadline)
+  if (-not $Engine.HasExited) {
+    throw "Packaged engine did not exit after its declared owner stopped"
+  }
+  $SurvivingChildren = $EngineTreeIds |
+    Where-Object { $null -ne (Get-Process -Id $_ -ErrorAction SilentlyContinue) }
+  if ($SurvivingChildren.Count -gt 0) {
+    throw "Packaged engine left descendant processes after owner shutdown: $SurvivingChildren"
+  }
+  $Evidence["parent_watchdog_exit"] = $true
 
   $Serialized = $Evidence | ConvertTo-Json
   Write-Host $Serialized
@@ -127,9 +172,14 @@ try {
 }
 finally {
   $env:WFMHUB2_SESSION_TOKEN = $PriorSessionToken
+  $env:WFMHUB2_PARENT_PID = $PriorParentPid
+  if ($null -ne $Owner -and -not $Owner.HasExited) {
+    Stop-Process -Id $Owner.Id -Force
+    $Owner.WaitForExit()
+  }
   $EngineStillRunning = $false
   if ($null -ne $Engine -and -not $Engine.HasExited) {
-    Stop-Process -Id $Engine.Id -Force
+    & taskkill.exe /PID $Engine.Id /T /F | Out-Null
     $Engine.WaitForExit()
   }
   if ($null -ne $Engine) {

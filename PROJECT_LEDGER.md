@@ -40,6 +40,8 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-006 | Portable runtime binds to loopback and uses a per-launch token, restricted origins, explicit home, and owned sidecar lifecycle. | Loopback alone is not a sufficient desktop security/lifecycle boundary. |
 | D-007 | Import only business contracts/configuration from WFMHub-Portable, never operational or personal data. | Preserve privacy and reproducibility. |
 | D-008 | Tauri generates a 256-bit token, passes it to the owned sidecar through `WFMHUB2_SESSION_TOKEN`, and exposes connection details only through a narrow command. | Avoid fixed ports, generic shell access, and token exposure in process arguments or logs. |
+| D-009 | The packaged engine watches the desktop PID in addition to Tauri retaining the immediate child handle. | PyInstaller one-file mode has a supervisor/child process tree; killing only the supervisor can orphan the API. |
+| D-010 | Package only modules/native assets exercised by the engine, with explicit exclusions for unused GUI, test, GPU, and optional analytics layers. | `collect_all()` produced a 596 MB sidecar and bundled unrelated Spark/Dask/test/plotting code. |
 
 ## Evidence already collected
 
@@ -79,6 +81,21 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   and decompressed SHA-256
   `4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0`.
   The binary is build-staged and ignored, never committed.
+- The integrated Python 3.14.7 source passes Ruff format/lint, strict Pyright,
+  and 17 tests. The frontend passes Biome, TypeScript, 5 Vitest tests, and its
+  production build. Rust passes rustfmt, Clippy with warnings denied, and 5 tests.
+- A real Linux release-mode Tauri shell launched the Python 3.14 PyInstaller
+  engine from a co-located portable directory, rendered authenticated health
+  plus SQLite/DuckLake PASS states, reopened the same storage on a second
+  launch, exited cleanly, and left no engine supervisor or worker process.
+- Read-only portable-home qualification now produces one sanitized actionable
+  message in the desktop instead of a traceback or unexplained exit code.
+- The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
+  initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
+  `355.1 MB` before installer compression. Observed cold readiness was
+  `10.25 s`, total desktop-process idle RSS was about `527 MiB`, packaged full
+  doctor was `11.34 s` with about `385 MiB` peak RSS, and median explicit
+  DuckLake load was `38.1 ms`. These are evidence, not yet release targets.
 
 ## Phase 0 acceptance gates
 
@@ -87,16 +104,17 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Gate | Status | Required evidence |
 | --- | --- | --- |
 | Reproducible dependency locks | TODO | Frozen Python, pnpm, and Cargo installs from a clean checkout |
-| Python quality | TODO | Ruff, Pyright, and pytest on Python 3.14 |
+| Python quality | PASS | Ruff, Pyright, and pytest on Python 3.14 |
 | Frontend quality | PASS | Biome, TypeScript, 5 Vitest contract tests, and production build pass locally on Node 22/pnpm 12 |
-| Core storage probe | TODO | SQLite plus offline local DuckLake load, write, restart, and read |
-| Native-library probe | TODO | Packaged Polars, DuckDB, forecast, XGBoost, and OR-Tools smoke operations |
-| Secure engine launch | TODO | Loopback, per-launch token, restricted origin/host, explicit portable home |
-| Desktop lifecycle | TODO | Tauri starts engine, receives readiness, UI reaches health, close kills engine |
-| Portable persistence | TODO | Writable co-located data survives restart; read-only location fails clearly |
+| Rust quality | PASS | rustfmt, Clippy with warnings denied, and Rust tests |
+| Core storage probe | PASS | SQLite plus offline local DuckLake load, write, restart, and read |
+| Native-library probe | PASS | Linux package executes Polars, DuckDB, StatsForecast, XGBoost, and OR-Tools operations |
+| Secure engine launch | PASS | Loopback, per-launch token, restricted origin/host, explicit portable home |
+| Desktop lifecycle | PASS | Linux Tauri starts engine, UI reaches authenticated health/storage PASS, graceful close kills both one-file processes |
+| Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
 | Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
 | Windows package | TODO | PyInstaller sidecar and Tauri package built from clean runner |
-| Operational budget | TODO | Record package size, cold start, idle memory, extension load time |
+| Operational budget | PASS | Linux size, cold start, idle memory, full-doctor peak, and extension load recorded above; optimization remains a release concern |
 
 Phase 0 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
@@ -109,26 +127,58 @@ only through a recorded decision with evidence.
   the compatibility baseline.
 - If heavy analytical libraries make core launch too large or slow, split them
   into optional/lazy capabilities and keep the RTA core minimal.
-- Fixed port `8765` can collide; readiness and connection details must be owned
-  by the desktop launcher rather than hard-coded in React.
+- The optimized Linux package is still about 303 MB and cold desktop readiness
+  is about 10 seconds. Treat optional/lazy analytics and PyInstaller one-folder
+  mode as serious follow-up candidates, not cosmetic tuning.
+- Linux evidence does not establish Windows DLL discovery, WebView2 behavior,
+  firewall assertions, installer layout, or offline clean-machine behavior.
 
 ## Next executable steps
 
-1. Review and integrate the backend, desktop, and foundation qualification
-   commits onto `integration/stack-qualification`.
-2. Resolve integration conflicts against the final readiness/token/lifecycle
-   contract and make every source-quality check pass.
-3. Run the stack-qualification workflow on a clean Windows runner without
+1. Commit the integrated qualification work and run all frozen installs plus
+   source checks from a clean local worktree.
+2. Run the stack-qualification workflow on a clean Windows runner without
    weakening frozen-lock, artifact-hash, authentication, or outbound-network
    assertions.
-4. Review uploaded package size, checksum, startup, storage, and native-stack
+3. Review uploaded package size, checksum, startup, storage, and native-stack
    evidence; record each acceptance gate result here.
-5. Run the final extracted bundle on a clean/offline Windows workstation with
+4. Run the final extracted bundle on a clean/offline Windows workstation with
    no developer runtimes and confirm WebView2 behavior.
+5. Decide explicit Windows package/startup/memory budgets and whether the core
+   engine must split optional forecasting/optimization capabilities.
 6. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
    technology is explicitly replaced through a recorded decision.
 
 ## Session log
+
+### 2026-09-19 — Integrated Linux desktop stack qualified
+
+- Fixed the PyInstaller spec's repository-root resolution; the original spec
+  looked for `packaging/src/wfmhub2/cli.py` and could not build.
+- Added the missing Tauri icon set and made Tauri invoke the Corepack-pinned
+  pnpm rather than assuming a global executable. The real release-mode Tauri
+  shell now compiles, not merely its Cargo metadata.
+- Added portable-first DuckLake resource resolution with installed-bundle
+  fallback. Tauri's Linux resource resolver otherwise passed an `/usr/lib`
+  path to an unbundled co-located executable and the engine exited before
+  readiness.
+- Reproduced and fixed a real PyInstaller one-file lifecycle defect: killing
+  the supervisor left the Python API worker alive. Tauri now passes its PID and
+  the engine exits when its owning desktop disappears. Two launch/close cycles
+  exited 0 with no survivors.
+- Added a strict `WFMHUB2_ERROR` contract for a non-writable portable folder.
+  Tauri accepts only the known sanitized payload and renders an actionable
+  message; arbitrary sidecar output is not exposed to the webview.
+- Replaced broad `collect_all()` packaging with actual-import analysis, a
+  narrow XGBoost native/data inclusion, and explicit unused-layer exclusions.
+  The package fell from 596.4 MB to 303.3 MB while the packaged full doctor
+  continued to pass every required native operation.
+- Fixed both CI Rust source-check steps so Tauri source tests do not require
+  release-staged native artifacts; the actual Windows package step still
+  validates the real sidecar and resource. Added explicit Linux pkg-config and
+  D-Bus development prerequisites.
+- All claims in this entry are Linux qualification evidence. Clean Windows CI
+  and a no-developer-runtime offline workstation remain blocking Phase 0 gates.
 
 ### 2026-09-19 — Linux backend walking skeleton qualified
 
@@ -158,9 +208,9 @@ only through a recorded decision with evidence.
 - These results do **not** close the Windows/Python 3.14/PyInstaller/Tauri gates.
   The tested extension came from the Linux development cache and is not a release
   artifact. Clean Windows offline packaging remains mandatory.
-- Integration note: FastAPI 0.141/Starlette's typed test client targets `httpx2`;
-  the foundation dependency lock must include it or deliberately pin a compatible
-  FastAPI/Starlette/client set. No lockfile was changed on this worker branch.
+- Integration replaced the deprecated `httpx` test-client dependency with
+  `httpx2`; this restored strict Pyright typing for the FastAPI tests and is
+  captured in the regenerated Python lock.
 
 ### 2026-09-19 — Phase 0 opened
 

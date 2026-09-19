@@ -39,8 +39,10 @@ jobs:
           sudo apt-get install --no-install-recommends -y \
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
+            libdbus-1-dev \
             librsvg2-dev \
-            patchelf
+            patchelf \
+            pkg-config
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -98,6 +100,9 @@ jobs:
 
       - name: Rust quality and locked build
         run: |
+          # Source checks do not consume release-staged native artifacts. The
+          # Windows package build below validates the real sidecar/resources.
+          export TAURI_CONFIG='{"bundle":{"externalBin":[],"resources":{}}}'
           cargo fmt --manifest-path src-tauri/Cargo.toml --check
           cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
           cargo test --manifest-path src-tauri/Cargo.toml --locked
@@ -169,6 +174,7 @@ jobs:
           pnpm test:web
           pnpm build:web
           cargo fmt --manifest-path src-tauri/Cargo.toml --check
+          $env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":{}}}'
           cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
           cargo test --manifest-path src-tauri/Cargo.toml --locked
 
