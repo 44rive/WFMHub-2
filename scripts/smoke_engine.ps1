@@ -52,9 +52,10 @@ try {
   }
 
   $PowerShellExecutable = (Get-Process -Id $PID).Path
+  $OwnerLifetimeSeconds = $TimeoutSeconds + 60
   $Owner = Start-Process `
     -FilePath $PowerShellExecutable `
-    -ArgumentList @("-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds 120") `
+    -ArgumentList @("-NoProfile", "-NonInteractive", "-Command", "Start-Sleep -Seconds $OwnerLifetimeSeconds") `
     -WindowStyle Hidden `
     -PassThru
   $env:WFMHUB2_SESSION_TOKEN = $SessionToken

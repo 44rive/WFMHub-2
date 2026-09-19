@@ -2,7 +2,7 @@
 param(
   [Parameter(Mandatory = $true)]
   [string]$DesktopPath,
-  [int]$TimeoutSeconds = 60,
+  [int]$TimeoutSeconds = 150,
   [string]$EvidencePath = ""
 )
 
@@ -65,6 +65,8 @@ try {
   } while (-not $StorageActivity -and [DateTimeOffset]::UtcNow -lt $Deadline)
 
   if (-not $StorageActivity) {
+    $Desktop.Refresh()
+    Write-Host "Desktop smoke diagnostics: desktop_alive=$(-not $Desktop.HasExited); engine_process_count=$($EngineProcessIds.Count); control_database_exists=$(Test-Path -LiteralPath $ControlDatabase -PathType Leaf); ducklake_catalog_exists=$(Test-Path -LiteralPath $DuckLakeCatalog -PathType Leaf); parquet_file_count=$($ParquetFiles.Count)"
     throw "Packaged desktop did not initiate its authenticated SQLite/DuckLake UI probe within $TimeoutSeconds seconds."
   }
 

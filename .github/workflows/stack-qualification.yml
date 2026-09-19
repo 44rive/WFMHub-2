@@ -197,7 +197,7 @@ jobs:
         shell: pwsh
         run: ./scripts/build_portable.ps1 -UseStagedDuckLake
 
-      - name: Expand and smoke the exact portable release ZIP
+      - name: Expand the exact portable release ZIP
         shell: pwsh
         run: |
           $Archives = @(Get-ChildItem dist/WFMHub-2-v*-windows-x64-portable.zip -File)
@@ -205,19 +205,38 @@ jobs:
             throw "Expected exactly one portable release ZIP, found $($Archives.Count)"
           }
           $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          if (Test-Path -LiteralPath $ExtractRoot) {
+            Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
+          }
           Expand-Archive -LiteralPath $Archives[0].FullName -DestinationPath $ExtractRoot
+
+      - name: Launch and smoke the untouched portable desktop
+        shell: pwsh
+        run: |
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
           $PortableRoot = Join-Path $ExtractRoot "WFMHub-2"
           ./scripts/smoke_desktop.ps1 `
             -DesktopPath (Join-Path $PortableRoot "WFMHub.exe") `
+            -TimeoutSeconds 150 `
             -EvidencePath qualification-evidence/packaged-desktop.json
+
+      - name: Smoke the exact packaged engine with outbound traffic blocked
+        if: ${{ always() && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip') != '' && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip.sha256') != '' }}
+        shell: pwsh
+        run: |
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          $PortableRoot = Join-Path $ExtractRoot "WFMHub-2"
+          $EngineHome = Join-Path $env:RUNNER_TEMP "wfmhub2-packaged-engine-home"
           ./scripts/smoke_engine.ps1 `
             -EnginePath (Join-Path $PortableRoot "wfmhub-engine.exe") `
             -ExtensionPath (Join-Path $PortableRoot "duckdb_extensions/ducklake.duckdb_extension") `
-            -HomePath $PortableRoot `
+            -HomePath $EngineHome `
+            -TimeoutSeconds 120 `
             -EvidencePath qualification-evidence/packaged-engine.json `
             -BlockOutbound
 
       - name: Record package-size and checksum evidence
+        if: ${{ always() && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip') != '' && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip.sha256') != '' }}
         shell: pwsh
         run: |
           $Files = @()
@@ -244,6 +263,7 @@ jobs:
           $Files | Format-Table path, bytes | Out-String | Add-Content $env:GITHUB_STEP_SUMMARY
 
       - name: Upload portable release ZIP
+        if: ${{ always() && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip') != '' && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip.sha256') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: WFMHub-2-windows-x64-portable

@@ -10,7 +10,10 @@ use tauri_plugin_shell::{
 const READY_PREFIX: &str = "WFMHUB2_READY ";
 const ERROR_PREFIX: &str = "WFMHUB2_ERROR ";
 const PORTABLE_HOME_ERROR: &str = "The portable WFMHub folder is not writable. Move WFMHub to a writable folder or grant write access.";
-const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
+// A PyInstaller one-file sidecar must unpack its native runtime on the first
+// Windows launch. Hosted runners with real-time scanning can take materially
+// longer than Linux, so do not kill an otherwise healthy cold start at 30 s.
+const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
