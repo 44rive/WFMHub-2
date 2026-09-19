@@ -107,6 +107,35 @@ only through a recorded decision with evidence.
 
 ## Session log
 
+### 2026-09-19 — Linux backend walking skeleton qualified
+
+- Added an explicit `create_app(settings, token)` API factory; removed divergent
+  module-global settings. Health is public, while stack and refresh probes require
+  `X-WFMHub-Token`. Trusted hosts, CORS origins, and server binds are loopback-only.
+- Production launch tokens now come from the child-only
+  `WFMHUB2_SESSION_TOKEN` environment. The CLI override is development-only, and
+  readiness, health, doctor output, settings, and errors never contain the token.
+- `serve --port 0` now pre-binds an ephemeral socket and emits one parseable
+  `WFMHUB2_READY` line after Uvicorn startup with the actual port.
+- Added deterministic core and full doctor probes. Offline mode uses explicit
+  `LOAD` only; development mode is the only mode allowed to use DuckDB's extension
+  repository. The DuckLake probe disables data inlining, requires a new managed
+  Zstd Parquet file, then closes/reopens the catalog and verifies the data.
+- Linux evidence under CPython 3.12 (supplementary, not the required 3.14 gate):
+  Ruff passed, Pyright strict passed, and 14 tests passed. Development and explicit
+  offline DuckLake 1.0 probes passed with DuckDB 1.5.5 and extension version
+  `d8a1881e`; SQLite and DuckLake both survived reopen.
+- The full explicit-offline probe passed real Polars 1.44.2, StatsForecast 2.1.1,
+  XGBoost 3.4.1, and OR-Tools 9.15 operations. A live engine launch selected an
+  ephemeral port, emitted readiness, served health, accepted the correct token for
+  the protected probe, and terminated cleanly.
+- These results do **not** close the Windows/Python 3.14/PyInstaller/Tauri gates.
+  The tested extension came from the Linux development cache and is not a release
+  artifact. Clean Windows offline packaging remains mandatory.
+- Integration note: FastAPI 0.141/Starlette's typed test client targets `httpx2`;
+  the foundation dependency lock must include it or deliberately pin a compatible
+  FastAPI/Starlette/client set. No lockfile was changed on this worker branch.
+
 ### 2026-09-19 — Phase 0 opened
 
 - Compared the major update with the preserved governed implementation.
