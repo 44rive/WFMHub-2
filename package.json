@@ -8,8 +8,8 @@
     "build:web": "pnpm --dir web build",
     "typecheck:web": "pnpm --dir web typecheck",
     "test:web": "pnpm --dir web test",
-    "check:web": "biome check web/src web/*.json web/*.ts",
-    "format:web": "biome format --write web/src web/*.json web/*.ts",
+    "check:web": "biome check web/src web/package.json web/tsconfig.json web/vite.config.ts",
+    "format:web": "biome format --write web/src web/package.json web/tsconfig.json web/vite.config.ts",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build"

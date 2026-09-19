@@ -96,6 +96,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   source/native probes, then failed before packaging because
   `build_portable.ps1` used array splatting for named PowerShell parameters.
   No Windows executable or portable asset was produced by that run.
+- Corrected run `35458355085` passed Linux again but stopped in the Windows
+  frontend check: Windows checkout converted the files to CRLF and PowerShell
+  passed literal `web/*.json` and `web/*.ts` paths to Biome. Packaging was not
+  reached. Repository line endings and frontend check paths are now explicit.
 - The optimized Linux sidecar is `303,345,488` bytes, down 49.1% from the
   initial `596,396,352`-byte build. Shell + sidecar + DuckLake total about
   `355.1 MB` before installer compression. Observed cold readiness was
@@ -166,6 +170,9 @@ only through a recorded decision with evidence.
 - Recorded Windows run `35456417569`: Linux passed, Windows dependency/source,
   DuckLake, and native probes passed, then packaging failed because an argument
   array was incorrectly used for named PowerShell parameter splatting.
+- The next run, `35458355085`, exposed a separate cross-platform check defect:
+  CRLF checkout plus shell-specific globs made Biome fail before packaging.
+  Added a repository line-ending contract and shell-independent explicit paths.
 - Corrected the build invocation and added a versioned, checksummed portable
   ZIP with one `WFMHub-2` root. CI now expands the exact ZIP, launches the actual
   desktop entrypoint, requires authenticated SQLite/DuckLake/Parquet storage
