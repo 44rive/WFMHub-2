@@ -15,6 +15,8 @@ and expanding only after the governed evidence and operational workflow work.
 the complete WFM/data/forecasting/optimization stack, replace the blocked
 Tauri/PyInstaller delivery shell with the already proven embedded-CPython + CMD
 operating model, and prove the exact release ZIP on the target corporate PC.
+The ordinary-Windows package passed, but the target corporate gate has now
+failed before the Python doctor could start.
 
 ## Repository and branch state
 
@@ -112,6 +114,17 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   fast-forwarded to GitHub `main`, and was published as prerelease
   `v0.2.0-phase0.2`. Its release assets are the exact CI-produced portable ZIP
   and adjacent SHA-256; GitHub's automatic source archives remain unsupported.
+- The exact `v0.2.0-phase0.2` ZIP failed on the target corporate workstation:
+  `python.exe` returned decimal `1073751882` (`0x4000274A`) before emitting any
+  supervisor/probe output. This is consistent with an enforced Device Guard /
+  App Control block at process or initial-DLL load. The CodeIntegrity event
+  3077/3089 blocked-file path is still required to distinguish `python.exe`,
+  `python314.dll`, or another initial runtime file.
+- The known-working old portable uses official CPython 3.13.7 plus only four
+  pure-Python wheels; its runtime contains 30 reviewed CPython native images.
+  The Phase 0.2 full stack adds hundreds of native dependency images. Therefore
+  the old launcher's success proves the operating model, not approval of an
+  arbitrary Python version or the complete new native dependency graph.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -220,7 +233,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Browser/API security | PASS | Ephemeral loopback, per-launch token, 401/authenticated HTTP, host/origin tests, same-origin React passed |
 | Exact ZIP verification | PASS | 13,375 members/hash-verified; no user data or custom application executable; adjacent SHA-256 independently passed |
 | Windows offline/lifecycle | PASS | Outbound-blocked exact ZIP served React/API, persisted storage, and shut down cleanly in run `35507582306` |
-| Corporate App Control | BLOCKED | User runs `DOCTOR.cmd` from the exact release ZIP on the managed workstation; every native child probe passes |
+| Corporate App Control | FAIL | Exact Phase 0.2 ZIP exited `1073751882` / `0x4000274A` before supervisor output; collect CodeIntegrity 3077/3089 blocked path |
 | Operational budget | PASS | 300,607,038-byte ZIP; 852,233,445 bytes/13,375 files extracted; 10.224 s doctor; 1.345 s readiness; 102,010,880-byte working set |
 
 Phase 0.2 is complete only when all gates pass. A gate may be deliberately removed
@@ -228,10 +241,11 @@ only through a recorded decision with evidence.
 
 ## Current risks and fallbacks
 
-- **Primary risk:** the complete stack adds 371 unsigned third-party PE files.
-  Official `python.exe` being allowed does not imply those `.pyd`/`.dll` files
-  are allowed. If the exact doctor fails, identify the blocked capability in
-  Windows Code Integrity/AppLocker logs, then remove/replace it or request a
+- **Primary risk is now observed:** the exact release was stopped before the
+  doctor supervisor produced output. Identify the initial blocked file in the
+  Windows CodeIntegrity 3077/3089 events. Even if CPython 3.13.7 restores
+  startup, the complete stack still adds 371 unsigned third-party PE files that
+  may be blocked individually. Remove/replace blocked capabilities or request a
   narrow IT allowlist; do not attempt a policy bypass.
 - The release will be large: roughly `795 MiB` of unpacked `site-packages`
   before runtime/app/assets, about 13,000 dependency files, and likely a ZIP in
@@ -250,15 +264,16 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Download the `WFMHub-2-v0.2.0-windows-x64-portable.zip` asset from
-   prerelease `v0.2.0-phase0.2`; do not use GitHub's source-code ZIP.
-2. Extract it to a normal local writable folder and run `DOCTOR.cmd` on the
-   target corporate workstation.
-   This is the go/no-go point for the full all-at-once stack.
-3. If a native probe is blocked, use the named failure plus Windows Code
-   Integrity/AppLocker logs to remove/replace that capability or request a
-   narrow allowlist; do not attempt a bypass.
-4. After the target gate passes, begin the first RTA vertical slice using the
+1. Read the target attempt's newest enforcement event 3077 and correlated 3089
+   under `Microsoft/Windows/CodeIntegrity/Operational`; record the blocked file
+   and policy name without changing or bypassing policy.
+2. Confirm the existing old portable's CPython 3.13.7 still starts on the same
+   workstation. If it does and the new block names a 3.14 runtime image, build
+   and CI-qualify a frozen 3.13.7 compatibility variant.
+3. Run the compatibility doctor. If unsigned analytical children are blocked,
+   stop pursuing the full native stack without an IT allowlist and define a
+   pure-Python/SQLite local core with explicitly deferred/replaced capabilities.
+4. After a target-compatible boundary is proven, begin the first RTA vertical slice using the
    governed contracts preserved from the old portable repo.
 
 ## Session log
@@ -303,6 +318,14 @@ only through a recorded decision with evidence.
   and prerelease `v0.2.0-phase0.2` was published with the exact verified ZIP
   plus checksum. The next evidence must come from `DOCTOR.cmd` on the managed
   workstation.
+- The target `DOCTOR.cmd` attempt returned `1073751882` (`0x4000274A`) before
+  emitting any probe result, so the corporate gate is now `FAIL`, not pending.
+  The code is consistent with Device Guard/App Control terminating the initial
+  Python image load. Added a targeted launcher explanation pointing to
+  CodeIntegrity enforcement event 3077 and signature event 3089. Comparison to
+  the still-working old portable shows its approved surface is CPython 3.13.7
+  plus pure-Python wheels; a 3.13.7 current-stack experiment is conditional on
+  the blocked filename and cannot prove the hundreds of new native libraries.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 

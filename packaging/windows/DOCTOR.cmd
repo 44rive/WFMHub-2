@@ -17,12 +17,26 @@ echo.
 "%WFMHUB_PYTHON%" -I -m wfmhub2.portable_doctor --home "%WFMHUB_HOME%" --ducklake-extension "%WFMHUB_DUCKLAKE%" --full --require-offline
 set "EXIT_CODE=%ERRORLEVEL%"
 echo.
+if "%EXIT_CODE%"=="1073751882" goto :policy_block
 if "%EXIT_CODE%"=="0" (
   echo WFMHub 2 compatibility doctor PASSED.
 ) else (
   echo WFMHub 2 compatibility doctor FAILED with exit code %EXIT_CODE%.
   echo Copy the complete output above when reporting the failure.
 )
+pause
+exit /b %EXIT_CODE%
+
+:policy_block
+echo Windows App Control / Device Guard stopped Python before the doctor could run.
+echo Exit code: 1073751882 ^(0x4000274A^)
+echo.
+echo This is an enterprise-policy block, not a SQLite, DuckLake, or WFMHub test failure.
+echo Do not try to bypass company policy. Ask IT for the blocked file from:
+echo   Event Viewer ^> Applications and Services Logs ^> Microsoft ^> Windows
+echo   ^> CodeIntegrity ^> Operational
+echo Look for enforcement event 3077 at the time of this attempt and its related 3089 event.
+echo.
 pause
 exit /b %EXIT_CODE%
 
