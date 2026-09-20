@@ -23,7 +23,7 @@ only; the exact trial ZIP must still pass on the target corporate PC.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `3927ecd` | Qualified Phase 0.2 source plus target-policy diagnosis | Phase 0.3 will fast-forward only after its ordinary-Windows qualification |
+| `origin/main` | Phase 0.3 CPython 3.13.7 compatibility baseline | Fast-forwarded after run `35526661488` passed; target corporate gate remains open |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
