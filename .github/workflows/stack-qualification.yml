@@ -33,17 +33,6 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v5
 
-      - name: Install Tauri Linux prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install --no-install-recommends -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            libdbus-1-dev \
-            librsvg2-dev \
-            patchelf \
-            pkg-config
-
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -58,8 +47,8 @@ jobs:
 
       - name: Python quality and tests
         run: |
-          uv run --frozen ruff format --check src tests scripts
-          uv run --frozen ruff check src tests scripts
+          uv run --frozen ruff format --check src tests scripts packaging/windows
+          uv run --frozen ruff check src tests scripts packaging/windows
           uv run --frozen pyright
           uv run --frozen pytest
 
@@ -88,25 +77,6 @@ jobs:
           pnpm test:web
           pnpm build:web
 
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy,rustfmt
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-
-      - name: Rust quality and locked build
-        run: |
-          # Source checks do not consume release-staged native artifacts. The
-          # Windows package build below validates the real sidecar/resources.
-          export TAURI_CONFIG='{"bundle":{"externalBin":[],"resources":[]}}'
-          cargo fmt --manifest-path src-tauri/Cargo.toml --check
-          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
-          cargo test --manifest-path src-tauri/Cargo.toml --locked
-
       - name: Upload source qualification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -116,7 +86,7 @@ jobs:
           if-no-files-found: warn
 
   windows-portable:
-    name: Windows x64 portable stack
+    name: Windows x64 embedded-CPython portable stack
     runs-on: windows-latest
     timeout-minutes: 90
 
@@ -151,33 +121,18 @@ jobs:
       - name: Sync frozen frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install stable Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-pc-windows-msvc
-          components: clippy,rustfmt
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-
-      - name: Verify all source layers on Windows
+      - name: Verify release source layers on Windows
         shell: pwsh
         run: |
           $PSNativeCommandUseErrorActionPreference = $true
-          uv run --frozen ruff format --check src tests scripts
-          uv run --frozen ruff check src tests scripts
+          uv run --frozen ruff format --check src tests scripts packaging/windows
+          uv run --frozen ruff check src tests scripts packaging/windows
           uv run --frozen pyright
           uv run --frozen pytest
           pnpm check:web
           pnpm typecheck:web
           pnpm test:web
           pnpm build:web
-          cargo fmt --manifest-path src-tauri/Cargo.toml --check
-          $env:TAURI_CONFIG = '{"bundle":{"externalBin":[],"resources":[]}}'
-          cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
-          cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       - name: Stage pinned DuckLake and prove local compatibility
         shell: pwsh
@@ -193,7 +148,7 @@ jobs:
         shell: pwsh
         run: uv run --frozen python scripts/probe_native_stack.py --evidence qualification-evidence/native-stack-windows.json
 
-      - name: Build PyInstaller sidecar and Tauri executable from frozen inputs
+      - name: Build embedded CPython release from frozen inputs
         shell: pwsh
         run: ./scripts/build_portable.ps1 -UseStagedDuckLake
 
@@ -204,35 +159,40 @@ jobs:
           if ($Archives.Count -ne 1) {
             throw "Expected exactly one portable release ZIP, found $($Archives.Count)"
           }
-          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "WFMHub 2 portable ü release"
           if (Test-Path -LiteralPath $ExtractRoot) {
             Remove-Item -LiteralPath $ExtractRoot -Recurse -Force
           }
           Expand-Archive -LiteralPath $Archives[0].FullName -DestinationPath $ExtractRoot
 
-      - name: Launch and smoke the untouched portable desktop
+      - name: Run the full doctor with the exact embedded Python
         shell: pwsh
         run: |
-          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "WFMHub 2 portable ü release"
           $PortableRoot = Join-Path $ExtractRoot "WFMHub-2"
-          ./scripts/smoke_desktop.ps1 `
-            -DesktopPath (Join-Path $PortableRoot "WFMHub.exe") `
-            -TimeoutSeconds 150 `
-            -EvidencePath qualification-evidence/packaged-desktop.json
+          $PythonPath = Join-Path $PortableRoot "_system/runtime/python.exe"
+          $ExtensionPath = Join-Path $PortableRoot "_system/duckdb_extensions/ducklake.duckdb_extension"
+          $DoctorOutput = & $PythonPath -I -m wfmhub2.portable_doctor `
+            --home $PortableRoot `
+            --ducklake-extension $ExtensionPath `
+            --full --require-offline --json
+          if ($LASTEXITCODE -ne 0) {
+            throw "The exact embedded Python failed its full offline doctor."
+          }
+          New-Item -ItemType Directory -Force qualification-evidence | Out-Null
+          $DoctorOutput | Set-Content qualification-evidence/embedded-doctor.json -Encoding utf8
+          $DoctorOutput | Write-Host
 
-      - name: Smoke the exact packaged engine with outbound traffic blocked
+      - name: Smoke localhost health, storage, and React with outbound blocked
         if: ${{ always() && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip') != '' && hashFiles('dist/WFMHub-2-v*-windows-x64-portable.zip.sha256') != '' }}
         shell: pwsh
         run: |
-          $ExtractRoot = Join-Path $env:RUNNER_TEMP "wfmhub2-portable-release"
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "WFMHub 2 portable ü release"
           $PortableRoot = Join-Path $ExtractRoot "WFMHub-2"
-          $EngineHome = Join-Path $env:RUNNER_TEMP "wfmhub2-packaged-engine-home"
-          ./scripts/smoke_engine.ps1 `
-            -EnginePath (Join-Path $PortableRoot "wfmhub-engine.exe") `
-            -ExtensionPath (Join-Path $PortableRoot "duckdb_extensions/ducklake.duckdb_extension") `
-            -HomePath $EngineHome `
+          ./scripts/smoke_embedded_portable.ps1 `
+            -PortableRoot $PortableRoot `
             -TimeoutSeconds 120 `
-            -EvidencePath qualification-evidence/packaged-engine.json `
+            -EvidencePath qualification-evidence/embedded-portable-smoke.json `
             -BlockOutbound
 
       - name: Record package-size and checksum evidence
@@ -241,10 +201,10 @@ jobs:
         run: |
           $Files = @()
           $Candidates = @(
-            "dist/wfmhub-engine.exe",
             "packaging/duckdb_extensions/ducklake.duckdb_extension",
-            "src-tauri/target/release/wfmhub-2.exe",
-            "src-tauri/target/release/wfmhub-engine.exe"
+            "build/embedded-portable/WFMHub-2/_system/runtime/python.exe",
+            "build/embedded-portable/WFMHub-2/_system/manifests/NATIVE_FILES.sha256",
+            "build/embedded-portable/WFMHub-2/_system/manifests/RUNTIME_ORIGIN.json"
           )
           $Candidates += Get-ChildItem dist/WFMHub-2-v*-windows-x64-portable.zip* -File |
             Select-Object -ExpandProperty FullName
