@@ -20,9 +20,9 @@ operating model, and prove the exact release ZIP on the target corporate PC.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `a16da3e` | Merged initial Phase 0 qualification | Behind the qualified Phase 0.1 preview and current Phase 0.2 work |
+| `origin/main` at `25ec4b5` | Qualified Phase 0.2 embedded-portable source | Fast-forwarded from the reviewed integration branch |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
-| `integration/stack-qualification` (current HEAD) | Authoritative integration/release branch | Active; runtime and packaging commits merged |
+| `integration/stack-qualification` (current HEAD) | Phase 0.2 integration/release history | Qualified and merged to GitHub `main` |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -108,6 +108,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   61,902,848 private-memory bytes after the authenticated API/storage smoke.
   GitHub's coarse extraction step took 19 seconds. These are hosted-runner
   baselines; target-PC antivirus and policy behavior remain a separate gate.
+- Commit `25ec4b5` passed final tag-candidate run `35508340152`, was
+  fast-forwarded to GitHub `main`, and was published as prerelease
+  `v0.2.0-phase0.2`. Its release assets are the exact CI-produced portable ZIP
+  and adjacent SHA-256; GitHub's automatic source archives remain unsupported.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -246,11 +250,14 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Run this final evidence-ledger commit through CI.
-2. Merge the qualified branch to `main` and publish the exact final green
-   embedded portable ZIP plus adjacent SHA-256 as a prerelease.
-3. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
+1. Download the `WFMHub-2-v0.2.0-windows-x64-portable.zip` asset from
+   prerelease `v0.2.0-phase0.2`; do not use GitHub's source-code ZIP.
+2. Extract it to a normal local writable folder and run `DOCTOR.cmd` on the
+   target corporate workstation.
    This is the go/no-go point for the full all-at-once stack.
+3. If a native probe is blocked, use the named failure plus Windows Code
+   Integrity/AppLocker logs to remove/replace that capability or request a
+   narrow allowlist; do not attempt a bypass.
 4. After the target gate passes, begin the first RTA vertical slice using the
    governed contracts preserved from the old portable repo.
 
@@ -290,6 +297,12 @@ only through a recorded decision with evidence.
   private bytes after the authenticated API/storage smoke. The hosted runner's
   archive expansion step was 19 seconds. The operational-budget gate now
   passes; only execution under the target company's policy remains blocked.
+- Final tag-candidate run `35508340152` passed Linux and the complete Windows
+  build/extract/doctor/offline-lifecycle pipeline on commit `25ec4b5`. GitHub
+  `main` was fast-forwarded without touching the preserved dirty local `main`,
+  and prerelease `v0.2.0-phase0.2` was published with the exact verified ZIP
+  plus checksum. The next evidence must come from `DOCTOR.cmd` on the managed
+  workstation.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 
