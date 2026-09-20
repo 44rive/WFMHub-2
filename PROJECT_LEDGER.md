@@ -170,8 +170,8 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   `127.0.0.1:8420` origin. The DuckDB OPFS counter advanced from 1 to 2,
   proving cross-launch persistence; OPFS remains only a rebuildable cache.
 - The deterministic Phase 0.4 Windows compatibility ZIP has 84 files,
-  73,143,851 bytes, and SHA-256
-  `279d040263bf3645e01373a6ab527b0892d9efa1a7e58d13b179a842f1ff76d4`.
+  73,143,871 bytes, and SHA-256
+  `2f1bb4349fcf8f857e28247efd563e18e0805069a823347df08cc5433a1ad765`.
   Its extracted stage is about 146 MiB. Ordinary Windows CI has passed the
   profile; target corporate-policy execution remains pending.
 - GitHub Actions run `35536020333` passed the Linux job and the complete new
@@ -180,6 +180,12 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   Windows job exposed Windows `SO_REUSEADDR` allowing a live same-port bind;
   the hybrid server now uses `SO_EXCLUSIVEADDRUSE` on Windows and
   `SO_REUSEADDR` elsewhere, with collision/restart regression coverage.
+- Corrected GitHub Actions run `35536284746` passed all three jobs, including
+  the exact Windows hybrid host/browser smoke and the complete legacy native
+  regression suite. Its hybrid artifact was independently downloaded and its
+  adjacent checksum verified. The builder now normalizes CMD files to CRLF so
+  every platform stages identical member contents. The Windows CI ZIP is the
+  canonical release container because DEFLATE output can vary by zlib build.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -361,6 +367,9 @@ only through a recorded decision with evidence.
   offline Edge capabilities. Its legacy native job then caught Windows' live
   port-reuse semantics; the host now requests exclusive address ownership on
   Windows while retaining immediate-restart behavior.
+- Corrected run `35536284746` passed all Linux, hybrid Windows, and legacy
+  native Windows gates. The exact CI hybrid ZIP/checksum was downloaded and
+  verified before release preparation.
 - Local result: 29 pytest, strict Pyright, Ruff, TypeScript, 8 Vitest, Biome,
   production build, two real-browser offline smokes, cross-launch OPFS
   persistence, and two identical deterministic ZIP assemblies all pass.

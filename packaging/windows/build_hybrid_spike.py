@@ -52,6 +52,11 @@ def copy_tree(source: Path, destination: Path) -> None:
     )
 
 
+def copy_windows_text(source: Path, destination: Path) -> None:
+    content = source.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    destination.write_text(content, encoding="utf-8", newline="\r\n")
+
+
 def download_verified(destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     if not destination.exists():
@@ -246,8 +251,8 @@ def build_stage(web_dist: Path) -> Path:
 
     copy_tree(ROOT / "src/wfmhub2_compat", stage / "_system/app/wfmhub2_compat")
     copy_tree(web_dist, stage / "_system/web")
-    shutil.copy2(ROOT / "packaging/windows/WFMHub-Hybrid.cmd", stage / "WFMHub.cmd")
-    shutil.copy2(ROOT / "packaging/windows/DOCTOR-Hybrid.cmd", stage / "DOCTOR.cmd")
+    copy_windows_text(ROOT / "packaging/windows/WFMHub-Hybrid.cmd", stage / "WFMHub.cmd")
+    copy_windows_text(ROOT / "packaging/windows/DOCTOR-Hybrid.cmd", stage / "DOCTOR.cmd")
 
     (stage / "Feed").mkdir()
     (stage / "Feed/README.txt").write_text(
