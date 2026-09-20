@@ -2,12 +2,15 @@ import argparse
 import ctypes
 import json
 import os
+import secrets
 import socket
 import threading
 import time
-from collections.abc import Sequence
+import webbrowser
+from collections.abc import Callable, Sequence
 from ctypes import wintypes
 from pathlib import Path
+from urllib.parse import urlencode
 
 import uvicorn
 
@@ -18,6 +21,8 @@ from wfmhub2.storage.lakehouse import initialize as initialize_lakehouse
 from wfmhub2.storage.sqlite import initialize as initialize_sqlite
 
 ERROR_PREFIX = "WFMHUB2_ERROR "
+PORTABLE_WEB_RELATIVE_PATH = Path("_system") / "web"
+SESSION_TOKEN_FRAGMENT_KEY = "wfmhub_token"
 PORTABLE_HOME_ERROR = (
     "The portable WFMHub folder is not writable. Move WFMHub to a writable "
     "folder or grant write access."
@@ -65,12 +70,35 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--host", default=None)
     serve.add_argument("--port", default=None, type=int)
     serve.add_argument(
+        "--web-dir",
+        default=None,
+        help=(
+            "Compiled React directory. Packaged homes automatically use "
+            "<home>/_system/web when it exists."
+        ),
+    )
+    serve.add_argument(
         "--session-token",
         default=None,
         help=(
             "Development override for WFMHUB2_SESSION_TOKEN. Production launchers "
             "should inject the token through the child-process environment."
         ),
+    )
+
+    portable = sub.add_parser(
+        "portable",
+        help="Start the local engine and open the compiled interface in the default browser",
+    )
+    portable.add_argument(
+        "--web-dir",
+        default=None,
+        help="Compiled React directory. Defaults to <home>/_system/web.",
+    )
+    portable.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Start the portable server without opening a browser (for automated smoke tests).",
     )
 
     doctor = sub.add_parser("doctor", help="Qualify the portable backend stack")
@@ -127,14 +155,22 @@ def reserve_server_socket(settings: Settings) -> socket.socket:
 
 
 class ReadinessServer(uvicorn.Server):
-    def __init__(self, config: uvicorn.Config, ready_line: str) -> None:
+    def __init__(
+        self,
+        config: uvicorn.Config,
+        ready_line: str,
+        on_started: Callable[[], None] | None = None,
+    ) -> None:
         super().__init__(config)
         self._ready_line = ready_line
+        self._on_started = on_started
 
     async def startup(self, sockets: list[socket.socket] | None = None) -> None:
         await super().startup(sockets=sockets)
         if self.started:
             print(self._ready_line, flush=True)
+            if self._on_started is not None:
+                self._on_started()
 
 
 def _print_human_report(report: DoctorReport) -> None:
@@ -151,9 +187,51 @@ def _serve(
     session_token: str,
     *,
     parent_pid: int | None = None,
+    web_dir: Path | None = None,
 ) -> None:
-    init_storage(settings)
-    app = create_app(settings, session_token)
+    _run_server(settings, session_token, parent_pid=parent_pid, web_dir=web_dir)
+
+
+def portable_web_dir(settings: Settings, raw_web_dir: str | None) -> Path:
+    if raw_web_dir is None:
+        return (settings.home / PORTABLE_WEB_RELATIVE_PATH).resolve()
+    return Path(raw_web_dir).expanduser().resolve()
+
+
+def serve_web_dir(settings: Settings, raw_web_dir: str | None) -> Path | None:
+    candidate = portable_web_dir(settings, raw_web_dir)
+    if raw_web_dir is not None or (candidate / "index.html").is_file():
+        return candidate
+    return None
+
+
+def portable_browser_url(actual_port: int, session_token: str) -> str:
+    fragment = urlencode({SESSION_TOKEN_FRAGMENT_KEY: session_token})
+    return f"http://127.0.0.1:{actual_port}/#{fragment}"
+
+
+def _open_browser(url: str) -> None:
+    try:
+        opened = webbrowser.open(url, new=2)
+    except webbrowser.Error:
+        opened = False
+    if not opened:
+        print(
+            "The default browser did not open. Keep this window open and retry WFMHub.", flush=True
+        )
+
+
+def _run_server(
+    settings: Settings,
+    session_token: str,
+    *,
+    parent_pid: int | None = None,
+    web_dir: Path | None = None,
+    require_offline: bool = False,
+    on_ready: Callable[[int], None] | None = None,
+) -> None:
+    init_storage(settings, require_offline=require_offline)
+    app = create_app(settings, session_token, web_dir=web_dir)
     server_socket = reserve_server_socket(settings)
     actual_port = int(server_socket.getsockname()[1])
     config = uvicorn.Config(
@@ -163,9 +241,44 @@ def _serve(
         reload=False,
         access_log=False,
     )
-    server = ReadinessServer(config, readiness_line(actual_port))
+    started_callback = None if on_ready is None else lambda: on_ready(actual_port)
+    server = ReadinessServer(
+        config,
+        readiness_line(actual_port),
+        on_started=started_callback,
+    )
     start_parent_watchdog(server, parent_pid)
     server.run(sockets=[server_socket])
+
+
+def _portable(
+    settings: Settings,
+    web_dir: Path,
+    *,
+    launch_browser: bool,
+    session_token: str | None = None,
+) -> None:
+    # token_urlsafe(32) draws 32 random bytes: a fresh 256-bit credential for
+    # this one localhost process. The fragment is not sent in the HTTP request.
+    session_token = session_token or secrets.token_urlsafe(32)
+
+    def ready(actual_port: int) -> None:
+        display_url = f"http://127.0.0.1:{actual_port}/"
+        print("\nWFMHub 2 is ready.", flush=True)
+        print(f"Address: {display_url}", flush=True)
+        print("Scope: this computer only", flush=True)
+        print("Keep this window open; press Ctrl+C to stop WFMHub.\n", flush=True)
+        if launch_browser:
+            _open_browser(portable_browser_url(actual_port, session_token))
+
+    portable_settings = settings.model_copy(update={"host": "127.0.0.1", "port": 0})
+    _run_server(
+        portable_settings,
+        session_token,
+        web_dir=web_dir,
+        require_offline=True,
+        on_ready=ready,
+    )
 
 
 def session_token_from_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> str:
@@ -263,16 +376,31 @@ def _main(argv: Sequence[str] | None = None) -> None:
             raise SystemExit(1)
         return
 
+    if args.command == "portable":
+        _portable(
+            settings,
+            portable_web_dir(settings, args.web_dir),
+            launch_browser=not args.no_browser,
+            # Automated exact-ZIP smoke needs a known credential. Normal
+            # browser launches always ignore inherited token variables and
+            # generate a fresh credential inside this process.
+            session_token=(os.environ.get("WFMHUB2_SESSION_TOKEN") if args.no_browser else None),
+        )
+        return
+
     _serve(
         settings,
         session_token_from_args(args, parser),
         parent_pid=parent_pid_from_environment(),
+        web_dir=serve_web_dir(settings, args.web_dir),
     )
 
 
 def main(argv: Sequence[str] | None = None) -> None:
     try:
         _main(argv)
+    except KeyboardInterrupt:
+        print("\nWFMHub 2 stopped.", flush=True)
     except PermissionError:
         print(error_line("portable_home_not_writable", PORTABLE_HOME_ERROR), flush=True)
         raise SystemExit(2) from None

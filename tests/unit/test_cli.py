@@ -10,9 +10,12 @@ from wfmhub2.cli import (
     build_parser,
     error_line,
     parent_pid_from_environment,
+    portable_browser_url,
+    portable_web_dir,
     process_exists,
     readiness_line,
     reserve_server_socket,
+    serve_web_dir,
     session_token_from_args,
     settings_from_args,
 )
@@ -43,6 +46,38 @@ def test_cli_propagates_home_extension_host_and_ephemeral_port(tmp_path: Path) -
     assert settings.ducklake_extension == extension.resolve()
     assert settings.host == "127.0.0.1"
     assert settings.port == 0
+
+
+def test_portable_command_uses_fixed_loopback_dynamic_port_and_default_web_assets(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "portable"
+    args = build_parser().parse_args(["--home", str(home), "portable", "--no-browser"])
+    settings = settings_from_args(args)
+
+    assert args.command == "portable"
+    assert settings.host == "127.0.0.1"
+    assert portable_web_dir(settings, args.web_dir) == (home / "_system" / "web").resolve()
+
+
+def test_portable_browser_url_keeps_session_token_in_fragment() -> None:
+    url = portable_browser_url(43127, "launch-secret")
+
+    assert url == "http://127.0.0.1:43127/#wfmhub_token=launch-secret"
+    assert "?" not in url
+
+
+def test_serve_auto_discovers_packaged_web_assets_without_requiring_them_in_development(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(home=tmp_path)
+    assert serve_web_dir(settings, None) is None
+
+    packaged_web = tmp_path / "_system" / "web"
+    packaged_web.mkdir(parents=True)
+    (packaged_web / "index.html").write_text('<div id="root"></div>', encoding="utf-8")
+
+    assert serve_web_dir(settings, None) == packaged_web.resolve()
 
 
 def test_ephemeral_socket_and_readiness_line_report_actual_port_without_token(

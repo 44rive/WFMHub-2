@@ -70,7 +70,7 @@ def test_host_and_cors_are_restricted(tmp_path: Path) -> None:
         allowed = client.options(
             "/api/stack/probe",
             headers={
-                "Origin": "tauri://localhost",
+                "Origin": "http://127.0.0.1:5173",
                 "Access-Control-Request-Method": "GET",
                 "Access-Control-Request-Headers": "X-WFMHub-Token",
             },
@@ -84,11 +84,11 @@ def test_host_and_cors_are_restricted(tmp_path: Path) -> None:
         )
 
     assert allowed.status_code == 200
-    assert allowed.headers["access-control-allow-origin"] == "tauri://localhost"
+    assert allowed.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
     assert "access-control-allow-origin" not in denied.headers
 
 
-def test_vite_development_origin_matches_desktop_configuration(tmp_path: Path) -> None:
+def test_vite_development_origin_matches_browser_configuration(tmp_path: Path) -> None:
     app = create_app(Settings(home=tmp_path), "per-launch-secret")
 
     with TestClient(app, base_url="http://localhost") as client:
@@ -113,3 +113,39 @@ def test_empty_session_token_is_rejected(tmp_path: Path) -> None:
         assert "session token" in str(exc)
     else:
         raise AssertionError("empty token must not create an application")
+
+
+def test_compiled_frontend_is_served_same_origin_with_spa_fallback(tmp_path: Path) -> None:
+    web_dir = tmp_path / "web"
+    assets_dir = web_dir / "assets"
+    assets_dir.mkdir(parents=True)
+    (web_dir / "index.html").write_text("<main>WFMHub browser shell</main>", encoding="utf-8")
+    (assets_dir / "app.js").write_text("console.log('wfmhub')", encoding="utf-8")
+    app = create_app(Settings(home=tmp_path), "per-launch-secret", web_dir=web_dir)
+
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        root = client.get("/")
+        asset = client.get("/assets/app.js")
+        client_route = client.get("/future/rta")
+        missing_api = client.get("/api/not-a-route")
+
+    assert root.status_code == 200
+    assert "WFMHub browser shell" in root.text
+    assert asset.status_code == 200
+    assert asset.text == "console.log('wfmhub')"
+    assert client_route.status_code == 200
+    assert "WFMHub browser shell" in client_route.text
+    assert missing_api.status_code == 404
+
+
+def test_missing_compiled_frontend_fails_before_server_start(tmp_path: Path) -> None:
+    try:
+        create_app(
+            Settings(home=tmp_path),
+            "per-launch-secret",
+            web_dir=tmp_path / "missing-web",
+        )
+    except FileNotFoundError as exc:
+        assert "index.html" in str(exc)
+    else:
+        raise AssertionError("portable launch must reject missing compiled web assets")

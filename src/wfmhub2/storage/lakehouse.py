@@ -3,11 +3,21 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, Protocol, TypedDict
 
 import duckdb
 
-from wfmhub2.core.settings import Settings
+
+class LakehouseSettings(Protocol):
+    @property
+    def ducklake_extension(self) -> Path | None: ...
+
+    @property
+    def ducklake_catalog_path(self) -> Path: ...
+
+    @property
+    def ducklake_data_path(self) -> Path: ...
+
 
 LAKE_SCHEMA = """
 CREATE SCHEMA IF NOT EXISTS bronze;
@@ -95,7 +105,7 @@ def _load_ducklake(
 
 def describe(
     con: duckdb.DuckDBPyConnection,
-    settings: Settings,
+    settings: LakehouseSettings,
     load_mode: DuckLakeLoadMode,
 ) -> DuckLakeDetails:
     row = con.execute(
@@ -121,7 +131,7 @@ def describe(
 
 @contextmanager
 def connect(
-    settings: Settings,
+    settings: LakehouseSettings,
     *,
     require_offline: bool = False,
 ) -> Generator[duckdb.DuckDBPyConnection]:
@@ -130,6 +140,8 @@ def connect(
 
     con = duckdb.connect(database=":memory:")
     try:
+        con.execute("SET autoinstall_known_extensions = false")
+        con.execute("SET autoload_known_extensions = false")
         _load_ducklake(
             con,
             settings.ducklake_extension,
@@ -144,7 +156,7 @@ def connect(
         con.close()
 
 
-def initialize(settings: Settings, *, require_offline: bool = False) -> None:
+def initialize(settings: LakehouseSettings, *, require_offline: bool = False) -> None:
     with connect(settings, require_offline=require_offline) as con:
         con.execute(LAKE_SCHEMA)
         con.execute("CALL lake.set_option('parquet_compression', 'zstd')")

@@ -35,7 +35,7 @@ const horizons = [
 ]
 
 const stack = [
-  'Tauri 2',
+  'Portable CPython',
   'React 19.3',
   'Python 3.14',
   'DuckDB + DuckLake',
@@ -106,8 +106,8 @@ export function HomePage() {
                 Engine and storage walking skeleton
               </h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                This page uses launch details supplied by the desktop shell, then calls the
-                token-protected offline storage probe.
+                This page uses the secure localhost browser session created by WFMHub.cmd, then
+                calls the token-protected offline storage probe.
               </p>
             </div>
             <button
@@ -128,7 +128,7 @@ export function HomePage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-3">
             <QualificationCard
-              label="Desktop launch"
+              label="Portable launch"
               status={
                 connection.data?.phase === 'ready' ? 'pass' : (connection.data?.phase ?? 'pending')
               }

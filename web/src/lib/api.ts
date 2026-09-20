@@ -1,5 +1,3 @@
-import { invoke, isTauri } from '@tauri-apps/api/core'
-
 export type EnginePhase = 'starting' | 'ready' | 'failed' | 'unavailable'
 
 export type EngineConnection = {
@@ -31,14 +29,15 @@ export type StackProbe = {
   settings: {
     home: string
     control_db_path: string
-    ducklake_extension: string
+    ducklake_extension: string | null
     ducklake_catalog_path: string
     ducklake_data_path: string
   }
   checks: ProbeCheck[]
 }
 
-type InvokeConnection = () => Promise<EngineConnection>
+const sessionTokenFragmentKey = 'wfmhub_token'
+const sessionTokenStorageKey = 'wfmhub2.session-token'
 
 function unavailable(message: string): EngineConnection {
   return {
@@ -51,28 +50,44 @@ function unavailable(message: string): EngineConnection {
 
 export function validateLoopbackBaseUrl(rawUrl: string): string {
   const url = new URL(rawUrl)
-  if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost'].includes(url.hostname)) {
+  if (
+    url.protocol !== 'http:' ||
+    !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+    url.username !== '' ||
+    url.password !== ''
+  ) {
     throw new Error('Engine URL must use HTTP on loopback')
   }
   return url.toString().replace(/\/$/, '')
 }
 
-export async function resolveEngineConnection(
-  tauriRuntime: boolean,
+export function sessionTokenFromFragment(fragment: string): string | null {
+  const parameters = new URLSearchParams(fragment.startsWith('#') ? fragment.slice(1) : fragment)
+  const token = parameters.get(sessionTokenFragmentKey)
+  return token && token.trim() !== '' ? token : null
+}
+
+export function resolveEngineConnection(
   development: boolean,
   environment: Record<string, string | boolean | undefined>,
-  invokeConnection: InvokeConnection,
-): Promise<EngineConnection> {
-  if (tauriRuntime) {
-    const connection = await invokeConnection()
-    if (connection.phase === 'ready' && connection.baseUrl) {
-      return { ...connection, baseUrl: validateLoopbackBaseUrl(connection.baseUrl) }
+  browserOrigin: string,
+  browserSessionToken: string | null,
+): EngineConnection {
+  if (browserSessionToken) {
+    try {
+      return {
+        phase: 'ready',
+        baseUrl: validateLoopbackBaseUrl(`${browserOrigin}/api`),
+        sessionToken: browserSessionToken,
+        message: 'Connected to the local portable engine.',
+      }
+    } catch (error) {
+      return unavailable(error instanceof Error ? error.message : 'Invalid portable engine URL')
     }
-    return connection
   }
 
   if (!development) {
-    return unavailable('The production web client must run inside the WFMHub desktop shell.')
+    return unavailable('Start WFMHub with WFMHub.cmd to create a secure browser session.')
   }
 
   const baseUrl = environment.VITE_ENGINE_BASE_URL
@@ -95,9 +110,41 @@ export async function resolveEngineConnection(
   }
 }
 
+function browserSessionToken(): string | null {
+  const launchToken = sessionTokenFromFragment(window.location.hash)
+  if (launchToken) {
+    try {
+      window.sessionStorage.setItem(sessionTokenStorageKey, launchToken)
+    } catch {
+      // The current page can still use the in-memory token when storage is disabled.
+    }
+
+    const parameters = new URLSearchParams(window.location.hash.slice(1))
+    parameters.delete(sessionTokenFragmentKey)
+    const remainingFragment = parameters.toString()
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${window.location.pathname}${window.location.search}${remainingFragment ? `#${remainingFragment}` : ''}`,
+    )
+    return launchToken
+  }
+
+  try {
+    return window.sessionStorage.getItem(sessionTokenStorageKey)
+  } catch {
+    return null
+  }
+}
+
 export function getEngineConnection(): Promise<EngineConnection> {
-  return resolveEngineConnection(isTauri(), import.meta.env.DEV, import.meta.env, () =>
-    invoke<EngineConnection>('get_engine_connection'),
+  return Promise.resolve(
+    resolveEngineConnection(
+      import.meta.env.DEV,
+      import.meta.env,
+      window.location.origin,
+      browserSessionToken(),
+    ),
   )
 }
 

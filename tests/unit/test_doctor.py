@@ -14,6 +14,7 @@ def test_offline_doctor_reports_missing_local_extension_without_network(
     assert report.mode == "offline"
     results = {check.name: check for check in report.checks}
     assert results["portable_paths"].status == "pass"
+    assert results["runtime_isolation"].status == "pass"
     assert results["sqlite"].status == "pass"
     assert results["ducklake"].status == "fail"
     assert results["ducklake"].error is not None
@@ -29,11 +30,16 @@ def test_full_doctor_reports_missing_capabilities_instead_of_crashing(
     assert report.status == "failed"
     assert [check.name for check in report.checks] == [
         "portable_paths",
+        "runtime_isolation",
+        "api_runtime",
         "sqlite",
         "ducklake",
         "polars",
         "statsforecast",
+        "mlforecast",
+        "hierarchicalforecast",
         "xgboost",
         "ortools",
+        "excel",
     ]
     assert all(check.status in {"pass", "fail"} for check in report.checks)

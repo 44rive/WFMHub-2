@@ -13,8 +13,6 @@ class Settings(BaseSettings):
     port: int = 8765
     ducklake_extension: Path | None = None
     cors_origins: tuple[str, ...] = (
-        "tauri://localhost",
-        "http://tauri.localhost",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
     )
@@ -49,11 +47,11 @@ class Settings(BaseSettings):
 
     @property
     def inbox_dir(self) -> Path:
-        return self.data_dir / "inbox"
+        return self.home / "Feed"
 
     @property
     def exports_dir(self) -> Path:
-        return self.data_dir / "exports"
+        return self.home / "Reports"
 
     @property
     def lake_dir(self) -> Path:

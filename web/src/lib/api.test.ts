@@ -3,6 +3,7 @@ import {
   createEngineClient,
   type EngineConnection,
   resolveEngineConnection,
+  sessionTokenFromFragment,
   validateLoopbackBaseUrl,
 } from './api'
 
@@ -17,37 +18,50 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe('desktop engine discovery', () => {
-  it('uses the desktop command instead of a hard-coded port', async () => {
-    const invokeConnection = vi.fn(async () => readyConnection)
+describe('browser engine discovery', () => {
+  it('uses the same-origin portable endpoint and fragment token', () => {
+    const token = sessionTokenFromFragment('#wfmhub_token=launch-secret')
+    const connection = resolveEngineConnection(false, {}, 'http://127.0.0.1:43127', token)
 
-    await expect(resolveEngineConnection(true, false, {}, invokeConnection)).resolves.toEqual(
-      readyConnection,
-    )
-    expect(invokeConnection).toHaveBeenCalledOnce()
+    expect(connection).toMatchObject({
+      phase: 'ready',
+      baseUrl: 'http://127.0.0.1:43127/api',
+      sessionToken: 'launch-secret',
+    })
+    expect(connection.baseUrl).not.toContain('launch-secret')
   })
 
-  it('does not permit a production browser fallback', async () => {
-    const connection = await resolveEngineConnection(false, false, {}, vi.fn())
+  it('does not permit a production browser without a launcher token', () => {
+    const connection = resolveEngineConnection(false, {}, 'http://127.0.0.1:43127', null)
 
     expect(connection.phase).toBe('unavailable')
     expect(connection.baseUrl).toBeNull()
     expect(connection.sessionToken).toBeNull()
   })
 
-  it('only permits explicit loopback browser-development endpoints', async () => {
-    const connection = await resolveEngineConnection(
-      false,
-      true,
-      {
-        VITE_ENGINE_BASE_URL: 'https://example.com/api',
-        VITE_ENGINE_SESSION_TOKEN: 'development-secret',
-      },
-      vi.fn(),
-    )
+  it('rejects non-loopback production origins', () => {
+    const connection = resolveEngineConnection(false, {}, 'https://example.com', 'secret')
 
     expect(connection.phase).toBe('unavailable')
     expect(() => validateLoopbackBaseUrl('http://127.0.0.1:40100/api')).not.toThrow()
+  })
+
+  it('preserves explicit loopback browser-development endpoints', () => {
+    const connection = resolveEngineConnection(
+      true,
+      {
+        VITE_ENGINE_BASE_URL: 'http://127.0.0.1:40100/api',
+        VITE_ENGINE_SESSION_TOKEN: 'development-secret',
+      },
+      'http://127.0.0.1:5173',
+      null,
+    )
+
+    expect(connection).toMatchObject({
+      phase: 'ready',
+      baseUrl: 'http://127.0.0.1:40100/api',
+      sessionToken: 'development-secret',
+    })
   })
 })
 
@@ -56,7 +70,7 @@ describe('engine API client', () => {
     const fetchMock = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({ status: 'ok', version: '0.2.0', architecture: 'portable-sidecar' }),
+          JSON.stringify({ status: 'ok', version: '0.2.0', architecture: 'portable-browser' }),
           { status: 200 },
         ),
     )

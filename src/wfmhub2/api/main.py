@@ -1,10 +1,15 @@
+from pathlib import Path
 from secrets import compare_digest
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.responses import Response
+from starlette.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from wfmhub2 import __version__
 from wfmhub2.core.settings import Settings
@@ -12,7 +17,29 @@ from wfmhub2.doctor import run_doctor
 from wfmhub2.ingestion.refresh import RefreshEngine
 
 
-def create_app(settings: Settings, session_token: str) -> FastAPI:
+class SinglePageApplication(StaticFiles):
+    """Serve compiled assets with an index fallback for client-side routes."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        if path.startswith("api/"):
+            raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
+        try:
+            response = await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+            return await super().get_response("index.html", scope)
+        if response.status_code == status.HTTP_404_NOT_FOUND:
+            return await super().get_response("index.html", scope)
+        return response
+
+
+def create_app(
+    settings: Settings,
+    session_token: str,
+    *,
+    web_dir: Path | None = None,
+) -> FastAPI:
     """Create one engine API bound to one explicit portable-home launch."""
     if not session_token:
         raise ValueError("a non-empty per-launch session token is required")
@@ -55,7 +82,7 @@ def create_app(settings: Settings, session_token: str) -> FastAPI:
         return {
             "status": "ok",
             "version": __version__,
-            "architecture": "tauri-python-ducklake",
+            "architecture": "browser-python-ducklake",
         }
 
     @app.get("/api/stack/probe", dependencies=[protected])
@@ -75,5 +102,18 @@ def create_app(settings: Settings, session_token: str) -> FastAPI:
             "files_changed": result.files_changed,
             "files_hashed": result.files_hashed,
         }
+
+    if web_dir is not None:
+        resolved_web_dir = web_dir.resolve()
+        if not (resolved_web_dir / "index.html").is_file():
+            raise FileNotFoundError(
+                f"Compiled WFMHub web assets are missing: {resolved_web_dir / 'index.html'}"
+            )
+        app.state.web_dir = resolved_web_dir
+        app.mount(
+            "/",
+            SinglePageApplication(directory=resolved_web_dir, html=True),
+            name="web",
+        )
 
     return app
