@@ -19,8 +19,8 @@ if (-not [Environment]::Is64BitOperatingSystem) {
 
 Write-Host "== WFMHub 2 official-CPython portable build =="
 
-Write-Host "[1/7] Sync the frozen Python 3.14.7 build environment"
-uv sync --frozen --extra dev --python 3.14.7
+Write-Host "[1/7] Sync the frozen Python 3.13.7 build environment"
+uv sync --frozen --extra dev --python 3.13.7
 
 Write-Host "[2/7] Install and build the frozen React frontend"
 corepack enable

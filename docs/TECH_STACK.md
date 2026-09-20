@@ -6,7 +6,7 @@ Baseline revised: **2026-09-20**.
 
 ## Portable runtime and frontend
 
-### Official CPython 3.14 embeddable distribution
+### Official CPython 3.13 embeddable distribution
 
 The Windows release vendors the official, hash-pinned CPython embeddable ZIP
 and launches it through `WFMHub.cmd`. Application code and locked third-party
@@ -59,10 +59,13 @@ Frontend formatter/linter. It replaces a larger ESLint/Prettier plugin stack for
 
 ## Python engine
 
-### Python 3.14.7
+### Python 3.13.7
 
-Python is the WFM/domain language. The production portable baseline is the
-official CPython 3.14.7 embeddable x64 distribution. Free-threaded Python is
+Python is the WFM/domain language. The Phase 0.3 compatibility baseline is the
+official CPython 3.13.7 embeddable x64 distribution. This intentionally matches
+the runtime generation already proven by the old WFMHub-Portable on the target
+workstation; whether the full native stack is accepted remains a separate
+corporate-policy gate. Free-threaded Python is
 unnecessary because DuckDB, Polars, XGBoost and OR-Tools already perform heavy
 work in optimized native code.
 
@@ -191,7 +194,7 @@ Excel remains a first-class business handoff even when the desktop UI improves. 
 ### Vendored Windows wheels
 
 Release CI installs the frozen production dependency graph into an
-application-local `site-packages` directory for CPython 3.14 / Windows x64.
+application-local `site-packages` directory for CPython 3.13 / Windows x64.
 Native `.pyd` and `.dll` files remain in their normal wheel layout; they are not
 repacked into a custom executable and are not extracted to a temporary folder
 at launch. The target workstation never runs pip.

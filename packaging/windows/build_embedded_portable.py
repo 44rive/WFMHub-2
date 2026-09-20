@@ -26,10 +26,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
-PYTHON_VERSION = "3.14.7"
+PYTHON_VERSION = "3.13.7"
 PYTHON_ARCHIVE = f"python-{PYTHON_VERSION}-embed-amd64.zip"
 PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/{PYTHON_ARCHIVE}"
-PYTHON_SHA256 = "d297e5ff019966817ad8502465176139f2d3d840fa4ed84b13bed399a6ab1f15"
+PYTHON_SHA256 = "f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65"
 DUCKLAKE_SHA256 = "4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0"
 TOP_LEVEL = "WFMHub-2"
 NATIVE_SUFFIXES = (".dll", ".exe", ".pyd", ".duckdb_extension")
@@ -131,13 +131,13 @@ def installed_distributions(site_packages: Path) -> dict[str, str]:
 
 
 def configure_embedded_runtime(runtime: Path) -> None:
-    pth = runtime / "python314._pth"
+    pth = runtime / "python313._pth"
     if not pth.is_file():
         raise RuntimeError(f"Official embedded runtime is missing {pth.name}")
     original_lines = pth.read_text(encoding="utf-8").splitlines()
-    python_zip = next((line for line in original_lines if line == "python314.zip"), None)
+    python_zip = next((line for line in original_lines if line == "python313.zip"), None)
     if python_zip is None:
-        raise RuntimeError("Official embedded runtime _pth does not reference python314.zip")
+        raise RuntimeError("Official embedded runtime _pth does not reference python313.zip")
     # Keep the runtime isolated from user/system installs and ignore arbitrary
     # `.pth` execution. Every application import root is listed explicitly.
     lines = [python_zip, ".", "../site-packages", "../app"]
@@ -311,8 +311,8 @@ def validate_release_layout(stage: Path, cpython_native: dict[str, str]) -> None
 def build_stage(args: argparse.Namespace) -> tuple[Path, str]:
     if sys.platform != "win32" or platform.machine().lower() not in {"amd64", "x86_64"}:
         raise RuntimeError("Embedded portable releases must be built on Windows x64")
-    if sys.version_info[:3] != (3, 14, 7):
-        raise RuntimeError(f"Builder must run under CPython 3.14.7, found {sys.version.split()[0]}")
+    if sys.version_info[:3] != (3, 13, 7):
+        raise RuntimeError(f"Builder must run under CPython 3.13.7, found {sys.version.split()[0]}")
 
     version, direct_dependencies = project_metadata()
     build_root = ROOT / "build/embedded-portable"

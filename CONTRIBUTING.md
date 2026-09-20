@@ -4,7 +4,7 @@ WFMHub 2.0 is organized around workforce-management domains and a strict separat
 
 ## Development prerequisites
 
-- Python 3.14.7;
+- Python 3.13.7;
 - uv;
 - Node compatible with the selected Vite toolchain;
 - pnpm 12;
@@ -12,7 +12,7 @@ WFMHub 2.0 is organized around workforce-management domains and a strict separat
 ## Python setup
 
 ```powershell
-uv sync --frozen --extra dev --python 3.14.7
+uv sync --frozen --extra dev --python 3.13.7
 uv run --frozen ruff format --check src tests scripts packaging/windows
 uv run --frozen ruff check src tests scripts packaging/windows
 uv run --frozen pyright
@@ -49,7 +49,7 @@ portable build and exact extracted-ZIP smoke for that gate.
 On a networked Windows x64 build machine, the portable build command uses the
 committed Python/frontend locks, stages the reviewed DuckLake 1.5.5 artifact,
 verifies a local load/write/restart/read, builds the React client, and assembles
-the complete Windows production graph beside official embedded CPython 3.14.7:
+the complete Windows production graph beside official embedded CPython 3.13.7:
 
 ```powershell
 ./scripts/build_portable.ps1
@@ -79,7 +79,7 @@ Normal build and test commands are frozen. A deliberate dependency update must
 regenerate and review all affected locks:
 
 ```powershell
-uv lock --python 3.14.7
+uv lock --python 3.13.7
 pnpm install --lockfile-only --force
 ```
 

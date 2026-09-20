@@ -7,7 +7,7 @@ name = "wfmhub2"
 version = "0.2.0"
 description = "Portable workforce intelligence and decision platform"
 readme = "README.md"
-requires-python = ">=3.14,<3.15"
+requires-python = ">=3.13,<3.14"
 dependencies = [
   "duckdb>=1.5.5,<2.0",
   "polars>=1.44.2,<2.0",
@@ -41,14 +41,14 @@ wfmhub2 = "wfmhub2.cli:main"
 packages = ["src/wfmhub2"]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py313"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.pyright]
-pythonVersion = "3.14"
+pythonVersion = "3.13"
 typeCheckingMode = "strict"
 include = ["src", "tests"]
 venvPath = "."

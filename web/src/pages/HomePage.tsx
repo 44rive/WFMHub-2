@@ -37,7 +37,7 @@ const horizons = [
 const stack = [
   'Portable CPython',
   'React 19.3',
-  'Python 3.14',
+  'Python 3.13',
   'DuckDB + DuckLake',
   'Polars',
   'OR-Tools',

@@ -18,7 +18,7 @@ plus the user's normal browser:
 
 ```text
 ┌──────────────────────────────┐
-│ Official embedded Python 3.14│
+│ Official embedded Python 3.13│
 │                              │
 │ FastAPI                      │
 │ WFM domain services          │

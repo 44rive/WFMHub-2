@@ -11,20 +11,22 @@ state instead of repeating discovery.
 Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
-**Active milestone: Phase 0.2 — official-CPython portable qualification.** Keep
-the complete WFM/data/forecasting/optimization stack, replace the blocked
-Tauri/PyInstaller delivery shell with the already proven embedded-CPython + CMD
-operating model, and prove the exact release ZIP on the target corporate PC.
-The ordinary-Windows package passed, but the target corporate gate has now
-failed before the Python doctor could start.
+**Active milestone: Phase 0.3 — CPython 3.13 policy-compatibility trial.** Phase
+0.2 proved the complete embedded-CPython package on ordinary Windows, but the
+target policy stopped CPython 3.14.7 before the doctor could start. Keep the
+same full stack, security model, and CMD/browser lifecycle while changing only
+the runtime generation to the CPython 3.13.7 generation used by the still-known
+working old portable. CI success will prove technical compatibility only; the
+exact trial ZIP must still pass on the target corporate PC.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `25ec4b5` | Qualified Phase 0.2 embedded-portable source | Fast-forwarded from the reviewed integration branch |
+| `origin/main` at `791b37b` | Qualified Phase 0.2 source, release ledger, and published diagnostic release | Target corporate gate failed after publication |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
-| `integration/stack-qualification` (current HEAD) | Phase 0.2 integration/release history | Qualified and merged to GitHub `main` |
+| `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | CI in progress; merge to `main` only after green |
+| `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Implementation and qualification in progress |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -51,6 +53,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-013 | WFMHub is single-user/local-only: read configured source folders directly and never add an upload or cloud path. | This is the actual operating context and privacy boundary. |
 | D-014 | The full doctor must start with only the standard library and isolate native probes in child processes. | One blocked or crashing `.pyd`/`.dll` must produce a named failure rather than prevent diagnosis of the rest of the stack. |
 | D-015 | Corporate-PC execution of the exact extracted ZIP is a release gate, not an assumption. | CMD does not bypass WDAC/AppLocker rules applied to bundled native libraries. |
+| D-016 | Test CPython 3.13.7 as a separate compatibility release; do not silently replace or call it a policy bypass. | The old portable proves this Python generation can launch on the target, but its pure-Python dependency surface does not prove the new native stack. |
 
 ## Evidence already collected
 
@@ -125,6 +128,11 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   The Phase 0.2 full stack adds hundreds of native dependency images. Therefore
   the old launcher's success proves the operating model, not approval of an
   arbitrary Python version or the complete new native dependency graph.
+- All 75 distributions in the Phase 0.2 Windows production closure resolve to
+  CPython 3.13-compatible Windows wheels at the pinned versions. The only
+  irrelevant exception reported by the cross-platform audit is Linux-only
+  `nvidia-nccl-cu13`. This makes a same-stack 3.13.7 package technically
+  feasible; it does not make it corporate-policy compatible.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -239,6 +247,17 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 Phase 0.2 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
 
+## Phase 0.3 compatibility gates
+
+| Gate | Status | Required evidence |
+| --- | --- | --- |
+| Frozen CPython 3.13 graph | TODO | Regenerated `uv.lock`; frozen Linux and Windows installs under exactly 3.13.7 |
+| Official 3.13.7 provenance | TODO | Official archive SHA-256 `f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65`; exact native manifest |
+| Source and frontend quality | PASS | Local CPython 3.13.7: Ruff, strict Pyright, 22 pytest, native-stack probe; frontend: Biome, TypeScript, 6 Vitest, production build |
+| Ordinary-Windows exact ZIP | TODO | Full doctor plus outbound-blocked API/storage/browser lifecycle from the extracted CI artifact |
+| Target CPython startup | TODO | `DOCTOR.cmd` reaches and reports the supervisor on the corporate workstation |
+| Target native capabilities | TODO | All 14 isolated probes pass, or every blocked capability is identified from doctor plus CodeIntegrity events |
+
 ## Current risks and fallbacks
 
 - **Primary risk is now observed:** the exact release was stopped before the
@@ -268,15 +287,32 @@ only through a recorded decision with evidence.
    under `Microsoft/Windows/CodeIntegrity/Operational`; record the blocked file
    and policy name without changing or bypassing policy.
 2. Confirm the existing old portable's CPython 3.13.7 still starts on the same
-   workstation. If it does and the new block names a 3.14 runtime image, build
-   and CI-qualify a frozen 3.13.7 compatibility variant.
-3. Run the compatibility doctor. If unsigned analytical children are blocked,
+   workstation while the frozen 3.13.7 current-stack variant is CI-qualified.
+3. Download and run only the distinct Phase 0.3 compatibility asset after CI
+   passes. If unsigned analytical children are blocked,
    stop pursuing the full native stack without an IT allowlist and define a
    pure-Python/SQLite local core with explicitly deferred/replaced capabilities.
 4. After a target-compatible boundary is proven, begin the first RTA vertical slice using the
    governed contracts preserved from the old portable repo.
 
 ## Session log
+
+### 2026-09-20 — CPython 3.13 policy-compatibility trial started
+
+- Created `integration/python313-policy-compat` from the Phase 0.2 diagnostic
+  commit. The experiment preserves the full production dependency graph,
+  embedded-runtime isolation, doctor, security boundary, storage model, and
+  browser lifecycle; only the Python compatibility line changes.
+- Pinned the official CPython 3.13.7 embeddable archive to the exact hash used
+  by the old portable, changed build/smoke paths from `python314` to
+  `python313`, and regenerated the Python lock for `==3.13.*`.
+- Local CPython 3.13.7 now passes Ruff formatting/lint, strict Pyright, all 22
+  pytest tests, and real DuckDB/Polars/forecast/XGBoost/OR-Tools/Excel native
+  operations. The frontend passes Biome, TypeScript, all 6 Vitest tests, and
+  its production build.
+- This is not yet a target-compatible release. The complete Windows
+  build/extracted-ZIP smoke and the target corporate doctor remain required in
+  that order.
 
 ### 2026-09-20 — First embedded Windows CI repair
 

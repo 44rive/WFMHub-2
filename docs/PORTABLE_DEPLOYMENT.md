@@ -53,14 +53,14 @@ lake, configuration, feeds, and reports remain local. Program upgrades replace
 ## Embedded CPython contract
 
 Release CI downloads the official
-`python-3.14.7-embed-amd64.zip` and verifies SHA-256:
+`python-3.13.7-embed-amd64.zip` and verifies SHA-256:
 
 ```text
-d297e5ff019966817ad8502465176139f2d3d840fa4ed84b13bed399a6ab1f15
+f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65
 ```
 
 The build records its origin and an exact native-file manifest. The runtime
-`python314._pth` exposes only the standard library, application package and
+`python313._pth` exposes only the standard library, application package and
 application-local `site-packages`. Launchers clear machine Python environment
 variables and use isolated mode.
 
@@ -165,7 +165,7 @@ does not replace the final run on the separately managed corporate workstation.
 From a networked Windows x64 checkout:
 
 ```powershell
-uv sync --frozen --extra dev --python 3.14.7
+uv sync --frozen --extra dev --python 3.13.7
 corepack pnpm install --frozen-lockfile
 ./scripts/build_portable.ps1
 ```

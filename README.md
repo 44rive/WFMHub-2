@@ -118,7 +118,7 @@ Measured learning and better future recommendations
                                │ loopback API
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Official embedded CPython 3.14 application                     │
+│ Official embedded CPython 3.13 application                     │
 │ FastAPI + Pydantic                                             │
 │                                                                 │
 │  WFM domain       Intelligence       Forecasting    Optimization│
@@ -339,7 +339,7 @@ These are the greenfield targets selected on **2026-09-16**. Stable releases are
 
 | Area | Baseline |
 | --- | --- |
-| Python | 3.14.7 |
+| Python | 3.13.7 policy-compatibility baseline |
 | DuckDB | 1.5.5; 2.0 intentionally deferred until stable |
 | DuckLake | 1.0 format / current stable extension |
 | Polars | 1.44.2; 2.0 RC intentionally not used |

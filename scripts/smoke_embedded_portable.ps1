@@ -88,7 +88,7 @@ try {
     [System.StringComparer]::OrdinalIgnoreCase
   )
   foreach ($AllowedPath in @(
-    (Join-Path $PortableRoot "_system/runtime/python314.zip"),
+    (Join-Path $PortableRoot "_system/runtime/python313.zip"),
     (Join-Path $PortableRoot "_system/runtime"),
     (Join-Path $PortableRoot "_system/site-packages"),
     (Join-Path $PortableRoot "_system/app")
