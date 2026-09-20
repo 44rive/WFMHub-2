@@ -25,6 +25,7 @@ node_modules/
 web/dist/
 web/.vite/
 web/coverage/
+web/public/vendor/
 *.tsbuildinfo
 
 # Local compiler output, including artifacts left by the retired desktop experiment

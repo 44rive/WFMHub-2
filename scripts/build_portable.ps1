@@ -25,6 +25,7 @@ uv sync --frozen --extra dev --python 3.13.7
 Write-Host "[2/7] Install and build the frozen React frontend"
 corepack enable
 pnpm install --frozen-lockfile
+uv run --frozen python scripts/stage_browser_runtime.py
 pnpm build:web
 
 Write-Host "[3/7] Stage and verify the pinned offline DuckLake extension"

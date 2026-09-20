@@ -34,13 +34,19 @@ training_window_end
 
 ## Model families
 
-### Statistical baselines — StatsForecast
+### Portable deterministic baselines
 
-Start every service with strong baselines. Depending on history and seasonality these may include seasonal naive, ETS, ARIMA-family or other statistical models.
+Start every service with transparent pure-Python baselines such as recent mean,
+weekday/interval seasonal naive, and governed trend variants.
 
 A complex model must beat the baseline on held-out rolling windows before being selected.
 
-### Feature models — MLForecast + XGBoost
+### Browser statistical and feature candidates
+
+After the exact target gate and data-quality work, Pyodide can evaluate
+statsmodels ETS/ARIMA-family models and scikit-learn feature models in a Worker.
+Native StatsForecast/MLForecast/XGBoost remain optional trusted/server-profile
+implementations.
 
 Useful features can include:
 
@@ -83,7 +89,10 @@ market
       queue
 ```
 
-Independent forecasts can disagree across levels. `HierarchicalForecast` is used to reconcile them so totals remain coherent.
+Independent forecasts can disagree across levels. Reconciliation is a governed
+domain requirement; the target implementation is selected only after
+performance qualification. Native `HierarchicalForecast` remains a
+trusted/server-profile reference.
 
 ## Forecast intelligence
 

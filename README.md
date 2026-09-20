@@ -104,87 +104,58 @@ Decision + outcome history
 Measured learning and better future recommendations
 ```
 
-### Technology architecture — September 2026 greenfield baseline
+### Technology architecture — target-compatible baseline
 
 ```text
-                      WFMHub 2.0 Portable
-
-┌─────────────────────────────────────────────────────────────────┐
-│ System browser                                                  │
-│ React 19.3 + TypeScript 7 + Vite 8.1                           │
-│ TanStack Query / Router / Table / Virtual                      │
-│ Tailwind CSS 4.3 + Apache ECharts 6.1                          │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │ loopback API
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ Official embedded CPython 3.13 application                     │
-│ FastAPI + Pydantic                                             │
-│                                                                 │
-│  WFM domain       Intelligence       Forecasting    Optimization│
-│  attendance       risk               StatsForecast  OR-Tools    │
-│  service          drivers            MLForecast                 │
-│  staffing         interventions      XGBoost                    │
-│  scheduling       scenarios          HierarchicalForecast       │
-│  capacity         decision learning                              │
-└───────────────┬───────────────────────┬─────────────────────────┘
-                │                       │
-                ▼                       ▼
-        SQLite control plane       Polars ingestion
-                │                       │
-                │                       ▼
-                │                 DuckLake 1.0
-                │                 Parquet history
-                │                       │
-                └──────────────┬────────┘
-                               ▼
-                            DuckDB
-                       analytical engine
+WFMHub.cmd
+    |
+    v
+Official embedded CPython 3.13.7
+  stdlib localhost server
+  governed pure-Python WFM services
+  authoritative SQLite + Excel/CSV outputs
+    |
+    | stable 127.0.0.1:8420 origin + per-launch token
+    v
+Microsoft Edge
+  React / TypeScript WFM workbench
+  optional DuckDB-Wasm + OPFS analytical cache
+  optional Pyodide forecasting worker
+  optional HiGHS-Wasm optimization worker
 ```
 
-The current stack rationale is documented in [docs/TECH_STACK.md](docs/TECH_STACK.md).
+This topology follows measured corporate-policy evidence. Native Python
+analytics remain available for development or a future IT-managed deployment,
+but they are not allowed to block the target portable RTA core. See
+[docs/TECH_STACK.md](docs/TECH_STACK.md).
 
 ## Data architecture
 
-WFMHub 2.0 uses **two storage responsibilities**, not two competing analytical databases.
+Configured source extracts and `data/control.sqlite` are authoritative.
+SQLite stores manifests, governed facts, marts, mappings, refresh runs,
+decisions, scenarios, and audit state. DuckDB-Wasm may keep derived analytical
+tables in browser OPFS for speed, but that cache must be rebuildable because
+browser storage is not a durable system of record.
 
-### SQLite — control plane
-
-SQLite stores small, mutable application state:
-
-```text
-configuration
-source manifests
-refresh runs
-mapping versions
-scenarios
-RTA interventions
-decision/outcome history
-audit state
-user preferences
-```
-
-### DuckLake + Parquet — analytical history
-
-DuckLake owns durable analytical datasets and snapshots. Parquet is the physical historical storage format. DuckDB is the engine that queries and transforms those tables.
+Bronze, Silver, and Gold describe responsibilities rather than mandatory
+physical databases:
 
 ```text
-Untouched source files
+read-only source evidence
         |
         v
-Polars adapters / normalization
+Bronze: source-faithful typed rows + provenance
         |
         v
-DuckLake
-  bronze  source-faithful normalized facts
-  silver  mapped and governed canonical WFM facts
-  gold    analytical marts / decision products
+Silver: governed vendor-neutral WFM facts
         |
         v
-DuckDB queries -> FastAPI -> desktop UI / Excel / optimization
+Gold: RTA / staffing / forecast / decision products
+        |
+        +--> React workbench
+        +--> Excel / CSV
+        +--> optional browser analytical cache
 ```
-
-For the portable single-engine edition, the DuckLake metadata catalog is DuckDB-backed. A future multi-client/server edition can move the catalog to SQLite or PostgreSQL without changing the WFM domain model.
 
 ## Refresh philosophy
 
@@ -204,7 +175,8 @@ Examples:
 | Change parser logic | invalidate only source versions produced by that parser |
 | Full rebuild | explicit maintenance command, never normal refresh |
 
-DuckLake snapshots also give WFMHub a natural basis for reproducing historical analytical states, such as “what did we know when this staffing decision was made?”
+Every activated generation must retain enough provenance to answer “what did
+we know when this staffing decision was made?”
 
 See [docs/REFRESH_ENGINE.md](docs/REFRESH_ENGINE.md).
 
@@ -215,9 +187,11 @@ Forecasting is a governed model-selection pipeline rather than a single “AI fo
 ```text
 Historical demand
       |
-      +--> Seasonal / statistical baselines     StatsForecast
+      +--> Explainable seasonal baselines        portable Python
       |
-      +--> Feature-based ML models               MLForecast + XGBoost
+      +--> Statistical models                    Pyodide + statsmodels
+      |
+      +--> Feature-based candidate models        Pyodide + scikit-learn
       |
       +--> calendar / event / exogenous features
       |
@@ -236,7 +210,8 @@ The initial objective is not maximum model complexity. It is trustworthy bias/er
 
 ## Optimization architecture
 
-OR-Tools CP-SAT is the optimization layer for constraint-heavy WFM problems such as:
+HiGHS-Wasm is the target-profile candidate for linear and mixed-integer WFM
+problems such as:
 
 - interval coverage;
 - shifts and tours;
@@ -247,7 +222,9 @@ OR-Tools CP-SAT is the optimization layer for constraint-heavy WFM problems such
 - cross-skill allocation;
 - preference and fairness constraints.
 
-The optimizer consumes governed domain inputs. Solver code does not own WFM definitions.
+The optimizer consumes governed domain inputs. It is not an OR-Tools CP-SAT
+drop-in, and solver code never owns WFM definitions. Native OR-Tools remains a
+trusted/server-profile option.
 
 ## Repository structure
 
@@ -256,7 +233,7 @@ WFMHub-2/
 ├─ src/wfmhub2/
 │  ├─ adapters/          Verint / Storm / CSV / Excel source contracts
 │  ├─ analytics/         DuckDB analytical pipelines
-│  ├─ api/               FastAPI transport only
+│  ├─ api/               trusted/server transport
 │  ├─ core/              settings and shared platform primitives
 │  ├─ domain/            vendor-neutral WFM business logic
 │  │  ├─ attendance/
@@ -267,9 +244,10 @@ WFMHub-2/
 │  │  └─ staffing/
 │  ├─ ingestion/         discovery, fingerprints and refresh planning
 │  ├─ intelligence/      risk, interventions, patterns and scenarios
-│  ├─ optimization/      OR-Tools models
+│  ├─ optimization/      solver-independent model contracts
 │  ├─ reports/           Excel/CSV business handoffs
-│  └─ storage/           SQLite control + DuckLake access
+│  └─ storage/           SQLite authority + optional analytical adapters
+├─ src/wfmhub2_compat/   stdlib-only target host
 ├─ web/                  React / TypeScript workbench
 ├─ docs/                 product and engineering documentation
 ├─ config/               example governed configuration
@@ -288,23 +266,18 @@ The target Windows release is still portable/offline:
 ```text
 WFMHub-2/
 ├─ WFMHub.cmd                 primary local launcher
-├─ DOCTOR.cmd                 full compatibility qualification
+├─ DOCTOR.cmd                 Python/SQLite/Excel host qualification
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
 ├─ Feed/
 ├─ Reports/
 ├─ data/                         created locally on first use; not shipped
 │  ├─ control.sqlite
-│  └─ lake/
-│     ├─ catalog.ducklake
-│     └─ files/               Parquet data managed by DuckLake
 └─ _system/
-   ├─ runtime/                official CPython + signed MS runtime DLLs
-   ├─ site-packages/          complete frozen Windows dependency graph
-   ├─ app/                    WFMHub Python package
-   ├─ web/                    compiled React assets
-   └─ duckdb_extensions/
-      └─ ducklake.duckdb_extension
+   ├─ runtime/                official CPython + pure Python wheel archives
+   ├─ app/                    stdlib-only local host
+   ├─ web/                    React, Workers, WASM, Pyodide packages
+   └─ manifests/              exact origin and SHA-256 inventories
 ```
 
 End users should require:
@@ -318,12 +291,12 @@ End users should require:
 
 Node and uv are build-time tools only. The target computer launches the
 official embedded `python.exe`; it does not install Python or dependencies.
-The packaged DuckLake extension is loaded locally in offline releases.
+Every browser and Python asset is self-hosted in the ZIP.
 
 End users must download the versioned Windows portable asset from GitHub
 Releases, not GitHub's automatically generated source-code ZIP. The source ZIP
-does not contain the embedded runtime, locked Windows packages, compiled web
-assets, or DuckLake binary.
+does not contain the embedded runtime, pure Python wheels, compiled web assets,
+or WebAssembly packages.
 
 The historical [v0.2.0 Phase 0.1 preview](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase0.1)
 uses the retired executable delivery path and is blocked on the target managed
@@ -335,16 +308,18 @@ See [docs/PORTABLE_DEPLOYMENT.md](docs/PORTABLE_DEPLOYMENT.md).
 
 ## Current baseline versions
 
-These are the greenfield targets selected on **2026-09-16**. Stable releases are preferred over previews.
+These are the target-compatible baselines selected on **2026-09-20**. Stable
+releases are preferred over previews.
 
 | Area | Baseline |
 | --- | --- |
 | Python | 3.13.7 policy-compatibility baseline |
-| DuckDB | 1.5.5; 2.0 intentionally deferred until stable |
-| DuckLake | 1.0 format / current stable extension |
-| Polars | 1.44.2; 2.0 RC intentionally not used |
-| FastAPI | 0.141.1 |
-| OR-Tools | 9.15.6755 |
+| Host HTTP | Python 3.13 standard library |
+| SQLite | CPython-bundled; authoritative portable store |
+| DuckDB-Wasm | 1.32.0; rebuildable OPFS cache |
+| Pyodide | 0.29.5 |
+| Browser forecasting | scikit-learn 1.7.0 + statsmodels 0.14.4 |
+| Browser optimization | highs 1.15.3 |
 | React | 19.3.0 |
 | TypeScript | 7.0.2 |
 | Vite | 8.1 line |
@@ -358,12 +333,11 @@ Versions should be upgraded deliberately with CI and portable-build verification
 
 ## Development quick start
 
-Python engine:
+Python development environment:
 
 ```powershell
 uv sync --extra dev
-uv run wfmhub2 init
-uv run wfmhub2 serve
+uv run pytest
 ```
 
 Frontend:
@@ -374,10 +348,12 @@ pnpm install
 pnpm dev:web
 ```
 
-Run the combined local application during development:
+Build the hybrid compatibility release:
 
 ```powershell
-uv run wfmhub2 portable
+python scripts/stage_browser_runtime.py
+pnpm build:web
+python packaging/windows/build_hybrid_spike.py
 ```
 
 Run checks:
@@ -396,10 +372,10 @@ pnpm test:web
 - Preserve source evidence; missing evidence remains unknown until a governed rule says otherwise.
 - Keep metric definitions deterministic and testable.
 - Keep vendor parsing outside the domain layer.
-- Keep FastAPI and React free of WFM formulas.
+- Keep HTTP handlers and React free of WFM formulas.
 - Make recommendations explainable from governed data.
 - Prefer incremental refresh and bounded recomputation.
-- Store analytical history in columnar, partitionable structures rather than one monolithic mutable file.
+- Keep browser analytical storage rebuildable from authoritative evidence.
 - Keep the Windows portable/offline edition a first-class product.
 - Use statistical/ML complexity only when it improves measured forecast performance.
 - Record interventions and outcomes so the system learns from operations, not merely reports them.

@@ -5,8 +5,8 @@ The roadmap is organized by **WFM capability**, not by framework implementation.
 ## Foundation — platform and governed data
 
 - official embedded-CPython runtime + CMD/localhost-browser lifecycle;
-- SQLite control plane;
-- DuckLake/Parquet analytical plane;
+- stdlib host + authoritative SQLite analytical/core plane;
+- optional DuckDB-Wasm/OPFS rebuildable analytical cache;
 - incremental source manifest and refresh planner;
 - adapter contract for Verint/Storm/generic CSV/Excel;
 - canonical service/interval/agent concepts;
@@ -30,9 +30,9 @@ The roadmap is organized by **WFM capability**, not by framework implementation.
 - forecast-vintage storage;
 - bias/WAPE/MAE/RMSE;
 - weekday/interval error patterns;
-- StatsForecast baselines;
-- MLForecast/XGBoost models;
-- hierarchical forecast reconciliation;
+- explainable pure-Python seasonal baselines;
+- optional Pyodide statsmodels/scikit-learn candidates;
+- hierarchical reconciliation after target performance qualification;
 - independent staffing requirement service;
 - shrinkage uplift and requirement audit trail.
 
@@ -44,7 +44,8 @@ The roadmap is organized by **WFM capability**, not by framework implementation.
 - skill mismatch;
 - training/PTO displacement;
 - schedule-quality findings;
-- OR-Tools scheduling prototype.
+- HiGHS-Wasm MIP scheduling prototype;
+- optional OR-Tools CP-SAT reference in a trusted/server profile.
 
 ## Scenario lab
 

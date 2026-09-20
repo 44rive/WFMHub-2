@@ -72,6 +72,7 @@ jobs:
 
       - name: Frontend quality and build
         run: |
+          uv run --frozen python scripts/stage_browser_runtime.py
           pnpm check:web
           pnpm typecheck:web
           pnpm test:web
@@ -82,6 +83,100 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: source-qualification-evidence
+          path: qualification-evidence/
+          if-no-files-found: warn
+
+  hybrid-portable:
+    name: Windows x64 target-compatible hybrid spike
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+
+      - name: Install exact build Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Sync frozen browser dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Stage self-hosted browser runtimes and build React
+        shell: pwsh
+        run: |
+          uv run --no-project --python $env:PYTHON_VERSION python scripts/stage_browser_runtime.py
+          pnpm build:web
+
+      - name: Build and verify the hybrid Windows ZIP
+        shell: pwsh
+        run: >-
+          uv run --no-project --python $env:PYTHON_VERSION python
+          packaging/windows/build_hybrid_spike.py --web-dist web/dist
+
+      - name: Expand exact hybrid ZIP
+        shell: pwsh
+        run: |
+          $Archives = @(Get-ChildItem dist/WFMHub-2-v*-phase0.4-hybrid-spike-windows-x64.zip -File)
+          if ($Archives.Count -ne 1) {
+            throw "Expected one Phase 0.4 hybrid ZIP, found $($Archives.Count)"
+          }
+          $ExtractRoot = Join-Path $env:RUNNER_TEMP "WFMHub 2 hybrid ü release"
+          Expand-Archive -LiteralPath $Archives[0].FullName -DestinationPath $ExtractRoot
+          "HYBRID_ROOT=$(Join-Path $ExtractRoot 'WFMHub-2')" | Add-Content $env:GITHUB_ENV
+
+      - name: Run exact embedded host doctor
+        shell: pwsh
+        run: |
+          $Python = Join-Path $env:HYBRID_ROOT "_system/runtime/python.exe"
+          $Doctor = & $Python -I -m wfmhub2_compat.doctor --home $env:HYBRID_ROOT --json
+          if ($LASTEXITCODE -ne 0) {
+            throw "The exact hybrid embedded host doctor failed."
+          }
+          New-Item -ItemType Directory -Force qualification-evidence | Out-Null
+          $Doctor | Set-Content qualification-evidence/hybrid-host-doctor.json -Encoding utf8
+          $Doctor | Write-Host
+
+      - name: Smoke all browser capabilities with outbound resolution blocked
+        shell: pwsh
+        run: >-
+          ./scripts/smoke_hybrid_portable.ps1
+          -PortableRoot $env:HYBRID_ROOT
+          -EvidencePath qualification-evidence/hybrid-browser-report.json
+          -TimeoutSeconds 480
+
+      - name: Upload hybrid Windows release ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: WFMHub-2-phase0.4-hybrid-windows-x64
+          path: |
+            dist/WFMHub-2-v*-phase0.4-hybrid-spike-windows-x64.zip
+            dist/WFMHub-2-v*-phase0.4-hybrid-spike-windows-x64.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload hybrid qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybrid-qualification-evidence
           path: qualification-evidence/
           if-no-files-found: warn
 
@@ -129,6 +224,7 @@ jobs:
           uv run --frozen ruff check src tests scripts packaging/windows
           uv run --frozen pyright
           uv run --frozen pytest
+          uv run --frozen python scripts/stage_browser_runtime.py
           pnpm check:web
           pnpm typecheck:web
           pnpm test:web

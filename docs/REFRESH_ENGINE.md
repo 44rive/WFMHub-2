@@ -30,13 +30,13 @@ The quick path compares cheap metadata first. Hashing is performed when metadata
 3. quick manifest comparison
 4. calculate SHA-256 if required
 5. skip/reactivate known immutable source version when valid
-6. normalize changed version with Polars/plain Python
-7. write/replace affected Bronze facts in DuckLake
+6. normalize changed version with streaming/plain Python
+7. write/replace affected Bronze facts in the authoritative SQLite transaction
 8. determine affected business-date/service scope
 9. rebuild affected Silver canonical facts
 10. rebuild affected Gold marts/intelligence
-11. commit control-plane manifest + refresh result
-12. retain DuckLake snapshot information for reproducibility
+11. commit manifest + validated generation atomically
+12. optionally refresh the rebuildable browser analytical cache
 ```
 
 ## Bronze / Silver / Gold invalidation
@@ -69,9 +69,11 @@ Rebuild the specific Silver/Gold models whose rule fingerprint changed.
 
 Only source versions produced by the changed parser contract need to be re-normalized.
 
-## DuckLake snapshots
+## Generation provenance
 
-DuckLake creates snapshots as analytical state changes. WFMHub should capture the relevant snapshot ID/time in refresh metadata when practical.
+Every successful refresh records its source versions, policy fingerprints,
+model versions, affected scopes, and activation time. Optional analytical
+caches may record their own version, but they are not the authority.
 
 This enables future reproducibility questions such as:
 
@@ -80,21 +82,22 @@ What did the staffing mart look like at 10:40
 when the RTA decided to move two agents?
 ```
 
-Decision records should eventually retain the analytical snapshot or governed model version used for the decision.
+Decision records retain the governed generation/model version used for the
+decision.
 
-## Partition strategy
+## Optional analytical cache
 
-Partition analytical tables only where pruning benefit outweighs small-file overhead. Likely candidates include business date/month and possibly service scope for very large datasets.
+DuckDB-Wasm may materialize derived tables in OPFS when measured queries need
+columnar execution. Partition/cache only where pruning benefit outweighs
+complexity. Likely candidates include business date/month and service scope for
+large call/status histories.
 
 Do not blindly partition every table by every dimension.
 
 High-frequency events such as call-by-call/status history should be written in reasonably sized files rather than one file per tiny interval.
 
-## Compaction
-
-Repeated corrections can create many small Parquet files. DuckLake maintenance/compaction should be a controlled maintenance operation with explicit performance thresholds.
-
-Normal refresh should not compact all history.
+Clearing or losing the browser cache must trigger a bounded rebuild from
+authoritative SQLite/source evidence, never data loss.
 
 ## Atomicity
 
@@ -109,7 +112,8 @@ succeeded
 failed
 ```
 
-A failed analytical write must not mark the source version active/successful in SQLite.
+A failed canonical/mart write must not mark the source version active. A failed
+optional cache refresh does not invalidate the committed SQLite generation.
 
 ## Full rebuild
 
@@ -133,11 +137,12 @@ files changed
 bytes parsed
 rows normalized
 business dates affected
-DuckLake tables touched
+SQLite tables/generations touched
 Gold marts rebuilt
+browser cache tables refreshed
 elapsed by stage
 peak memory if available
-snapshot id/time
+generation id/time
 ```
 
 This makes performance regressions measurable rather than anecdotal.

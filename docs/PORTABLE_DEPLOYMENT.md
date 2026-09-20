@@ -1,29 +1,24 @@
 # Portable Windows Deployment
 
-## Goal
-
-The supported single-user experience is:
+## Supported target experience
 
 ```text
-download release ZIP -> Extract All -> run WFMHub.cmd -> work locally
+download GitHub Release ZIP -> Extract All -> DOCTOR.cmd -> WFMHub.cmd
 ```
 
-Normal use requires no administrator rights, installed Python, Node.js, Rust,
-database server, installer, or internet access. WFMHub reads the configured
-local source folders directly; there is no upload workflow.
+Normal use requires no administrator rights, installed Python, Node, Rust,
+database server, installer, upload, or runtime internet. WFMHub reads configured
+local source folders directly.
 
-## Why the runtime changed
+## Why the Phase 0.4 profile exists
 
-The Phase 0.1 Tauri + PyInstaller bundle ran correctly in Windows CI but its two
-unsigned custom executables were rejected by application-control policy on the
-target corporate workstation. The earlier WFMHub-Portable product already
-proved a compatible model on that workstation: a CMD launcher invokes the
-official CPython embeddable runtime and runs application-local Python code.
+The target workstation runs official embedded CPython 3.13.7, SQLite, and the
+pure-Python Excel stack. It blocks third-party native Python libraries through
+enterprise App Control. Consequently, the target profile does not import or
+ship FastAPI/Pydantic Core, native DuckDB, Polars, PyArrow, NumPy, XGBoost,
+OR-Tools, or the native forecast graph.
 
-WFMHub 2 therefore retains the complete Python/data/forecasting/optimization
-stack while replacing only its delivery shell. It no longer requires a Tauri
-launcher, PyInstaller sidecar, WebView2 window, installer, or one-file
-extraction under `%TEMP%`.
+This is a policy-compatible architecture, not a security-control bypass.
 
 ## Release layout
 
@@ -33,142 +28,94 @@ WFMHub-2/
 ├─ DOCTOR.cmd
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
-├─ config/
 ├─ Feed/
 ├─ Reports/
 └─ _system/
-   ├─ runtime/                 official CPython + signed MS runtime DLLs
-   ├─ site-packages/           frozen Windows x64 production graph
-   ├─ app/wfmhub2/             application code
-   ├─ web/                     compiled React assets
-   └─ duckdb_extensions/
-      └─ ducklake.duckdb_extension
+   ├─ runtime/
+   │  ├─ python.exe            official CPython 3.13.7
+   │  └─ wheels/               four reviewed pure-Python Excel wheels
+   ├─ app/wfmhub2_compat/      stdlib-only host
+   ├─ web/                     React, Workers, WASM, Pyodide packages
+   └─ manifests/               origin and exact SHA-256 inventories
 ```
 
-`data/control.sqlite`, the DuckLake catalog, and managed Parquet files are
-created locally on first use; they are never release payloads. The database,
-lake, configuration, feeds, and reports remain local. Program upgrades replace
-`_system` and launchers, never durable user state.
+`data/control.sqlite` and browser compatibility reports are created only after
+extraction. Releases never contain operational extracts, databases, reports,
+logs, local configuration, or employee/customer data.
 
-## Embedded CPython contract
+## Launch and security contract
 
-Release CI downloads the official
-`python-3.13.7-embed-amd64.zip` and verifies SHA-256:
+`WFMHub.cmd` clears machine Python variables and invokes the embedded runtime
+with isolated paths. The host:
+
+1. creates/checks SQLite;
+2. binds the stable `127.0.0.1:8420` origin so the rebuildable OPFS cache can
+   survive launches;
+3. creates a fresh 256-bit session token;
+4. serves the compiled UI and self-hosted browser runtimes;
+5. opens the browser with the token in the URL fragment;
+6. requires that token for protected local requests;
+7. remains visible until Ctrl+C stops the application.
+
+The server restricts Host headers to loopback and emits CSP, COOP, COEP,
+same-origin resource, no-frame, no-referrer, and no-sniff headers.
+
+## Two-stage doctor
+
+### `DOCTOR.cmd` — host boundary
+
+Runs before the UI and checks:
+
+- isolated official runtime paths;
+- SQLite WAL and integrity;
+- OpenPyXL/XlsxWriter XLSX generation and readback;
+- presence of the complete browser runtime.
+
+### `WFMHub.cmd` — browser boundary
+
+Select **Run all probes**. The browser reports independently:
+
+- standard WebAssembly inside a Worker;
+- DuckDB-Wasm SQL plus OPFS checkpoint/terminate/reopen;
+- Pyodide with scikit-learn and statsmodels model fitting;
+- HiGHS-Wasm mixed-integer optimization.
+
+The complete result is atomically stored at:
 
 ```text
-f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65
+data/compatibility/last-browser-report.json
 ```
 
-The build records its origin and an exact native-file manifest. The runtime
-`python313._pth` exposes only the standard library, application package and
-application-local `site-packages`. Launchers clear machine Python environment
-variables and use isolated mode.
+Return that file when reporting a managed-workstation result. It contains
+capability/version/timing information, not workforce extracts.
 
-Third-party packages are resolved from the committed lock during the networked
-build and installed into the staged runtime. The target workstation never runs
-pip. Native wheel contents remain ordinary `.pyd`/`.dll` files in their wheel
-layout rather than being embedded in or extracted from a custom executable.
-The Microsoft-signed `msvcp140.dll` and `vcomp140.dll` copies from the locked
-scikit-learn wheel are signature-checked and placed beside `python.exe` so the
-release does not rely on a machine-wide redistributable installation.
+## Build
 
-## Application launch
-
-`WFMHub.cmd`:
-
-1. resolves the extracted application directory;
-2. verifies that `_system/runtime/python.exe` exists;
-3. clears `PYTHONHOME` and `PYTHONPATH`;
-4. invokes the embedded runtime in isolated mode with explicit home and local
-   DuckLake-extension paths;
-5. generates a per-launch session token;
-6. starts FastAPI/Uvicorn on an available `127.0.0.1` port;
-7. serves the compiled React client on the same origin;
-8. opens the system browser;
-9. remains the visible lifecycle owner until Ctrl+C/window close.
-
-The browser is presentation and job control. Python remains the only owner of
-source reads, calculations and analytical writes.
-
-## Full-stack compatibility doctor
-
-`DOCTOR.cmd` starts through a standard-library-only supervisor. It executes
-every capability in a fresh child of the same embedded `python.exe`, so one
-blocked or crashing native library becomes a named failure and does not hide
-the remaining results. It performs real, local operations with:
-
-- isolated runtime paths and cleared machine-Python environment;
-- portable paths and SQLite WAL/rollback/backup/quick-check/reopen;
-- DuckDB, the explicit offline DuckLake extension and managed Parquet;
-- Polars parsing/group transforms;
-- PyArrow Zstd-Parquet write/read required by the StatsForecast dependency graph;
-- StatsForecast prediction, MLForecast fit/predict and HierarchicalForecast
-  bottom-up reconciliation;
-- qpsolvers/Clarabel quadratic programming used by the forecast stack;
-- XGBoost;
-- OR-Tools CP-SAT;
-- XlsxWriter/OpenPyXL round-trip;
-- the FastAPI/Pydantic application boundary.
-
-All capabilities ship together, but heavy modules are imported only by their
-feature or by this explicit doctor. A normal RTA launch must not eagerly load
-forecasting, ML, or optimization libraries.
-
-The target corporate workstation is the final application-control gate. If its
-policy blocks a bundled `.pyd` or `.dll`, no launcher or archive layout may
-circumvent that policy; that binary must be approved or the dependency must be
-replaced. The doctor and Windows Code Integrity/AppLocker event logs identify
-the exact failing file.
-
-The current locked graph is intentionally complete rather than minimal: about
-75 runtime distributions, roughly 795 MiB of extracted dependencies and 13,000
-files before the runtime/app/extension. Most third-party PE files are unsigned,
-so neither ZIP creation nor GitHub-hosted Windows CI can prove company-policy
-acceptance. Normal startup remains lazy; only `DOCTOR.cmd` loads every heavy
-capability.
-
-## DuckLake extension
-
-The release contains the reviewed DuckDB/DuckLake `1.5.5` Windows AMD64
-extension. Build staging verifies:
-
-```text
-compressed:   4a5180e1654cbbc3fd58afe8c70b3f98187d18e8d8e8c9bf386c3d48e9b8a116
-decompressed: 4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0
-```
-
-Production always loads the explicit packaged file. It never installs or
-downloads an extension at runtime.
-
-## Release qualification
-
-Windows CI must:
-
-1. complete frozen Python and frontend source checks;
-2. stage and verify the pinned DuckLake extension;
-3. build the React client;
-4. assemble the official embedded runtime and complete locked production
-   dependency graph;
-5. reject missing/unexpected release members and user data;
-6. expand the exact final ZIP to a clean directory;
-7. launch only its embedded `python.exe`, never the runner's Python;
-8. run the full offline doctor with outbound traffic blocked;
-9. start the localhost application, verify authenticated API/storage activity,
-   and stop it cleanly;
-10. publish archive/member hashes and qualification evidence.
-
-GitHub-hosted Windows proves package completeness and offline operation. It
-does not replace the final run on the separately managed corporate workstation.
-
-## Build command
-
-From a networked Windows x64 checkout:
+After installing the locked Node dependencies:
 
 ```powershell
-uv sync --frozen --extra dev --python 3.13.7
-corepack pnpm install --frozen-lockfile
-./scripts/build_portable.ps1
+python scripts/stage_browser_runtime.py
+pnpm build:web
+python packaging/windows/build_hybrid_spike.py --web-dist web/dist
 ```
 
-The output is a versioned release ZIP plus its adjacent SHA-256 file. GitHub's
-automatic source archive is not runnable and is never an end-user artifact.
+Or on Windows:
+
+```powershell
+./scripts/build_hybrid_spike.ps1
+```
+
+The Python builder is intentionally cross-platform. It downloads and
+hash-verifies the official Windows embeddable runtime, downloads four
+hash-locked pure-Python wheels, rejects host-native additions, builds a
+deterministic ZIP, extracts it, and verifies every member/hash.
+
+## Release gate
+
+Ordinary CI and local Chromium can prove completeness and browser semantics.
+Only the exact extracted ZIP on the managed corporate workstation can prove
+the applicable App Control and Edge policies. A Phase 0.4 pass authorizes the
+first RTA vertical slice; it does not prove production-scale model performance.
+
+GitHub's automatically generated source ZIP is never a supported runnable
+package.

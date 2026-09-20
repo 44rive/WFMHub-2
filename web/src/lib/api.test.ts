@@ -106,4 +106,31 @@ describe('engine API client', () => {
       headers: { 'X-WFMHub-Token': 'launch-secret' },
     })
   })
+
+  it('saves a compatibility report through the protected local boundary', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            status: 'saved',
+            relativePath: 'data/compatibility/last-browser-report.json',
+          }),
+          { status: 200 },
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const report = { schemaVersion: 1, probes: [] }
+
+    await expect(
+      createEngineClient(readyConnection).saveCompatibilityReport(report),
+    ).resolves.toMatchObject({ status: 'saved' })
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:43127/api/compat/report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WFMHub-Token': 'launch-secret',
+      },
+      body: JSON.stringify(report),
+    })
+  })
 })

@@ -15,9 +15,10 @@ and expanding only after the governed evidence and operational workflow work.
 0.3 proved that official CPython 3.13.7, isolated source Python, SQLite, and the
 pure-Python Excel stack execute on the target workstation. The same doctor also
 proved that company App Control rejects the current third-party native
-analytics/API binaries. Stop iterating on packaging for the full native graph;
-either obtain an IT-managed trust decision or qualify a pure-Python/SQLite
-portable profile based on the already proven old-portable boundary.
+analytics/API binaries. The Phase 0.4 hybrid spike now passes locally with
+outbound resolution blocked: stdlib/SQLite on the host plus DuckDB-Wasm/OPFS,
+Pyodide forecasting, and HiGHS-Wasm in browser workers. The blocking gate is
+the exact extracted hybrid ZIP on the target corporate workstation.
 
 ## Repository and branch state
 
@@ -26,7 +27,8 @@ portable profile based on the already proven old-portable boundary.
 | `origin/main` | Phase 0.3 CPython 3.13.7 compatibility baseline | Target doctor starts, but 10 native capability probes are policy-blocked |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
-| `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
+| `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Locally implemented and offline-smoked; target-PC run pending |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -55,6 +57,11 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-015 | Corporate-PC execution of the exact extracted ZIP is a release gate, not an assumption. | CMD does not bypass WDAC/AppLocker rules applied to bundled native libraries. |
 | D-016 | Test CPython 3.13.7 as a separate compatibility release; do not silently replace or call it a policy bypass. | The old portable proves this Python generation can launch on the target, but its pure-Python dependency surface does not prove the new native stack. |
 | D-017 | Stop treating the complete native analytics graph as target-portable under the current company policy. | The exact Phase 0.3 doctor passed Python/SQLite/Excel but App Control blocked Pydantic Core, DuckDB, Polars/native loading, PyArrow, NumPy and every dependent forecasting/ML/optimization probe. More ZIP/CMD/version changes cannot authorize those binaries. |
+| D-018 | Use a hybrid target profile: stdlib CPython + authoritative SQLite/Excel host, React UI, and optional browser-WASM workers. | It preserves the target-proven boundary while allowing analytical experiments without loading third-party host DLLs. |
+| D-019 | OPFS/DuckDB-Wasm is a rebuildable analytical cache, never authoritative storage. | Browser storage can be cleared or evicted; source evidence and SQLite must survive browser/profile changes. |
+| D-020 | Pin DuckDB-Wasm 1.32.0, Pyodide 0.29.5, and highs 1.15.3 for the Phase 0.4 gate. | These exact self-hosted builds passed local Worker/WASM/OPFS/model/solver operations; moving versions requires the same gates. |
+| D-021 | HiGHS-Wasm and Pyodide models are candidates, not claimed drop-in replacements for OR-Tools/XGBoost/StatsForecast. | Scheduling formulations and forecast quality require independent WFM validation and performance evidence. |
+| D-022 | Use stable loopback origin `127.0.0.1:8420` for the browser-WASM profile while retaining a fresh 256-bit token per launch. | OPFS is scoped to origin; an ephemeral port destroys cross-launch cache continuity. Startup fails if the fixed port is occupied. This supersedes D-008 for Phase 0.4 only. |
 
 ## Evidence already collected
 
@@ -79,9 +86,9 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   production graph. Existing Windows CI already executed the native stack
   under installed Python 3.14; the new gate is execution from the embedded,
   exact extracted release.
-- The browser architecture needs no WebView runtime. Compiled React assets and
-  FastAPI share one ephemeral `127.0.0.1` origin, with a fresh per-launch
-  credential; the CMD console owns shutdown.
+- The superseded Phase 0.1/0.2 browser architecture needed no WebView runtime.
+  Compiled React assets and FastAPI shared one ephemeral `127.0.0.1` origin,
+  with a fresh per-launch credential; the CMD console owned shutdown.
 - GitHub Actions run `35507061319` passed the complete Linux job but stopped in
   Windows source tests before packaging. It exposed two Windows-specific bugs:
   Starlette hands a mounted static application backslash-normalized paths, so an
@@ -147,6 +154,26 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   it uses CPython 3.13.7, `sqlite3`, `http.server`, OpenPyXL, XlsxWriter, and
   pure-Python application code. It does not import FastAPI/Pydantic, DuckDB,
   Polars, NumPy, PyArrow, XGBoost, or OR-Tools.
+- The Phase 0.4 hybrid profile contains no third-party host-native images. Its
+  only `.exe`, `.dll`, and `.pyd` files are the 30 files from the exact official
+  CPython 3.13.7 embeddable archive; Excel dependencies remain four reviewed
+  pure-Python wheel archives.
+- A real headless Chromium run passed all five Phase 0.4 probes: stdlib host,
+  Worker WebAssembly, DuckDB-Wasm 1.32.0 OPFS checkpoint/terminate/reopen,
+  Pyodide 0.29.5 with NumPy/scikit-learn/statsmodels model fits, and highs
+  1.15.3 integer optimization. DuckDB completed in 4.743 seconds, Pyodide in
+  26.089 seconds, and HiGHS in 0.242 seconds on the local development machine.
+- The same browser sequence passed from a fresh profile with external hostname
+  resolution mapped away from the machine. All browser runtime assets and
+  Pyodide wheels were served from the loopback origin.
+- A second full host/browser launch reused the same browser profile and stable
+  `127.0.0.1:8420` origin. The DuckDB OPFS counter advanced from 1 to 2,
+  proving cross-launch persistence; OPFS remains only a rebuildable cache.
+- The deterministic Phase 0.4 Windows compatibility ZIP has 84 files,
+  73,143,767 bytes, and SHA-256
+  `e26be8dcae3a23f24ae1e52fa40b0313cd3bafafeb30a01a133f5a5af0f66abc`.
+  Its extracted stage is about 146 MiB. This is local build evidence; exact
+  embedded-Windows and target-policy execution remain pending.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -274,43 +301,60 @@ only through a recorded decision with evidence.
 
 ## Current risks and fallbacks
 
-- **Primary risk is now confirmed:** CPython 3.13.7 restores the supervisor, but
-  the target policy rejects the third-party native graph. A full local stack
-  requires an IT-authored allow policy, trusted signing/catalog rules, or
-  managed deployment. Without that administrative path, the target portable
-  must remove native dependencies; do not attempt a policy bypass.
-- The release will be large: roughly `795 MiB` of unpacked `site-packages`
-  before runtime/app/assets, about 13,000 dependency files, and likely a ZIP in
-  the high hundreds of MiB. Extraction/antivirus scanning may dominate first
-  use. Measure before pruning because wheel data/native layouts are fragile.
-- OR-Tools/HierarchicalForecast need `MSVCP140`; XGBoost/scikit-learn need
-  `VCOMP140`. The exact package must prove DLL discovery without assuming a
-  machine-wide Visual C++ or OpenMP installation.
-- If DuckLake cannot load reliably offline or recover safely, use the preserved
-  immutable-generation DuckDB/Parquet implementation.
-- If a heavy analytical dependency is policy-blocked, keep its WFM capability
-  contract but replace or defer that implementation explicitly; do not let it
-  block normal startup through eager imports.
+- **Primary remaining risk:** the target Edge policy may disable WebAssembly,
+  Worker execution, OPFS, or JIT behavior even though local Chromium passes.
+  The exact managed-workstation browser report is decisive.
+- OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
+  only a rebuildable cache; SQLite and source evidence remain authoritative.
+- The browser payload is about 125 MiB before the CPython host and compresses
+  into a roughly 70 MiB release ZIP. Local Pyodide startup/model fitting took
+  about 26 seconds; target memory and first-run time remain unmeasured.
+- Pyodide/scikit-learn/statsmodels prove model execution, not forecast quality.
+  HiGHS proves MIP execution, not that an OR-Tools scheduling formulation can
+  be translated with acceptable performance or semantics.
+- The blocked full native graph still requires an IT-authored allow policy,
+  trusted signing/catalog rules, or managed deployment. It is now a separate
+  trusted/server profile, not the target portable fallback.
 - GitHub-hosted Windows can prove package completeness and ordinary Windows
   runtime behavior. It cannot reproduce the target company's policy.
 
 ## Next executable steps
 
-1. Preserve the Phase 0.3 doctor output as the target-policy acceptance result.
-   Optionally collect correlated CodeIntegrity 3077/3089 events for an IT
-   request; exact events are no longer needed to choose the architecture.
-2. Decide between the only honest paths: IT-managed authorization for the full
-   native payload, or a target-portable pure-Python/SQLite profile.
-3. For the no-IT path, qualify the smallest spike first: CPython 3.13.7,
-   `http.server`, SQLite, OpenPyXL/XlsxWriter, compiled React assets, the same
-   ephemeral loopback token, and no Pydantic/FastAPI/Uvicorn/DuckDB/DuckLake/
-   Polars/NumPy/PyArrow/forecasting/XGBoost/OR-Tools imports.
-4. If that exact spike passes the target, port the first RTA vertical slice and
-   governed contracts from the old portable. Use SQLite/streaming CSV/Excel for
-   ingestion and deterministic pure-Python WFM calculations. Keep unavailable
-   native capabilities explicit rather than silently approximating them.
+1. Run CI for the Phase 0.4 branch and retain its exact hybrid ZIP/checksum.
+2. Extract that ZIP on the target workstation, run `DOCTOR.cmd`, then run all
+   five browser probes from `WFMHub.cmd`; return
+   `data/compatibility/last-browser-report.json`.
+3. If the host passes but a browser capability fails, keep that capability
+   optional and remove it from the first RTA slice. Do not block the core.
+4. Once the exact target gate passes, port the first governed RTA vertical
+   slice from WFMHub-Portable: source refresh -> SQLite -> service/attendance
+   -> staffing gap -> React command centre -> Excel export.
+5. Reach old-portable business parity before declaring WFMHub 2 the operational
+   replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-20 — Phase 0.4 hybrid browser-WASM spike implemented locally
+
+- Created `integration/browser-wasm-hybrid-spike` from the Phase 0.3 target
+  acceptance baseline.
+- Added a standalone `wfmhub2_compat` host that imports only the standard
+  library, binds the stable loopback origin `127.0.0.1:8420`, validates
+  Host/token boundaries, launches Edge explicitly on Windows, serves
+  cross-origin-isolated static assets, initializes authoritative SQLite, and
+  atomically records strictly validated five-probe browser reports.
+- Added independently reported Worker probes for base WebAssembly,
+  DuckDB-Wasm/OPFS persistence, Pyodide forecasting, and HiGHS-Wasm MIP.
+- Added verified offline Pyodide staging, pure-Python Excel wheel packaging,
+  native-file rejection, deterministic archive verification, and an explicit
+  compatibility UI that does not claim to be the finished product.
+- Independent final review found and drove fixes for browser readiness racing,
+  stale nested asset staging, default-browser ambiguity, weak report
+  validation, ephemeral-origin OPFS loss, and immediate fixed-port restart.
+- Local result: 29 pytest, strict Pyright, Ruff, TypeScript, 8 Vitest, Biome,
+  production build, two real-browser offline smokes, cross-launch OPFS
+  persistence, and two identical deterministic ZIP assemblies all pass.
+  Managed-Windows execution is pending.
 
 ### 2026-09-20 — Target Phase 0.3 native-policy boundary proven
 

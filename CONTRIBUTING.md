@@ -28,6 +28,7 @@ pnpm install --frozen-lockfile
 pnpm check:web
 pnpm typecheck:web
 pnpm test:web
+uv run --frozen python scripts/stage_browser_runtime.py
 pnpm build:web
 ```
 
@@ -45,6 +46,24 @@ portable release. It does not validate the embedded Windows runtime; use the
 portable build and exact extracted-ZIP smoke for that gate.
 
 ## Windows stack qualification
+
+### Target-compatible hybrid profile
+
+The current corporate-workstation gate builds a stdlib/SQLite host and
+self-hosted browser-WASM workers without packaging the blocked native Python
+graph:
+
+```powershell
+python scripts/stage_browser_runtime.py
+pnpm build:web
+python packaging/windows/build_hybrid_spike.py --web-dist web/dist
+```
+
+The exact extracted ZIP must pass `DOCTOR.cmd` and the five **Run all probes**
+browser checks on the managed workstation. Browser results are written to
+`data/compatibility/last-browser-report.json`.
+
+### Trusted/native development profile
 
 On a networked Windows x64 build machine, the portable build command uses the
 committed Python/frontend locks, stages the reviewed DuckLake 1.5.5 artifact,

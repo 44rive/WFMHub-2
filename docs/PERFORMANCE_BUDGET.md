@@ -63,6 +63,23 @@ CI budget records:
 Heavy forecasting/optimization imports stay out of normal startup even though
 every capability ships in the same release.
 
+## Phase 0.4 hybrid-spike baseline
+
+The local deterministic build produced:
+
+- ZIP: 73,143,767 bytes;
+- extracted stage: approximately 146 MiB across 84 files;
+- SHA-256: `e26be8dcae3a23f24ae1e52fa40b0313cd3bafafeb30a01a133f5a5af0f66abc`;
+- DuckDB-Wasm OPFS checkpoint/terminate/reopen: 3.683 seconds;
+- Pyodide plus two small forecast-model fits: 26.366 seconds;
+- HiGHS-Wasm integer staffing solve: 0.305 seconds.
+
+The five browser probes passed with external hostname resolution mapped away
+from the machine, then passed after a full host/browser restart with the same
+profile; the OPFS counter advanced from 1 to 2. These Linux/Chromium figures
+establish feasibility, not budgets for the managed Windows workstation or
+production datasets.
+
 ## Benchmark scales
 
 Synthetic fixtures should cover at least:
@@ -81,14 +98,13 @@ Ingestion:
 - rows/sec normalized;
 - hash time;
 - source decode time;
-- Polars transform time.
+- streaming/plain-Python transform time.
 
-Lakehouse:
+Storage/cache:
 
-- Parquet bytes written;
-- file count / average file size;
-- DuckLake commit time;
-- compaction time;
+- SQLite transaction and mart rebuild time;
+- database growth and backup time;
+- browser-cache publish/rebuild time;
 - query scan bytes.
 
 Models:
@@ -96,7 +112,8 @@ Models:
 - Silver rebuild per affected day;
 - Gold mart rebuild per affected day/service;
 - forecast backtest time;
-- OR-Tools solve time and optimality status.
+- Pyodide load/model time and memory;
+- HiGHS solve time, gap, feasibility, and optimality status.
 
 API/UI:
 

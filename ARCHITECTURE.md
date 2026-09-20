@@ -2,169 +2,130 @@
 
 ## Architectural objective
 
-WFMHub 2.0 separates four concerns that should never collapse into one large application module:
+WFMHub separates four concerns:
 
-1. **source ingestion** — understand vendor/file formats;
-2. **WFM domain logic** — define what service, staffing, attendance, forecasting, scheduling, and capacity mean;
-3. **intelligence/optimization** — explain, predict, recommend, and solve;
-4. **transport/presentation** — expose results through API, local browser UI, CLI, and reports.
+1. source adapters understand Verint, Storm, Excel, CSV, and other formats;
+2. the domain layer defines governed service, staffing, attendance, forecast,
+   schedule, and capacity meaning;
+3. intelligence explains, predicts, recommends, and evaluates decisions;
+4. transport and presentation expose the same products through the local UI,
+   CLI, and reports.
 
-The product architecture is stable even if implementation libraries change.
+The WFM model is the product. Libraries and deployment profiles may change
+without changing source authority or business meaning.
 
-## Runtime topology
+## Target portable topology
 
-The portable edition uses one official embedded-CPython application process
-plus the user's normal browser:
+The active corporate-workstation profile is deliberately asymmetric:
 
 ```text
-┌──────────────────────────────┐
-│ Official embedded Python 3.13│
-│                              │
-│ FastAPI                      │
-│ WFM domain services          │
-│ Intelligence                 │
-│ Forecasting                  │
-│ OR-Tools optimization        │
-│ DuckDB / DuckLake / Polars   │
-└──────────────┬───────────────┘
-               │
-      ┌────────┴─────────┐
-      ▼                  ▼
- control.sqlite      DuckLake catalog
-                    + Parquet data files
-
-              HTTP on 127.0.0.1
-                       │
-                       ▼
-              System web browser
-              React / TypeScript UI
+WFMHub.cmd
+    |
+    v
+Official embedded CPython 3.13.7
+  standard-library HTTP server
+  local source-folder access
+  governed pure-Python WFM services
+  SQLite authoritative state
+  OpenPyXL / XlsxWriter reports
+    |
+    | HTTP on stable 127.0.0.1:8420 + per-launch token
+    v
+Microsoft Edge
+  React / TypeScript presentation
+  Web Worker: DuckDB-Wasm analytical cache
+  Web Worker: Pyodide forecasting experiments
+  Web Worker: HiGHS-Wasm MIP experiments
 ```
 
-`WFMHub.cmd` invokes the hash-pinned CPython runtime directly. There is no
-custom launcher executable, PyInstaller sidecar, installer, or runtime
-extraction. The Python engine is the only component allowed to own WFM
-calculations or analytical writes. The browser never reads database or source
-files directly.
+The host profile contains no third-party native `.pyd` or `.dll` files. The
+only host native images are those in the exact official CPython embeddable ZIP,
+which matches the boundary already proven by WFMHub-Portable. WebAssembly is
+self-hosted and runs inside Edge rather than as a host DLL.
 
-## Storage model
+DuckDB-Wasm, Pyodide, and HiGHS-Wasm are feature-gated accelerators. The RTA
+core must still launch and perform deterministic WFM work when any or all of
+them are unavailable.
 
-### Control plane — SQLite
+## Authority and storage
 
-`data/control.sqlite`
+### SQLite and source files are authoritative
 
-Responsibilities:
+`data/control.sqlite` and the configured read-only extracts remain the durable
+portable source of truth. SQLite uses WAL, full synchronous commits, explicit
+transactions, integrity checks, verified backups, and atomic replacement where
+files must be published.
 
-- source-file manifests and fingerprints;
-- refresh runs and dependency invalidation;
-- configuration/mapping versions;
-- decision/intervention history;
-- scenario definitions;
-- audit and application state.
+SQLite owns:
 
-SQLite is intentionally small and transactional.
+- source manifests and fingerprints;
+- normalized/canonical WFM facts required by the portable core;
+- effective-dated mappings and configuration versions;
+- refresh runs and quality evidence;
+- decisions, interventions, scenarios, and measured outcomes;
+- application and upgrade state.
 
-### Analytical plane — DuckLake + Parquet
+The schema may retain Bronze/Silver/Gold responsibilities without requiring
+three physical databases:
 
-`data/lake/catalog.ducklake` is the metadata catalog for the portable edition. `data/lake/files/` holds Parquet files managed by DuckLake.
+- **Bronze** — source-faithful typed evidence and provenance;
+- **Silver** — mapped, vendor-neutral WFM facts at their natural grains;
+- **Gold** — rebuildable RTA, staffing, forecast, and decision products.
 
-DuckDB is used as the analytical query/compute engine. DuckLake gives the history layer table/catalog semantics, snapshots, schema evolution, partitioning and managed Parquet files without forcing WFMHub to invent its own lakehouse metadata format.
+### Browser analytics are rebuildable
 
-For the desktop edition, the DuckLake catalog is DuckDB-backed because one Python engine process owns writes. If WFMHub later becomes a multi-client/server application, the DuckLake catalog can move to SQLite or PostgreSQL while preserving table semantics.
+DuckDB-Wasm may materialize derived analytical tables in OPFS for fast local
+slice-and-dice. It is never the only copy of an operational fact because browser
+storage can be cleared, evicted, or isolated by profile/origin changes.
 
-## Medallion-style analytical layers
+The host can republish canonical data to the browser cache. A cache failure
+must not corrupt or invalidate the last committed SQLite state.
 
-The Bronze/Silver/Gold terminology describes data responsibility rather than separate physical databases.
+### Trusted/server profile remains optional
 
-### Bronze
+Native DuckDB/DuckLake/Parquet, Polars, StatsForecast, XGBoost, and OR-Tools
+remain valid for development or an IT-managed trusted deployment. They are not
+dependencies of the target portable profile under the current application
+control policy.
 
-Source-faithful normalized facts with strong provenance.
+## Data grains and source authority
 
-Examples:
+WFMHub does not collapse unrelated facts into one null-heavy interval table.
 
-- `bronze.verint_schedule`
-- `bronze.verint_activity`
-- `bronze.storm_agent_status`
-- `bronze.storm_call`
-- `bronze.forecast`
+- Call-by-Call queue evidence owns service and demand.
+- Verint Staff Type evidence owns forecast volume and requirement.
+- Published schedules own planned work.
+- Agent Status owns observed attendance; LILO is fallback evidence.
+- Verint Activities own finalized post-day absence and shrinkage.
+- FTE Count owns employee scope, status, FTE, PTO, and Away overlays.
 
-Rules:
-
-- retain source identifiers and source version;
-- normalize types/encoding/time zones;
-- do not apply business interpretation that belongs to WFM domain policy.
-
-### Silver
-
-Canonical governed WFM facts.
-
-Examples:
-
-- `silver.agent_interval_activity`
-- `silver.service_interval_demand`
-- `silver.schedule_interval`
-- `silver.attendance_evidence`
-- `silver.forecast_interval`
-
-Rules:
-
-- vendor-neutral schema;
-- governed mappings and scope;
-- effective-dated policy;
-- preserve null/unknown evidence states.
-
-### Gold
-
-Decision-ready marts/products.
-
-Examples:
-
-- `gold.rta_interval`
-- `gold.staffing_interval`
-- `gold.forecast_accuracy`
-- `gold.schedule_quality`
-- `gold.capacity_week`
-- `gold.intervention_candidate`
-
-Gold can be rebuilt from governed lower layers.
+Unknown evidence remains unknown. Client IDs remain text. RSA Belgium service
+and capacity scopes retain their governed distinction.
 
 ## Refresh architecture
 
-Normal refresh is dependency-aware and incremental:
-
 ```text
-Discover files
+Discover read-only source files
     |
-    v
-Metadata check (path, size, precise mtime)
+Metadata check -> SHA-256 only when needed
     |
-    +-- unchanged metadata + policy -> skip
+Parse changed source versions
     |
-    v
-SHA-256 when needed
+Validate employee, queue, date, and grain contracts
     |
-    +-- already active source version -> skip/reactivate
+Build affected canonical SQLite facts in a transaction
     |
-    v
-Adapter normalization -> Bronze
+Rebuild affected deterministic marts
     |
-    v
-Determine affected business-date/service ranges
+Commit manifest and activate the validated generation
     |
-    v
-Rebuild only affected Silver dependencies
-    |
-    v
-Rebuild only affected Gold marts/intelligence
-    |
-    v
-Commit refresh manifest + DuckLake snapshot metadata
+Optionally refresh the rebuildable browser cache
 ```
 
-A full historical rebuild is a separate maintenance command.
+A failed refresh leaves the previous validated state active. Full historical
+rebuild is an explicit maintenance operation, not the normal daily path.
 
-## Domain architecture
-
-The `domain/` package is not allowed to import FastAPI, React/browser concepts, or vendor parser modules.
+## Domain and intelligence boundaries
 
 ```text
 domain/
@@ -174,123 +135,65 @@ domain/
   forecasting/
   scheduling/
   capacity/
+
+intelligence/
+  risk/
+  interventions/
+  scenarios/
+  patterns/
+  decisions/
 ```
 
-This keeps the business engine usable from API, CLI, tests, batch jobs, and future server deployments.
+Domain modules must not depend on React, HTTP handlers, or vendor parser
+internals. Deterministic decomposition comes before statistical prediction.
+Recommendations expose eligibility, assumptions, expected impact, confidence,
+constraints, and operational cost.
 
-## Intelligence architecture
+## Forecasting and optimization
 
-`intelligence/` answers questions that combine multiple domain outputs:
+The target profile starts with explainable pure-Python seasonal baselines and
+forecast accuracy/bias measurement. Pyodide can add statsmodels and
+scikit-learn models after target performance and memory qualification. Those
+models must pass rolling-origin evaluation before selection.
 
-```text
-risk/             next 2–4 hour operational risk
-interventions/    eligible actions + expected impact
-scenarios/        governed what-if analysis
-patterns/         repeated structural findings
-decisions/        action/outcome learning
-```
+HiGHS-Wasm can solve linear and mixed-integer allocation/scheduling models. It
+is not a drop-in OR-Tools CP-SAT replacement: every model and constraint must be
+reformulated, validated, benchmarked, and explained. Solver output is a
+proposal; domain validation remains authoritative.
 
-The first versions should be deterministic and explainable. Statistical/ML models may add probability/confidence but should not replace visible drivers.
+## Portable security and lifecycle
 
-## Forecasting architecture
+- `WFMHub.cmd` invokes the pinned official embedded runtime directly.
+- The stdlib server binds only to `127.0.0.1:8420`. The stable origin lets the
+  rebuildable OPFS cache survive launches; startup fails safely if the port is
+  already occupied.
+- Each launch creates a 256-bit token delivered in the URL fragment, never the
+  HTTP query or server log.
+- Protected requests require the token; Host headers are restricted to
+  loopback to resist local DNS rebinding.
+- Static responses enforce same-origin, cross-origin isolation, CSP, no-frame,
+  and no-sniff headers.
+- All JavaScript, WebAssembly, Pyodide wheels, and other runtime assets are
+  packaged locally. Runtime internet is unnecessary.
+- The console remains the visible lifecycle owner and Ctrl+C stops the server.
+- The application reads configured local folders directly. It never uploads
+  workforce extracts or requires a cloud service.
 
-Forecasting is its own domain pipeline:
+## Delivery sequence
 
-```text
-canonical demand history
-        |
-        +--> StatsForecast baselines
-        +--> MLForecast feature pipeline
-                |
-                +--> XGBoost models
-        |
-        v
-rolling-origin cross validation
-        |
-        v
-metric comparison / model registry
-        |
-        v
-selected forecast
-        |
-        v
-HierarchicalForecast reconciliation
-        |
-        v
-governed forecast version
-```
-
-The engine must retain model/version/training window/feature provenance and forecast creation time so forecast vintages can be compared fairly.
-
-## Optimization architecture
-
-OR-Tools CP-SAT models belong under `optimization/` and consume domain objects rather than raw source rows.
-
-Typical constraints:
-
-- coverage requirement per interval;
-- skill eligibility;
-- shift duration;
-- min/max hours;
-- rest rules;
-- break/lunch windows;
-- training/PTO locks;
-- weekend/fairness preferences;
-- cross-service movement costs.
-
-Solver output is a proposal. Domain validation remains authoritative.
-
-## Portable application architecture
-
-The official embedded Python runtime owns application lifecycle and WFM
-execution. React owns presentation in the system browser.
-
-```text
-CMD launcher
-  ├─ resolve the portable home
-  ├─ isolate the bundled CPython runtime
-  ├─ start one local application process
-  └─ keep the console as the explicit stop/lifecycle owner
-
-React
-  ├─ routes/navigation
-  ├─ TanStack Query API state
-  ├─ TanStack Table/Virtual dense grids
-  ├─ ECharts interval visuals
-  └─ Tailwind design system
-
-FastAPI
-  ├─ transport validation
-  ├─ OpenAPI contract
-  ├─ serve compiled React assets on the same origin
-  └─ calls application/domain services
-```
-
-No WFM formula should live inside API route functions or React components.
-
-## Security boundary
-
-The embedded engine binds only to loopback. Each launch creates a 256-bit
-session token; the browser bootstrap receives only the connection material
-needed for that launch, and protected API requests must present the token.
-Host/origin policy remains restricted to loopback and the approved development
-origin.
-
-WFMHub does not require inbound LAN access in portable mode.
+1. Pass the exact Phase 0.4 hybrid ZIP on the target corporate workstation.
+2. Port the old product's governed source contracts, SQLite migrations,
+   formulas, mappings, upgrades, and synthetic tests.
+3. Deliver one RTA vertical slice: refresh -> service/attendance -> staffing
+   gap -> command-centre UI -> Excel export.
+4. Reach old-product operational parity before declaring WFMHub 2 its
+   replacement.
+5. Add browser analytics, forecasting, and optimization only behind measured
+   capability and business-value gates.
 
 ## Future team/server edition
 
-The architecture deliberately leaves room for:
-
-```text
-React web client
-      |
-central FastAPI service
-      |
-PostgreSQL control plane
-DuckLake PostgreSQL catalog / object storage
-worker processes
-SSO / role-based access
-```
-
-That is an evolution of deployment topology, not a rewrite of the WFM domain layer.
+A future centrally managed edition can restore FastAPI, PostgreSQL,
+DuckLake/object storage, workers, SSO, and role-based access. That is a new
+deployment topology over the same governed domain model, not permission to
+weaken the portable product's evidence contracts.

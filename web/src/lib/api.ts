@@ -11,6 +11,12 @@ export type Health = {
   status: string
   version: string
   architecture: string
+  thirdPartyHostNativeFiles?: number
+}
+
+export type SavedCompatibilityReport = {
+  status: 'saved'
+  relativePath: string
 }
 
 export type ProbeCheck = {
@@ -166,8 +172,25 @@ export function createEngineClient(connection: EngineConnection) {
     return response.json() as Promise<T>
   }
 
+  const post = async <T>(path: string, body: unknown): Promise<T> => {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WFMHub-Token': connection.sessionToken as string,
+      },
+      body: JSON.stringify(body),
+    })
+    if (!response.ok) {
+      throw new Error(`Engine request failed: ${response.status}`)
+    }
+    return response.json() as Promise<T>
+  }
+
   return {
     getHealth: () => request<Health>('/health'),
     getStackProbe: () => request<StackProbe>('/stack/probe'),
+    saveCompatibilityReport: (report: unknown) =>
+      post<SavedCompatibilityReport>('/compat/report', report),
   }
 }
