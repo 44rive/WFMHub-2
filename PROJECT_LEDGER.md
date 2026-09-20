@@ -83,7 +83,14 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   context manager did not close the temporary backup connection, leaving the
   file locked during cleanup. API prefix normalization and explicit SQLite
   connection closing now have local regression coverage; the corrected Windows
-  pipeline remains pending.
+  tests passed in the next pipeline.
+- Run `35507326233` passed Linux plus every Windows source, DuckLake, and native
+  analytical-stack gate, then failed the embedded builder's ZIP inventory
+  assertion. The staged and archived inventories were independently sorted as
+  Windows `Path` objects (case-insensitive) and ZIP strings (case-sensitive),
+  so mixed-case dependency filenames produced a false list-order mismatch. The
+  comparison now canonicalizes both sides as strings and reports any real
+  missing, unexpected, or duplicate members; ZIP/runtime execution is pending.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -222,8 +229,8 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Push the Windows portability repair and keep repairing CI until the embedded
-   release artifact is green.
+1. Push the canonical ZIP-inventory repair and keep repairing CI until the
+   embedded release artifact is green.
 2. Record the final archive hash, size, file count, doctor duration, and startup
    evidence in this ledger and rerun the final commit through CI.
 3. Merge the qualified branch to `main` and publish the exact green embedded
@@ -249,6 +256,12 @@ only through a recorded decision with evidence.
   SQLite backup connections. Local Python 3.14.7 Ruff, strict Pyright, and all
   21 tests pass; frontend Biome, TypeScript, 6 Vitest tests, and production
   build also pass. Corrected Windows package evidence is still pending.
+- Corrected run `35507326233` passed those Windows tests and the installed
+  DuckLake/native stack, but the builder rejected identical ZIP and staged
+  inventories because Windows `Path` ordering is case-insensitive while ZIP
+  string ordering is case-sensitive. Canonical string ordering and actionable
+  inventory diagnostics replace that false comparison; another exact package
+  run is pending.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 

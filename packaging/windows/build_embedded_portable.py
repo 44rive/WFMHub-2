@@ -20,6 +20,7 @@ import tempfile
 import tomllib
 import urllib.request
 import zipfile
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -452,9 +453,23 @@ def verify_archive(stage: Path, archive_path: Path) -> dict[str, object]:
             archive_members = sorted(name for name in archive.namelist() if not name.endswith("/"))
             archive.extractall(extracted_root)
         verified = extracted_root / TOP_LEVEL
-        expected_members = [f"{TOP_LEVEL}/{path.as_posix()}" for path in relative_files(stage)]
+        # WindowsPath sorts case-insensitively while ZIP member names are plain,
+        # case-sensitive strings. Canonicalize both inventories as strings so
+        # mixed-case dependency filenames do not create a false mismatch.
+        expected_members = sorted(
+            f"{TOP_LEVEL}/{path.as_posix()}" for path in relative_files(stage)
+        )
         if archive_members != expected_members:
-            raise RuntimeError("Portable ZIP members differ from the staged payload")
+            archive_counts = Counter(archive_members)
+            archive_set = set(archive_members)
+            expected_set = set(expected_members)
+            duplicates = sorted(name for name, count in archive_counts.items() if count > 1)
+            raise RuntimeError(
+                "Portable ZIP members differ from the staged payload: "
+                f"missing={sorted(expected_set - archive_set)[:10]}, "
+                f"unexpected={sorted(archive_set - expected_set)[:10]}, "
+                f"duplicates={duplicates[:10]}"
+            )
         if relative_files(verified) != relative_files(stage):
             raise RuntimeError("Expanded portable ZIP file set differs from the staged payload")
         for relative in relative_files(stage):
