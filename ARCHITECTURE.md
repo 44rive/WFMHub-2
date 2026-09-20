@@ -7,24 +7,18 @@ WFMHub 2.0 separates four concerns that should never collapse into one large app
 1. **source ingestion** — understand vendor/file formats;
 2. **WFM domain logic** — define what service, staffing, attendance, forecasting, scheduling, and capacity mean;
 3. **intelligence/optimization** — explain, predict, recommend, and solve;
-4. **transport/presentation** — expose results through API, desktop UI, CLI, and reports.
+4. **transport/presentation** — expose results through API, local browser UI, CLI, and reports.
 
 The product architecture is stable even if implementation libraries change.
 
 ## Runtime topology
 
-The portable desktop edition uses two runtime processes:
+The portable edition uses one official embedded-CPython application process
+plus the user's normal browser:
 
 ```text
 ┌──────────────────────────────┐
-│ Tauri 2 desktop process      │
-│                              │
-│ React/TypeScript webview     │
-└──────────────┬───────────────┘
-               │ HTTP on 127.0.0.1
-               ▼
-┌──────────────────────────────┐
-│ Python 3.14 engine sidecar   │
+│ Official embedded Python 3.14│
 │                              │
 │ FastAPI                      │
 │ WFM domain services          │
@@ -38,9 +32,19 @@ The portable desktop edition uses two runtime processes:
       ▼                  ▼
  control.sqlite      DuckLake catalog
                     + Parquet data files
+
+              HTTP on 127.0.0.1
+                       │
+                       ▼
+              System web browser
+              React / TypeScript UI
 ```
 
-The Python engine is the only component allowed to own WFM calculations or analytical writes. The UI never reads database files directly.
+`WFMHub.cmd` invokes the hash-pinned CPython runtime directly. There is no
+custom launcher executable, PyInstaller sidecar, installer, or runtime
+extraction. The Python engine is the only component allowed to own WFM
+calculations or analytical writes. The browser never reads database or source
+files directly.
 
 ## Storage model
 
@@ -160,7 +164,7 @@ A full historical rebuild is a separate maintenance command.
 
 ## Domain architecture
 
-The `domain/` package is not allowed to import FastAPI, React/Tauri concepts, or vendor parser modules.
+The `domain/` package is not allowed to import FastAPI, React/browser concepts, or vendor parser modules.
 
 ```text
 domain/
@@ -236,16 +240,17 @@ Typical constraints:
 
 Solver output is a proposal. Domain validation remains authoritative.
 
-## Desktop architecture
+## Portable application architecture
 
-Tauri is only the native shell. React owns presentation. Python owns the WFM engine.
+The official embedded Python runtime owns application lifecycle and WFM
+execution. React owns presentation in the system browser.
 
 ```text
-Tauri
-  ├─ package web assets
-  ├─ start/stop `wfmhub-engine` sidecar
-  ├─ native window lifecycle
-  └─ future OS integration
+CMD launcher
+  ├─ resolve the portable home
+  ├─ isolate the bundled CPython runtime
+  ├─ start one local application process
+  └─ keep the console as the explicit stop/lifecycle owner
 
 React
   ├─ routes/navigation
@@ -257,6 +262,7 @@ React
 FastAPI
   ├─ transport validation
   ├─ OpenAPI contract
+  ├─ serve compiled React assets on the same origin
   └─ calls application/domain services
 ```
 
@@ -264,7 +270,11 @@ No WFM formula should live inside API route functions or React components.
 
 ## Security boundary
 
-The desktop engine binds only to loopback. Production packaging should add a per-launch authentication token passed from Tauri to the sidecar and required on mutating API requests. CORS/origin policy should be restricted to the packaged application and approved development origin.
+The embedded engine binds only to loopback. Each launch creates a 256-bit
+session token; the browser bootstrap receives only the connection material
+needed for that launch, and protected API requests must present the token.
+Host/origin policy remains restricted to loopback and the approved development
+origin.
 
 WFMHub does not require inbound LAN access in portable mode.
 

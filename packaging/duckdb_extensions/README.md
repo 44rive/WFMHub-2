@@ -4,7 +4,7 @@ This directory intentionally contains no committed extension binary.
 
 `scripts/stage_ducklake.ps1` downloads the pinned DuckLake extension during a
 networked Windows build, verifies both the compressed and decompressed SHA-256
-digests, and writes the local file expected by the Tauri resource bundle:
+digests, and writes the local file consumed by the embedded-CPython packager:
 
 ```text
 ducklake.duckdb_extension

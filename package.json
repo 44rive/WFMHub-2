@@ -9,13 +9,9 @@
     "typecheck:web": "pnpm --dir web typecheck",
     "test:web": "pnpm --dir web test",
     "check:web": "biome check web/src web/package.json web/tsconfig.json web/vite.config.ts",
-    "format:web": "biome format --write web/src web/package.json web/tsconfig.json web/vite.config.ts",
-    "tauri": "tauri",
-    "desktop:dev": "tauri dev",
-    "desktop:build": "tauri build"
+    "format:web": "biome format --write web/src web/package.json web/tsconfig.json web/vite.config.ts"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.13",
-    "@tauri-apps/cli": "2.11.4"
+    "@biomejs/biome": "2.5.13"
   }
 }

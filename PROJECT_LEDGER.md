@@ -1,6 +1,6 @@
 # WFMHub 2 Project Ledger
 
-Last updated: 2026-09-19
+Last updated: 2026-09-20
 
 This is the durable project handoff. Read it before exploring the repository.
 Update it after material work so the next human or AI session starts from known
@@ -11,19 +11,21 @@ state instead of repeating discovery.
 Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
-**Active milestone: Phase 0 — stack qualification.** Prove the complete desktop
-walking skeleton on a clean Windows environment before adding more WFM features.
+**Active milestone: Phase 0.2 — official-CPython portable qualification.** Keep
+the complete WFM/data/forecasting/optimization stack, replace the blocked
+Tauri/PyInstaller delivery shell with the already proven embedded-CPython + CMD
+operating model, and prove the exact release ZIP on the target corporate PC.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `ec49670` | 2026 greenfield/Tauri/DuckLake major update | Architecture seed; not release-ready |
-| local `main` at `e943a05` | Pre-update governed contracts and storage work | Preserve; four commits ahead of the old baseline, one unstaged time cleanup |
-| `integration/stack-qualification` | Authoritative Phase 0 integration branch | Active |
-| `integration/stack-backend` | Isolated Python/storage worker branch | Active during Phase 0 |
-| `integration/stack-desktop` | Isolated Tauri/frontend worker branch | Active during Phase 0 |
-| `integration/stack-foundation` | Isolated locks/CI/tooling worker branch | Active during Phase 0 |
+| `origin/main` at `a16da3e` | Merged initial Phase 0 qualification | Behind the qualified Phase 0.1 preview and current Phase 0.2 work |
+| local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
+| `integration/stack-qualification` (current HEAD) | Authoritative integration/release branch | Active; runtime and packaging commits merged |
+| `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
+| `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
+| `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
 
 Do not merge the upstream repository replacement directly into the preserved
 local `main`. Integrate reviewed logical changes on the qualification branch.
@@ -37,15 +39,45 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-003 | Do not use one null-heavy universal interval fact. | Demand/service, forecast/requirement, schedule, and attendance have different grains and authorities. |
 | D-004 | SQLite is the control plane; DuckLake/Parquet is provisional for analytical history. | DuckLake remains contingent on offline Windows packaging, recovery, correction, and performance evidence. |
 | D-005 | Heavy forecasting/ML/optimization libraries must not block core startup. | They increase size and native packaging risk and belong behind explicit capability checks. |
-| D-006 | Portable runtime binds to loopback and uses a per-launch token, restricted origins, explicit home, and owned sidecar lifecycle. | Loopback alone is not a sufficient desktop security/lifecycle boundary. |
+| D-006 | Portable runtime binds to loopback and uses a per-launch token, restricted hosts/origins, explicit home, and console-owned lifecycle. | Loopback alone is not a sufficient local security/lifecycle boundary. |
 | D-007 | Import only business contracts/configuration from WFMHub-Portable, never operational or personal data. | Preserve privacy and reproducibility. |
-| D-008 | Tauri generates a 256-bit token, passes it to the owned sidecar through `WFMHUB2_SESSION_TOKEN`, and exposes connection details only through a narrow command. | Avoid fixed ports, generic shell access, and token exposure in process arguments or logs. |
-| D-009 | The packaged engine watches the desktop PID in addition to Tauri retaining the immediate child handle. | PyInstaller one-file mode has a supervisor/child process tree; killing only the supervisor can orphan the API. |
-| D-010 | Package only modules/native assets exercised by the engine, with explicit exclusions for unused GUI, test, GPU, and optional analytics layers. | `collect_all()` produced a 596 MB sidecar and bundled unrelated Spark/Dask/test/plotting code. |
+| D-008 | The Python process generates a 256-bit per-launch browser credential and binds an ephemeral loopback port. | Avoid fixed ports and prevent unrelated local pages from invoking protected APIs. |
+| D-009 | `WFMHub.cmd` remains the visible lifecycle owner; the embedded Python server stops on Ctrl+C/window close. | The supported product must behave like the proven older portable app without a custom launcher process. |
+| D-010 | Ship the complete frozen production dependency graph in one ZIP, preserving wheel layouts; lazy-import heavy capabilities during normal use. | The user requested one complete offline product, while ordinary RTA startup must remain bounded and diagnosable. |
 | D-011 | End users receive a versioned GitHub Release ZIP, never GitHub's source-code ZIP. | The source archive excludes all ignored native build artifacts and cannot satisfy `unzip -> run`. |
+| D-012 | Retire Tauri, Rust, PyInstaller, WebView2, and the custom WFMHub executables from the active build. | Both unsigned custom executables were blocked by target enterprise policy; CMD invoking official embedded CPython is already proven there. |
+| D-013 | WFMHub is single-user/local-only: read configured source folders directly and never add an upload or cloud path. | This is the actual operating context and privacy boundary. |
+| D-014 | The full doctor must start with only the standard library and isolate native probes in child processes. | One blocked or crashing `.pyd`/`.dll` must produce a named failure rather than prevent diagnosis of the rest of the stack. |
+| D-015 | Corporate-PC execution of the exact extracted ZIP is a release gate, not an assumption. | CMD does not bypass WDAC/AppLocker rules applied to bundled native libraries. |
 
 ## Evidence already collected
 
+- The target workstation rejects the unsigned Phase 0.1 `WFMHub.exe` /
+  PyInstaller engine under enterprise application control even after ordinary
+  Windows unblock steps. The problem is policy enforcement, not installation:
+  the old executable only launches and extracts its one-file payload.
+- The earlier WFMHub-Portable product works on the same workstation using
+  `WFMHub.cmd` -> official CPython embeddable `python.exe` -> local Python
+  package. It installs nothing, reads local source folders directly, and keeps
+  SQLite state beside the product.
+- Python 3.14.7's official Windows x64 embeddable archive is available and
+  pinned by SHA-256
+  `d297e5ff019966817ad8502465176139f2d3d840fa4ed84b13bed399a6ab1f15`.
+- The frozen Windows production closure is 75 distributions, approximately
+  `269.4 MiB` of compressed wheels and `795 MiB` extracted before the Python
+  runtime, app, web assets, and DuckLake extension. It contains 378 third-party
+  PE files; 371 have no Authenticode certificate table. This makes technical
+  packaging feasible but corporate-policy compatibility unproven.
+- Windows x64 CPython 3.14 wheels exist in the lock for DuckDB, Pydantic Core,
+  Polars, NumPy, SciPy, Pandas, PyArrow, XGBoost, OR-Tools, and the remaining
+  production graph. Existing Windows CI already executed the native stack
+  under installed Python 3.14; the new gate is execution from the embedded,
+  exact extracted release.
+- The browser architecture needs no WebView runtime. Compiled React assets and
+  FastAPI share one ephemeral `127.0.0.1` origin, with a fresh per-launch
+  credential; the CMD console owns shutdown.
+- The lines below retain historical qualification evidence for the superseded
+  Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
   dependency definitions were reviewed.
 - Python 3.14 Windows x64 wheels resolve for the declared Python dependency set.
@@ -137,57 +169,106 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   doctor was `11.34 s` with about `385 MiB` peak RSS, and median explicit
   DuckLake load was `38.1 ms`. These are evidence, not yet release targets.
 
-## Phase 0 acceptance gates
+## Phase 0.2 acceptance gates
 
 Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 
 | Gate | Status | Required evidence |
 | --- | --- | --- |
-| Reproducible dependency locks | PASS | Frozen Python 3.14.7, pnpm, and locked Cargo installs/checks passed from a detached clean checkout with no staged native artifacts |
-| Python quality | PASS | Ruff, Pyright, and pytest on Python 3.14 |
-| Frontend quality | PASS | Biome, TypeScript, 5 Vitest contract tests, and production build pass locally on Node 22/pnpm 12 |
-| Rust quality | PASS | rustfmt, Clippy with warnings denied, and Rust tests |
-| Core storage probe | PASS | SQLite plus offline local DuckLake load, write, restart, and read |
-| Native-library probe | PASS | Linux package executes Polars, DuckDB, StatsForecast, XGBoost, and OR-Tools operations |
-| Secure engine launch | PASS | Loopback, per-launch token, restricted origin/host, explicit portable home |
-| Desktop lifecycle | PASS | Linux and extracted Windows Tauri shells start the engine, initiate authenticated storage work, and close without leaving engine processes |
-| Portable persistence | PASS | Writable co-located data survives restart; read-only location shows an actionable failure |
-| Offline runtime | TODO | Clean Windows run with network unavailable and no developer runtimes installed |
-| Windows package | PASS | Run `35467361420` built, expanded, hash-verified, launched, exercised offline storage, and cleanly stopped the exact 241,753,224-byte ZIP |
-| Operational budget | PASS | Linux metrics plus Windows 17.422 s desktop-to-storage and 9.872 s direct engine readiness are recorded; optimization remains a release concern |
+| Frozen Python/frontend inputs | PASS | Existing `uv.lock` and `pnpm-lock.yaml`; exact versions remain enforced in CI |
+| Official embedded CPython provenance | TODO | Download hash, origin manifest, unchanged signed CPython-native manifest, isolated `_pth` |
+| Complete dependency payload | TODO | Entire frozen production closure installed without pip/build activity on the target |
+| Python/frontend quality | PASS | Local Python 3.14.7: Ruff format/lint, strict Pyright, 21 pytest; frontend: Biome, TypeScript, 6 Vitest, production build |
+| Full subprocess doctor | TODO | Every storage, dataframe, forecast, reconciliation, ML, optimization, Excel, API, and web capability executes independently |
+| Offline DuckLake | TODO | Explicit bundled extension writes physical Parquet, reopens, and reads with extension auto-install/autoload disabled |
+| Browser/API security | TODO | Ephemeral loopback, clean browser bootstrap, authenticated/unauthenticated HTTP tests, strict host/origin boundary |
+| Exact ZIP verification | TODO | Deterministic archive, complete member/native hashes, no user data or custom application executable |
+| Windows offline/lifecycle | TODO | Expanded ZIP runs with outbound blocked, serves React/API, persists/restarts, and stops cleanly |
+| Corporate App Control | BLOCKED | User runs `DOCTOR.cmd` from the exact release ZIP on the managed workstation; every native child probe passes |
+| Operational budget | TODO | Record ZIP/extracted size, file count, doctor duration, and normal cold-start/memory measurements |
 
-Phase 0 is complete only when all gates pass. A gate may be deliberately removed
+Phase 0.2 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
 
 ## Current risks and fallbacks
 
+- **Primary risk:** the complete stack adds 371 unsigned third-party PE files.
+  Official `python.exe` being allowed does not imply those `.pyd`/`.dll` files
+  are allowed. If the exact doctor fails, identify the blocked capability in
+  Windows Code Integrity/AppLocker logs, then remove/replace it or request a
+  narrow IT allowlist; do not attempt a policy bypass.
+- The release will be large: roughly `795 MiB` of unpacked `site-packages`
+  before runtime/app/assets, about 13,000 dependency files, and likely a ZIP in
+  the high hundreds of MiB. Extraction/antivirus scanning may dominate first
+  use. Measure before pruning because wheel data/native layouts are fragile.
+- OR-Tools/HierarchicalForecast need `MSVCP140`; XGBoost/scikit-learn need
+  `VCOMP140`. The exact package must prove DLL discovery without assuming a
+  machine-wide Visual C++ or OpenMP installation.
 - If DuckLake cannot load reliably offline or recover safely, use the preserved
   immutable-generation DuckDB/Parquet implementation.
-- If Python 3.14/PyInstaller fails on Windows, test and document Python 3.13 as
-  the compatibility baseline.
-- If heavy analytical libraries make core launch too large or slow, split them
-  into optional/lazy capabilities and keep the RTA core minimal.
-- The optimized Linux package is still about 303 MB and cold desktop readiness
-  is about 10 seconds. Treat optional/lazy analytics and PyInstaller one-folder
-  mode as serious follow-up candidates, not cosmetic tuning.
-- GitHub-hosted Windows evidence establishes packaged DLL discovery, WebView2
-  launch, firewall-blocked engine operation, and ZIP layout. It does not prove
-  behavior on a separate workstation with no developer runtimes installed.
-- The portable preview is unsigned and may trigger a Windows SmartScreen
-  warning. Code-signing policy remains a future release decision.
+- If a heavy analytical dependency is policy-blocked, keep its WFM capability
+  contract but replace or defer that implementation explicitly; do not let it
+  block normal startup through eager imports.
+- GitHub-hosted Windows can prove package completeness and ordinary Windows
+  runtime behavior. It cannot reproduce the target company's policy.
 
 ## Next executable steps
 
-1. Run the final extracted bundle on a clean/offline Windows workstation with
-   no developer runtimes and confirm WebView2 behavior.
-2. Decide explicit Windows package/startup/memory budgets and whether the core
-   engine must split optional forecasting/optimization capabilities.
-3. Decide code-signing and update/distribution policy before a public stable
-   release.
-4. Begin the first WFM vertical slice only after Phase 0 gates pass or a failed
-   technology is explicitly replaced through a recorded decision.
+1. Commit the completed local runtime/packaging/docs qualification and merge
+   current `origin/main` without touching the dirty local `main` worktree.
+2. Push the integration branch and keep repairing
+   Windows CI until the embedded release artifact is green.
+3. Publish the green embedded portable ZIP and adjacent SHA-256 as a prerelease.
+4. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
+   This is the go/no-go point for the full all-at-once stack.
+5. After the target gate passes, begin the first RTA vertical slice using the
+   governed contracts preserved from the old portable repo.
 
 ## Session log
+
+### 2026-09-20 — Embedded-CPython portable migration implemented locally
+
+- Re-inspected the old WFMHub-Portable launch/build/runtime contract and the
+  complete WFMHub-2 source, structure, dependency locks, Windows wheels, and
+  current CI/release evidence.
+- Confirmed that the blocked Phase 0.1 executables do not install software; the
+  Tauri shell launches a PyInstaller one-file engine which extracts and loads
+  many unsigned native files. Running through CMD would not evade enterprise
+  application control.
+- Chose the proven portable model: official, hash-pinned CPython 3.14.7
+  embeddable runtime, CMD lifecycle, same-origin FastAPI + compiled React in the
+  system browser, explicit local DuckLake extension, co-located local state,
+  and no upload/cloud/multi-user workflow.
+- Kept every requested Python WFM capability in one frozen release while
+  requiring heavy imports to remain lazy during normal startup.
+- Completed a dependency/native-policy audit: 75 packages, about 795 MiB
+  extracted and 378 third-party PE images, of which 371 have no Authenticode
+  certificate table. Therefore technical feasibility is positive, but target
+  policy compatibility remains honestly unproven until the exact ZIP doctor
+  passes there.
+- Implemented a same-origin browser runtime with ephemeral loopback port,
+  256-bit launch token, compiled React serving, offline storage initialization,
+  and CMD-owned clean shutdown. A local real server smoke returned health,
+  rejected an unauthenticated protected request with 401, planned an empty
+  read-only Feed refresh, served the React entrypoint, and stopped cleanly.
+- Implemented a standard-library-only doctor supervisor. Fourteen capabilities
+  execute in separate `-I` children: runtime isolation, local paths, Pydantic /
+  API imports, SQLite WAL/rollback/backup/quick-check/reopen, DuckLake physical
+  Parquet/reopen, Polars, PyArrow Parquet, StatsForecast, MLForecast fit/predict,
+  HierarchicalForecast reconciliation, Clarabel QP, XGBoost, OR-Tools, and Excel
+  round-trip. All passed locally under Python 3.14.7.
+- Implemented the Windows builder around hash-pinned official CPython 3.14.7,
+  frozen production wheels, compiled React, pinned DuckLake, locked-wheel
+  Microsoft runtime DLLs, deterministic ZIP/member/native manifests, and an
+  exact extracted-package smoke with outbound blocking and space/non-ASCII
+  paths. Windows execution is still pending.
+- Removed active Tauri/Rust/PyInstaller sources, scripts, dependencies, and lock
+  entries. Git/tag history retains the Phase 0.1 evidence.
+- Final local gates pass: Ruff format/lint, strict Pyright, 21 pytest tests,
+  the native-stack probe, Biome, TypeScript, 6 Vitest tests, and the production
+  React build.
+- Work remains on `integration/stack-qualification`; the dirty local `main` and
+  dirty old portable repo remain untouched.
 
 ### 2026-09-19 — Runnable GitHub release path corrected
 

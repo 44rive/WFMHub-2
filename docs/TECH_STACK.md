@@ -1,23 +1,28 @@
-# Technology Stack — 2026 Greenfield Baseline
+# Technology Stack — 2026 Portable Baseline
 
 This document describes **implementation choices**. It is intentionally separate from the WFM product vision.
 
-Baseline date: **2026-09-16**.
+Baseline revised: **2026-09-20**.
 
-## Desktop and frontend
+## Portable runtime and frontend
 
-### Tauri 2.11 line
+### Official CPython 3.14 embeddable distribution
 
-Tauri is the Windows desktop shell. It provides a native app/window while using the system webview rather than bundling a full Chromium runtime. It can package the Python engine as an external sidecar.
+The Windows release vendors the official, hash-pinned CPython embeddable ZIP
+and launches it through `WFMHub.cmd`. Application code and locked third-party
+packages live beside that private runtime. Nothing is installed system-wide,
+and normal use needs no administrator rights, installed Python, or internet.
 
-Why:
+This replaces the Tauri + PyInstaller delivery experiment. The experiment
+proved that the full stack runs, but its unsigned custom executables were
+blocked by the target corporate application-control policy. The embeddable
+layout matches the already proven WFMHub-Portable operating model and avoids a
+custom launcher executable, sidecar executable, and one-file temporary
+extraction.
 
-- real desktop UX instead of an exposed browser tab;
-- small shell footprint;
-- sidecar support fits a bundled Python API engine;
-- end users do not need Rust, Node, or Python installed.
-
-Tauri 3 previews are intentionally not used.
+All locked capabilities ship in one release. Heavy forecasting, ML, and
+optimization modules are imported only by the features that need them so they
+do not block ordinary RTA startup.
 
 ### React 19.3
 
@@ -56,7 +61,10 @@ Frontend formatter/linter. It replaces a larger ESLint/Prettier plugin stack for
 
 ### Python 3.14.7
 
-Python is the WFM/domain language. Use normal CPython for the production baseline; free-threaded Python is interesting but unnecessary because DuckDB, Polars, XGBoost and OR-Tools already perform heavy work in optimized native code.
+Python is the WFM/domain language. The production portable baseline is the
+official CPython 3.14.7 embeddable x64 distribution. Free-threaded Python is
+unnecessary because DuckDB, Polars, XGBoost and OR-Tools already perform heavy
+work in optimized native code.
 
 ### FastAPI 0.141 + Pydantic 2.13
 
@@ -71,14 +79,15 @@ Development dependency/resolution workflow:
 ```text
 uv sync
 uv run pytest
-uv run wfmhub2
+pnpm build:web
+uv run wfmhub2 portable
 ```
 
 The repository should commit `uv.lock` after dependency resolution is run in a networked development environment.
 
-`uv.lock`, the workspace `pnpm-lock.yaml`, and `src-tauri/Cargo.lock` are release
-inputs. CI and portable builds use frozen/locked modes; dependency updates are
-explicit changes rather than side effects of building.
+`uv.lock` and the workspace `pnpm-lock.yaml` are release inputs. CI and
+portable builds use frozen/locked modes; dependency updates are explicit
+changes rather than side effects of building.
 
 ### Ruff 0.16 line
 
@@ -179,13 +188,19 @@ Excel remains a first-class business handoff even when the desktop UI improves. 
 
 ## Packaging
 
-### PyInstaller 6.22
+### Vendored Windows wheels
 
-Packages the Python 3.14 engine and native dependencies into `wfmhub-engine.exe`.
+Release CI installs the frozen production dependency graph into an
+application-local `site-packages` directory for CPython 3.14 / Windows x64.
+Native `.pyd` and `.dll` files remain in their normal wheel layout; they are not
+repacked into a custom executable and are not extracted to a temporary folder
+at launch. The target workstation never runs pip.
 
-### Tauri bundler
+### Compiled browser client
 
-Packages the desktop shell, compiled React assets and Python sidecar.
+Vite builds React into static HTML/CSS/JavaScript under `_system/web`. The
+embedded Python process serves those assets and the FastAPI endpoints on the
+same loopback origin, then opens the system browser.
 
 ### Offline DuckDB extensions
 
@@ -207,10 +222,11 @@ Frontend:
 Portable release:
 
 - Windows clean-runner smoke test;
-- engine boot;
+- exact embedded-runtime boot;
 - DuckLake extension load;
-- desktop launch;
+- localhost browser launch contract;
 - API health;
+- full native-capability doctor;
 - synthetic refresh;
 - no-network execution test.
 
@@ -218,7 +234,8 @@ Portable release:
 
 - DuckDB 2.0 preview — wait for stable and benchmark migration.
 - Polars 2.0 RC — wait for stable.
-- Tauri 3 alpha — unnecessary risk for the desktop baseline.
+- Tauri/PyInstaller — custom unsigned executables are incompatible with the
+  target workstation's application-control policy.
 - free-threaded CPython — not needed for the current native-heavy workload.
 - React Server Components — no server-rendering requirement.
 - a remote database server — conflicts with portable/offline goals.

@@ -16,7 +16,7 @@ Initial engineering targets, subject to benchmark refinement:
 
 These are product budgets, not promises independent of source-file size and hardware.
 
-## Phase 0 desktop baseline
+## Retired Phase 0.1 desktop baseline
 
 The 2026-09-19 Linux qualification run recorded:
 
@@ -27,10 +27,23 @@ The 2026-09-19 Linux qualification run recorded:
 - packaged full native-stack doctor: 11.34 seconds, about 385 MiB peak RSS;
 - explicit local DuckLake load: 38.1 ms median across five warm-host runs.
 
-This proves measurability and launch feasibility. The startup and memory values
-are still high for an operational desktop and should be treated as optimization
-work, especially before bundling optional planning/forecasting capabilities into
-the always-on RTA core. Windows measurements remain mandatory.
+These values are historical evidence for the retired executable delivery path;
+they are not the baseline for the embedded-CPython release.
+
+## Phase 0.2 embedded-runtime budget
+
+The locked Windows graph is expected to be roughly 795 MiB and 13,000 files
+before CPython, application code, web assets, and DuckLake. CI must record:
+
+- exact ZIP and extracted bytes;
+- extracted file/native-image counts;
+- full subprocess-doctor duration;
+- normal cold readiness and idle memory;
+- extraction/antivirus-sensitive first-use time.
+
+No target is marked `PASS` until the exact ZIP is measured on Windows. Heavy
+forecasting/optimization imports stay out of normal startup even though every
+capability ships in the same release.
 
 ## Benchmark scales
 

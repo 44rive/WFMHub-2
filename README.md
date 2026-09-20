@@ -107,10 +107,10 @@ Measured learning and better future recommendations
 ### Technology architecture — September 2026 greenfield baseline
 
 ```text
-                         WFMHub 2.0 Desktop
+                      WFMHub 2.0 Portable
 
 ┌─────────────────────────────────────────────────────────────────┐
-│ Tauri 2                                                        │
+│ System browser                                                  │
 │ React 19.3 + TypeScript 7 + Vite 8.1                           │
 │ TanStack Query / Router / Table / Virtual                      │
 │ Tailwind CSS 4.3 + Apache ECharts 6.1                          │
@@ -118,7 +118,7 @@ Measured learning and better future recommendations
                                │ loopback API
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Python 3.14 engine sidecar                                     │
+│ Official embedded CPython 3.14 application                     │
 │ FastAPI + Pydantic                                             │
 │                                                                 │
 │  WFM domain       Intelligence       Forecasting    Optimization│
@@ -271,36 +271,40 @@ WFMHub-2/
 │  ├─ reports/           Excel/CSV business handoffs
 │  └─ storage/           SQLite control + DuckLake access
 ├─ web/                  React / TypeScript workbench
-├─ src-tauri/            Tauri desktop shell and Python sidecar bundle
 ├─ docs/                 product and engineering documentation
 ├─ config/               example governed configuration
 ├─ data/                 local runtime state; ignored by Git
-├─ packaging/            PyInstaller sidecar specification
+├─ packaging/            reviewed portable-runtime inputs
 ├─ scripts/              build/release tooling
 └─ tests/                unit, property and integration tests
 ```
 
 The physical structure follows **business domains**, not source vendors. Verint parsing belongs in `adapters/verint`; staffing rules belong in `domain/staffing`; risk belongs in `intelligence/risk`.
 
-## Portable desktop model
+## Portable local model
 
 The target Windows release is still portable/offline:
 
 ```text
 WFMHub-2/
-├─ WFMHub.exe                 Tauri desktop shell
-├─ wfmhub-engine.exe          bundled Python/FastAPI sidecar
+├─ WFMHub.cmd                 primary local launcher
+├─ DOCTOR.cmd                 full compatibility qualification
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
-├─ duckdb_extensions/
-│  └─ ducklake.duckdb_extension
 ├─ Feed/
 ├─ Reports/
-└─ data/
-   ├─ control.sqlite
-   └─ lake/
-      ├─ catalog.ducklake
-      └─ files/               Parquet data managed by DuckLake
+├─ data/                         created locally on first use; not shipped
+│  ├─ control.sqlite
+│  └─ lake/
+│     ├─ catalog.ducklake
+│     └─ files/               Parquet data managed by DuckLake
+└─ _system/
+   ├─ runtime/                official CPython + signed MS runtime DLLs
+   ├─ site-packages/          complete frozen Windows dependency graph
+   ├─ app/                    WFMHub Python package
+   ├─ web/                    compiled React assets
+   └─ duckdb_extensions/
+      └─ ducklake.duckdb_extension
 ```
 
 End users should require:
@@ -312,14 +316,20 @@ End users should require:
 - no database server;
 - no internet connection during normal operation.
 
-Node, Rust, uv, and PyInstaller are build-time tools only. The packaged DuckLake extension is loaded locally in offline releases.
+Node and uv are build-time tools only. The target computer launches the
+official embedded `python.exe`; it does not install Python or dependencies.
+The packaged DuckLake extension is loaded locally in offline releases.
 
 End users must download the versioned Windows portable asset from GitHub
 Releases, not GitHub's automatically generated source-code ZIP. The source ZIP
-does not contain the compiled desktop, sidecar, or DuckLake binaries.
+does not contain the embedded runtime, locked Windows packages, compiled web
+assets, or DuckLake binary.
 
-Current qualified preview: [WFMHub 2 v0.2.0 Phase 0 Preview](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase0.1).
-This is a stack-qualification build, not the finished WFM product.
+The historical [v0.2.0 Phase 0.1 preview](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase0.1)
+uses the retired executable delivery path and is blocked on the target managed
+workstation. The replacement embedded-CPython preview is published only after
+its exact ZIP passes Windows CI; it is still stack qualification, not the
+finished WFM product.
 
 See [docs/PORTABLE_DEPLOYMENT.md](docs/PORTABLE_DEPLOYMENT.md).
 
@@ -338,13 +348,11 @@ These are the greenfield targets selected on **2026-09-16**. Stable releases are
 | React | 19.3.0 |
 | TypeScript | 7.0.2 |
 | Vite | 8.1 line |
-| Tauri | 2.11 line |
 | Tailwind CSS | 4.3.3 |
 | Apache ECharts | 6.1.0 |
 | uv | 0.12.13 |
 | Ruff | 0.16 line |
 | Biome | 2.5.13 |
-| PyInstaller | 6.22.3 |
 
 Versions should be upgraded deliberately with CI and portable-build verification, not automatically because a preview exists.
 
@@ -366,10 +374,10 @@ pnpm install
 pnpm dev:web
 ```
 
-Desktop development requires Rust/Tauri tooling on the **developer machine only**:
+Run the combined local application during development:
 
 ```powershell
-pnpm desktop:dev
+uv run wfmhub2 portable
 ```
 
 Run checks:

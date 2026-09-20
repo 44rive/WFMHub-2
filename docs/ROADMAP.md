@@ -4,7 +4,7 @@ The roadmap is organized by **WFM capability**, not by framework implementation.
 
 ## Foundation — platform and governed data
 
-- Tauri desktop shell + Python sidecar lifecycle;
+- official embedded-CPython runtime + CMD/localhost-browser lifecycle;
 - SQLite control plane;
 - DuckLake/Parquet analytical plane;
 - incremental source manifest and refresh planner;

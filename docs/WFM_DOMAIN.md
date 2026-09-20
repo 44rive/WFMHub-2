@@ -2,7 +2,9 @@
 
 ## Technology independence
 
-This document defines the product vocabulary. DuckDB, DuckLake, Polars, FastAPI, React and Tauri are implementation details and must not leak into the meaning of WFM entities or formulas.
+This document defines the product vocabulary. DuckDB, DuckLake, Polars,
+FastAPI, React, and the portable delivery shell are implementation details and
+must not leak into the meaning of WFM entities or formulas.
 
 
 This document describes the business concepts WFMHub models independently of any source vendor.

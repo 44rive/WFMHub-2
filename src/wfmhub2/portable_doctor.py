@@ -31,9 +31,11 @@ CORE_PROBE_NAMES = (
 )
 FULL_PROBE_NAMES = (
     "polars",
+    "pyarrow",
     "statsforecast",
     "mlforecast",
     "hierarchicalforecast",
+    "clarabel",
     "xgboost",
     "ortools",
     "excel",

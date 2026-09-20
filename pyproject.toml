@@ -32,7 +32,6 @@ dev = [
   "ruff>=0.16,<1.0",
   "pyright>=1.1,<2.0",
   "httpx2>=2.13,<3.0",
-  "pyinstaller>=6.22.3,<7.0",
 ]
 
 [project.scripts]

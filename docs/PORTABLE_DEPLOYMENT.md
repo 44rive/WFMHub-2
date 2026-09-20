@@ -2,174 +2,173 @@
 
 ## Goal
 
-The end-user experience should remain:
+The supported single-user experience is:
 
 ```text
-unzip -> run WFMHub.exe -> work
+download release ZIP -> Extract All -> run WFMHub.cmd -> work locally
 ```
 
-Normal use should require no administrator rights, installed Python, Node.js, Rust, database server, or internet access.
+Normal use requires no administrator rights, installed Python, Node.js, Rust,
+database server, installer, or internet access. WFMHub reads the configured
+local source folders directly; there is no upload workflow.
+
+## Why the runtime changed
+
+The Phase 0.1 Tauri + PyInstaller bundle ran correctly in Windows CI but its two
+unsigned custom executables were rejected by application-control policy on the
+target corporate workstation. The earlier WFMHub-Portable product already
+proved a compatible model on that workstation: a CMD launcher invokes the
+official CPython embeddable runtime and runs application-local Python code.
+
+WFMHub 2 therefore retains the complete Python/data/forecasting/optimization
+stack while replacing only its delivery shell. It no longer requires a Tauri
+launcher, PyInstaller sidecar, WebView2 window, installer, or one-file
+extraction under `%TEMP%`.
 
 ## Release layout
 
-Conceptual Windows x64 release:
-
 ```text
 WFMHub-2/
-├─ WFMHub.exe
-├─ wfmhub-engine.exe
+├─ WFMHub.cmd
+├─ DOCTOR.cmd
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
+├─ config/
 ├─ Feed/
 ├─ Reports/
-├─ data/
-│  ├─ control.sqlite
-│  └─ lake/
-│     ├─ catalog.ducklake
-│     └─ files/
-└─ duckdb_extensions/
-   └─ ducklake.duckdb_extension
+└─ _system/
+   ├─ runtime/                 official CPython + signed MS runtime DLLs
+   ├─ site-packages/           frozen Windows x64 production graph
+   ├─ app/wfmhub2/             application code
+   ├─ web/                     compiled React assets
+   └─ duckdb_extensions/
+      └─ ducklake.duckdb_extension
 ```
 
-The sidecar build input includes the target triple; Tauri copies it to the
-release directory as `wfmhub-engine.exe`, which is the runtime name packaged
-beside `WFMHub.exe`.
-The build emits `dist/WFMHub-2-v<version>-windows-x64-portable.zip` plus an
-adjacent `.sha256`, expands the ZIP, verifies its exact member list and payload
-hashes, and records archive evidence before reporting success. GitHub's
-automatic source-code ZIP is not a runnable portable release.
+`data/control.sqlite`, the DuckLake catalog, and managed Parquet files are
+created locally on first use; they are never release payloads. The database,
+lake, configuration, feeds, and reports remain local. Program upgrades replace
+`_system` and launchers, never durable user state.
 
-## Build-time vs runtime dependencies
+## Embedded CPython contract
 
-### Build machine
+Release CI downloads the official
+`python-3.14.7-embed-amd64.zip` and verifies SHA-256:
 
-Requires:
+```text
+d297e5ff019966817ad8502465176139f2d3d840fa4ed84b13bed399a6ab1f15
+```
 
-- Python 3.14 / uv;
-- Node + pnpm;
-- Rust toolchain;
-- Tauri prerequisites;
-- PyInstaller;
-- access to dependency registries for a reproducible release build.
+The build records its origin and an exact native-file manifest. The runtime
+`python314._pth` exposes only the standard library, application package and
+application-local `site-packages`. Launchers clear machine Python environment
+variables and use isolated mode.
 
-### End-user workstation
+Third-party packages are resolved from the committed lock during the networked
+build and installed into the staged runtime. The target workstation never runs
+pip. Native wheel contents remain ordinary `.pyd`/`.dll` files in their wheel
+layout rather than being embedded in or extracted from a custom executable.
+The Microsoft-signed `msvcp140.dll` and `vcomp140.dll` copies from the locked
+scikit-learn wheel are signature-checked and placed beside `python.exe` so the
+release does not rely on a machine-wide redistributable installation.
 
-Requires only the produced application directory/bundle plus a supported Windows WebView2 runtime. Tauri can be configured with an appropriate WebView2 installation strategy for environments where the evergreen runtime cannot be assumed.
+## Application launch
 
-## Python sidecar
+`WFMHub.cmd`:
 
-PyInstaller produces `wfmhub-engine.exe` containing the Python runtime and application dependencies.
+1. resolves the extracted application directory;
+2. verifies that `_system/runtime/python.exe` exists;
+3. clears `PYTHONHOME` and `PYTHONPATH`;
+4. invokes the embedded runtime in isolated mode with explicit home and local
+   DuckLake-extension paths;
+5. generates a per-launch session token;
+6. starts FastAPI/Uvicorn on an available `127.0.0.1` port;
+7. serves the compiled React client on the same origin;
+8. opens the system browser;
+9. remains the visible lifecycle owner until Ctrl+C/window close.
 
-Tauri packages it as an `externalBin` sidecar and starts it on application launch.
+The browser is presentation and job control. Python remains the only owner of
+source reads, calculations and analytical writes.
 
-The engine binds to `127.0.0.1` only.
+## Full-stack compatibility doctor
 
-PyInstaller one-file mode uses a supervisor plus a Python worker process. Tauri
-retains and stops the supervisor, while the engine also watches the owning
-desktop PID so a normal close or desktop crash cannot leave the API worker
-orphaned.
+`DOCTOR.cmd` starts through a standard-library-only supervisor. It executes
+every capability in a fresh child of the same embedded `python.exe`, so one
+blocked or crashing native library becomes a named failure and does not hide
+the remaining results. It performs real, local operations with:
+
+- isolated runtime paths and cleared machine-Python environment;
+- portable paths and SQLite WAL/rollback/backup/quick-check/reopen;
+- DuckDB, the explicit offline DuckLake extension and managed Parquet;
+- Polars parsing/group transforms;
+- PyArrow Zstd-Parquet write/read required by the StatsForecast dependency graph;
+- StatsForecast prediction, MLForecast fit/predict and HierarchicalForecast
+  bottom-up reconciliation;
+- qpsolvers/Clarabel quadratic programming used by the forecast stack;
+- XGBoost;
+- OR-Tools CP-SAT;
+- XlsxWriter/OpenPyXL round-trip;
+- the FastAPI/Pydantic application boundary.
+
+All capabilities ship together, but heavy modules are imported only by their
+feature or by this explicit doctor. A normal RTA launch must not eagerly load
+forecasting, ML, or optimization libraries.
+
+The target corporate workstation is the final application-control gate. If its
+policy blocks a bundled `.pyd` or `.dll`, no launcher or archive layout may
+circumvent that policy; that binary must be approved or the dependency must be
+replaced. The doctor and Windows Code Integrity/AppLocker event logs identify
+the exact failing file.
+
+The current locked graph is intentionally complete rather than minimal: about
+75 runtime distributions, roughly 795 MiB of extracted dependencies and 13,000
+files before the runtime/app/extension. Most third-party PE files are unsigned,
+so neither ZIP creation nor GitHub-hosted Windows CI can prove company-policy
+acceptance. Normal startup remains lazy; only `DOCTOR.cmd` loads every heavy
+capability.
 
 ## DuckLake extension
 
-DuckLake is a DuckDB extension. Development environments may install it from DuckDB's extension repository, but a portable release must package the matching extension artifact locally.
-
-The engine supports an explicit local extension path via settings/environment and should `LOAD` that file instead of downloading at runtime.
-
-Release CI must verify the extension matches the bundled DuckDB version/platform.
-
-The current reviewed artifact is fixed to DuckDB/DuckLake `1.5.5` for
-`windows_amd64`. `scripts/stage_ducklake.ps1` downloads the official compressed
-artifact during the networked build and verifies these SHA-256 values before
-packaging:
+The release contains the reviewed DuckDB/DuckLake `1.5.5` Windows AMD64
+extension. Build staging verifies:
 
 ```text
 compressed:   4a5180e1654cbbc3fd58afe8c70b3f98187d18e8d8e8c9bf386c3d48e9b8a116
 decompressed: 4546a5c6d9bc52cc122bc76e521c996e1ac31e71a25e01c531db8d3bb65e2ef0
 ```
 
-The decompressed binary is not committed. A platform or DuckDB version change
-must add newly reviewed hashes and pass the compatibility probe; the staging
-script deliberately rejects unknown version/platform combinations.
+Production always loads the explicit packaged file. It never installs or
+downloads an extension at runtime.
 
-## Frontend
+## Release qualification
 
-React/Vite output is static build content packaged inside the Tauri application. Node/pnpm do not ship to the user.
+Windows CI must:
 
-## Data location
+1. complete frozen Python and frontend source checks;
+2. stage and verify the pinned DuckLake extension;
+3. build the React client;
+4. assemble the official embedded runtime and complete locked production
+   dependency graph;
+5. reject missing/unexpected release members and user data;
+6. expand the exact final ZIP to a clean directory;
+7. launch only its embedded `python.exe`, never the runner's Python;
+8. run the full offline doctor with outbound traffic blocked;
+9. start the localhost application, verify authenticated API/storage activity,
+   and stop it cleanly;
+10. publish archive/member hashes and qualification evidence.
 
-Portable mode defaults data paths relative to the executable/application home so the folder can be moved as one unit.
+GitHub-hosted Windows proves package completeness and offline operation. It
+does not replace the final run on the separately managed corporate workstation.
 
-WFMHub detects unsupported read-only locations before readiness and shows an
-actionable message without exposing a traceback. A future installed edition may
-optionally use a per-user application-data directory.
+## Build command
 
-## Offline smoke test
-
-Release CI should validate on a clean Windows runner:
-
-1. build Python sidecar;
-2. bundle DuckLake extension;
-3. build React/Tauri application;
-4. disable/avoid runtime network dependency;
-5. start application/engine;
-6. call `/api/health`;
-7. initialize SQLite and DuckLake;
-8. run a synthetic refresh fixture;
-9. run a representative DuckDB query;
-10. verify generated Excel handoff;
-11. verify shutdown cleans up the sidecar.
-
-The automated Windows workflow additionally blocks outbound traffic for the
-packaged engine during its initialization/health probe. This is useful evidence
-that the engine loads the local extension, but it is not a substitute for the
-final clean-workstation test: GitHub-hosted runners still contain developer
-runtimes and a preinstalled WebView2 environment.
-
-## Reproducible build commands
-
-From a clean checkout on Windows x64:
+From a networked Windows x64 checkout:
 
 ```powershell
 uv sync --frozen --extra dev --python 3.14.7
-pnpm install --frozen-lockfile
-cargo metadata --manifest-path src-tauri/Cargo.toml --locked --format-version 1
+corepack pnpm install --frozen-lockfile
 ./scripts/build_portable.ps1
 ```
 
-`build_portable.ps1` repeats the frozen checks, stages and probes DuckLake,
-exercises the native analytical stack, builds the sidecar, copies it with the
-Tauri target-triple suffix, builds the desktop, and invokes the verified ZIP
-packager. Missing, modified, empty, or version-incompatible artifacts fail
-before packaging.
-
-Windows CI extracts that exact ZIP, launches `WFMHub.exe`, requires the UI to
-initiate authenticated SQLite/DuckLake/Parquet storage activity and remain
-healthy through a stabilization window, then verifies desktop-sidecar shutdown.
-The following direct authenticated engine smoke is the authoritative completed
-HTTP probe and runs with outbound traffic blocked. Only that ZIP is eligible to
-become a GitHub Release asset.
-
-## Package size
-
-WFMHub 2.0 will be materially larger than the original portable tool because OR-Tools, XGBoost, forecasting libraries and the Python runtime contain native binaries. That is an acceptable tradeoff if the product remains simple to deploy and operate.
-
-Package size is a secondary metric; startup, refresh speed, reliability and zero-install operation are primary.
-
-The Phase 0 Linux qualification sidecar is 303.3 MB after removing unused
-test, GUI, GPU, and optional analytical modules from the PyInstaller graph. The
-complete uncompressed shell + engine + DuckLake files are about 355.1 MB, cold
-readiness was about 10.25 seconds, and total desktop-process idle RSS was about
-527 MiB on the qualification host. Windows evidence is still required; these
-figures are a baseline to improve, not a release-size waiver.
-
-## Offline DuckLake extension contract
-
-Release builds bundle the platform-matched DuckLake extension as a Tauri resource at
-`duckdb_extensions/ducklake.duckdb_extension`. The Rust shell resolves that resource
-path and passes it to the Python sidecar with `--ducklake-extension`, so production
-runtime never depends on DuckDB downloading an extension from the internet.
-
-The desktop shell also passes an explicit `--home` path. In the portable edition this
-is the directory containing `WFMHub.exe`, keeping `data/`, `Feed/`, and `Reports/`
-co-located with the extracted application. An installed/team edition may choose an OS
-application-data directory later without changing WFM domain logic.
+The output is a versioned release ZIP plus its adjacent SHA-256 file. GitHub's
+automatic source archive is not runnable and is never an end-user artifact.

@@ -20,7 +20,7 @@ that happens, record the new evidence and supersede the old decision explicitly.
 - Unknown evidence stays unknown.
 - Keep demand/service, forecast/requirement, schedule, and
   attendance/actual-state facts at their natural grains.
-- Keep business formulas out of adapters, API routes, Tauri, and React.
+- Keep business formulas out of adapters, API routes, portable launchers, and React.
 - Keep runtime state outside replaceable program files.
 - A failed refresh must leave the previous validated analytical state active.
 - The portable release must run without installed Python, Node, Rust, a database
@@ -32,4 +32,4 @@ that happens, record the new evidence and supersede the old decision explicitly.
 
 Use the checks declared in `CONTRIBUTING.md` plus the active milestone gates in
 `PROJECT_LEDGER.md`. A scaffold, successful dependency resolution, or passing
-unit test alone is not evidence that the portable desktop product launches.
+  unit test alone is not evidence that the exact extracted portable product launches.

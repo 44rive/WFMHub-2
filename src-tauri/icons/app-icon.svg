@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="WFMHub 2">
-  <rect width="1024" height="1024" rx="224" fill="#0b1324"/>
-  <path
-    d="M192 296h128l96 368 96-272h96l96 272 96-368h128L768 728H648L560 488l-88 240H352L192 296Z"
-    fill="#38d5c4"
-  />
-  <path d="M744 192h88v88h-88z" fill="#f5b544"/>
-</svg>

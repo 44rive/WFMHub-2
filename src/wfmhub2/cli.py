@@ -1,14 +1,10 @@
 import argparse
-import ctypes
 import json
 import os
 import secrets
 import socket
-import threading
-import time
 import webbrowser
 from collections.abc import Callable, Sequence
-from ctypes import wintypes
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -117,8 +113,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def readiness_payload(actual_port: int) -> dict[str, object]:
-    # Keep the Tauri handshake deliberately minimal. The parser rejects unknown
-    # fields so secrets or operational details cannot accidentally enter it.
+    # Keep the automation handshake deliberately minimal so secrets or
+    # operational details cannot accidentally enter logs.
     return {"port": actual_port}
 
 
@@ -186,10 +182,9 @@ def _serve(
     settings: Settings,
     session_token: str,
     *,
-    parent_pid: int | None = None,
     web_dir: Path | None = None,
 ) -> None:
-    _run_server(settings, session_token, parent_pid=parent_pid, web_dir=web_dir)
+    _run_server(settings, session_token, web_dir=web_dir)
 
 
 def portable_web_dir(settings: Settings, raw_web_dir: str | None) -> Path:
@@ -225,7 +220,6 @@ def _run_server(
     settings: Settings,
     session_token: str,
     *,
-    parent_pid: int | None = None,
     web_dir: Path | None = None,
     require_offline: bool = False,
     on_ready: Callable[[int], None] | None = None,
@@ -247,7 +241,6 @@ def _run_server(
         readiness_line(actual_port),
         on_started=started_callback,
     )
-    start_parent_watchdog(server, parent_pid)
     server.run(sockets=[server_socket])
 
 
@@ -286,70 +279,6 @@ def session_token_from_args(args: argparse.Namespace, parser: argparse.ArgumentP
     if not session_token:
         parser.error("serve requires WFMHUB2_SESSION_TOKEN or --session-token")
     return session_token
-
-
-def parent_pid_from_environment() -> int | None:
-    raw_parent_pid = os.environ.get("WFMHUB2_PARENT_PID")
-    if raw_parent_pid is None:
-        return None
-    try:
-        parent_pid = int(raw_parent_pid)
-    except ValueError as exc:
-        raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID") from exc
-    if parent_pid <= 1 or parent_pid > 0xFFFFFFFF:
-        raise RuntimeError("WFMHUB2_PARENT_PID must be a positive process ID")
-    return parent_pid
-
-
-def process_exists(process_id: int) -> bool:
-    if os.name == "nt":
-        # The POSIX `kill(pid, 0)` liveness idiom is invalid on Windows and can
-        # be destructive there. Query a process handle without signalling it.
-        process_query_limited_information = 0x1000
-        still_active = 259
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)  # pyright: ignore[reportAttributeAccessIssue]
-        open_process = kernel32.OpenProcess
-        open_process.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
-        open_process.restype = wintypes.HANDLE
-        get_exit_code_process = kernel32.GetExitCodeProcess
-        get_exit_code_process.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
-        get_exit_code_process.restype = wintypes.BOOL
-        close_handle = kernel32.CloseHandle
-        close_handle.argtypes = [wintypes.HANDLE]
-        close_handle.restype = wintypes.BOOL
-
-        handle = open_process(process_query_limited_information, False, process_id)
-        if not handle:
-            return False
-        try:
-            exit_code = wintypes.DWORD()
-            if not get_exit_code_process(handle, ctypes.byref(exit_code)):
-                return False
-            return exit_code.value == still_active
-        finally:
-            close_handle(handle)
-
-    try:
-        os.kill(process_id, 0)
-    except OSError:
-        return False
-    return True
-
-
-def start_parent_watchdog(server: uvicorn.Server, parent_pid: int | None) -> None:
-    if parent_pid is None:
-        return
-
-    def watch_parent() -> None:
-        while process_exists(parent_pid):
-            time.sleep(0.1)
-        server.should_exit = True
-
-    threading.Thread(
-        target=watch_parent,
-        name="wfmhub2-parent-watchdog",
-        daemon=True,
-    ).start()
 
 
 def _main(argv: Sequence[str] | None = None) -> None:
@@ -391,7 +320,6 @@ def _main(argv: Sequence[str] | None = None) -> None:
     _serve(
         settings,
         session_token_from_args(args, parser),
-        parent_pid=parent_pid_from_environment(),
         web_dir=serve_web_dir(settings, args.web_dir),
     )
 

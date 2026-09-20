@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 
 class DoctorSettings(Protocol):
@@ -253,6 +253,27 @@ def _probe_polars() -> dict[str, object]:
     return {"version": pl.__version__, "operation": "parse_group_sum", "result": result}
 
 
+def _probe_pyarrow() -> dict[str, object]:
+    import pyarrow as pa  # pyright: ignore[reportMissingTypeStubs]
+    import pyarrow.parquet as pq  # pyright: ignore[reportMissingTypeStubs]
+
+    arrow = cast(Any, pa)
+    parquet = cast(Any, pq)
+
+    with tempfile.TemporaryDirectory(prefix="wfmhub2-pyarrow-probe-") as folder:
+        parquet_path = Path(folder) / "probe.parquet"
+        table = arrow.table({"queue": ["sales", "service"], "offered": [22, 7]})
+        parquet.write_table(table, parquet_path, compression="zstd")
+        restored = parquet.read_table(parquet_path)
+    if restored.to_pydict() != {"queue": ["sales", "service"], "offered": [22, 7]}:
+        raise RuntimeError("PyArrow Parquet round-trip returned unexpected values")
+    return {
+        "operation": "parquet_zstd_roundtrip",
+        "rows": restored.num_rows,
+        "version": str(arrow.__version__),
+    }
+
+
 def _probe_statsforecast() -> dict[str, object]:
     import numpy as np
     import statsforecast
@@ -392,6 +413,30 @@ def _probe_hierarchicalforecast() -> dict[str, object]:
     }
 
 
+def _probe_clarabel() -> dict[str, object]:
+    import numpy as np
+    from qpsolvers import (  # pyright: ignore[reportMissingTypeStubs]
+        solve_qp,  # pyright: ignore[reportUnknownVariableType]
+    )
+    from scipy.sparse import csc_matrix  # pyright: ignore[reportMissingTypeStubs]
+
+    solve = cast(Any, solve_qp)
+    solution = solve(
+        csc_matrix([[1.0]]),
+        np.asarray([-1.0]),
+        lb=np.asarray([0.0]),
+        ub=np.asarray([2.0]),
+        solver="clarabel",
+    )
+    if solution is None or not np.isclose(solution[0], 1.0, atol=1e-5):
+        raise RuntimeError("Clarabel quadratic-program solve returned an unexpected result")
+    return {
+        "operation": "bounded_quadratic_program",
+        "result": float(solution[0]),
+        "solver": "clarabel",
+    }
+
+
 def _probe_xgboost() -> dict[str, object]:
     import xgboost as xgb
 
@@ -465,9 +510,11 @@ CORE_PROBE_NAMES = (
 )
 FULL_PROBE_NAMES = (
     "polars",
+    "pyarrow",
     "statsforecast",
     "mlforecast",
     "hierarchicalforecast",
+    "clarabel",
     "xgboost",
     "ortools",
     "excel",
@@ -491,9 +538,11 @@ def run_named_probe(
         "sqlite": lambda: _probe_sqlite(settings),
         "ducklake": lambda: _probe_ducklake(settings, require_offline=require_offline),
         "polars": _probe_polars,
+        "pyarrow": _probe_pyarrow,
         "statsforecast": _probe_statsforecast,
         "mlforecast": _probe_mlforecast,
         "hierarchicalforecast": _probe_hierarchicalforecast,
+        "clarabel": _probe_clarabel,
         "xgboost": _probe_xgboost,
         "ortools": _probe_ortools,
         "excel": _probe_excel,
