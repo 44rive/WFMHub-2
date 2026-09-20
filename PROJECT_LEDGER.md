@@ -11,25 +11,23 @@ state instead of repeating discovery.
 Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
-**Active milestone: Phase 0.4 — target-compatible core architecture.** Phase
-0.3 proved that official CPython 3.13.7, isolated source Python, SQLite, and the
-pure-Python Excel stack execute on the target workstation. The same doctor also
-proved that company App Control rejects the current third-party native
-analytics/API binaries. The Phase 0.4 hybrid spike passes locally and on an
-ordinary Windows CI runner with outbound resolution blocked: stdlib/SQLite on
-the host plus DuckDB-Wasm/OPFS, Pyodide forecasting, and HiGHS-Wasm in browser
-workers. The only blocking compatibility gate is the exact release ZIP on the
-target corporate workstation.
+**Active milestone: Phase 1 — governed RTA vertical slice.** Phase 0.4 is
+accepted. The exact hybrid release launched on the managed corporate
+workstation and all five browser probes passed: stdlib/SQLite host, Worker
+WebAssembly, DuckDB-Wasm/OPFS, Pyodide forecasting, and HiGHS-Wasm. The active
+work is now source refresh -> canonical SQLite evidence -> service/attendance
+-> staffing gap -> React command centre -> Excel export, followed by parity
+with the useful workflows in WFMHub-Portable.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 0.4 browser-WASM hybrid spike | Qualified in run `35536783063`; target-PC run pending |
+| `origin/main` | Phase 0.4 browser-WASM hybrid spike | CI and managed target passed; Phase 1 RTA work may begin |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Qualified in run `35536783063`; merged/released as `v0.2.0-phase0.4` |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Accepted on target; merged/released as `v0.2.0-phase0.4` |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -63,6 +61,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-020 | Pin DuckDB-Wasm 1.32.0, Pyodide 0.29.5, and highs 1.15.3 for the Phase 0.4 gate. | These exact self-hosted builds passed local Worker/WASM/OPFS/model/solver operations; moving versions requires the same gates. |
 | D-021 | HiGHS-Wasm and Pyodide models are candidates, not claimed drop-in replacements for OR-Tools/XGBoost/StatsForecast. | Scheduling formulations and forecast quality require independent WFM validation and performance evidence. |
 | D-022 | Use stable loopback origin `127.0.0.1:8420` for the browser-WASM profile while retaining a fresh 256-bit token per launch. | OPFS is scoped to origin; an ephemeral port destroys cross-launch cache continuity. Startup fails if the fixed port is occupied. This supersedes D-008 for Phase 0.4 only. |
+| D-023 | Accept the hybrid architecture as the target portable foundation and begin the governed RTA slice. | The exact Phase 0.4 release passed all five probes under the real corporate policy. This proves execution feasibility, not forecast quality, optimization semantics, production-data scale, or WFM product parity. |
 
 ## Evidence already collected
 
@@ -191,6 +190,12 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   normalization. Its exact hybrid ZIP and adjacent checksum independently
   verify 73,143,871 bytes and SHA-256
   `2f1bb4349fcf8f857e28247efd563e18e0805069a823347df08cc5433a1ad765`.
+- The managed target workstation returned a valid Phase 0.4 report with all
+  five exact probes passing under Edge 153. The host responded in 21 ms,
+  Worker WebAssembly in 39 ms, DuckDB-Wasm OPFS checkpoint/reopen in 2.251 s,
+  Pyodide scikit-learn/statsmodels model fitting in 11.350 s, and HiGHS-Wasm
+  integer optimization in 128 ms. `crossOriginIsolated` and `secureContext`
+  were both true. This closes the corporate browser-policy compatibility gate.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -316,37 +321,54 @@ only through a recorded decision with evidence.
 | Target CPython startup | PASS | Exact Phase 0.3 `DOCTOR.cmd` completed under embedded CPython 3.13.7 |
 | Target native capabilities | FAIL | 10 of 14 probes were explicitly stopped by App Control while Python/SQLite/Excel passed |
 
+## Phase 0.4 compatibility gates
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Exact release and ordinary Windows | PASS | Run `35536783063`; exact embedded host doctor and outbound-blocked five-probe Edge smoke |
+| Target stdlib/SQLite host | PASS | Managed-workstation `host_sqlite` probe passed in 21 ms with zero third-party host-native files |
+| Target Worker WebAssembly | PASS | Managed-workstation Worker probe returned the expected result in 39 ms |
+| Target DuckDB-Wasm/OPFS | PASS | 1.32.0 exception-handling bundle checkpointed, terminated, reopened, and read successfully in 2.251 s |
+| Target Pyodide forecasting | PASS | The pinned Pyodide payload returned Python 3.13.2, NumPy 2.2.5, scikit-learn 1.7.0, and statsmodels 0.14.4; both models fit in 11.350 s |
+| Target HiGHS-Wasm MIP | PASS | Integer staffing model returned the expected optimal solution/objective in 128 ms |
+| Browser security prerequisites | PASS | Edge 153 reported secure context and cross-origin isolation |
+
 ## Current risks and fallbacks
 
-- **Primary remaining risk:** the target Edge policy may disable WebAssembly,
-  Worker execution, OPFS, or JIT behavior even though local Chromium passes.
-  The exact managed-workstation browser report is decisive.
+- Phase 0.4 proves runtime compatibility, not that the RTA product is built or
+  that it is better than WFMHub-Portable in daily use. Product parity remains
+  a hard delivery gate.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
-- The browser payload is about 125 MiB before the CPython host and compresses
-  into a roughly 70 MiB release ZIP. Local Pyodide startup/model fitting took
-  about 26 seconds; target memory and first-run time remain unmeasured.
+- The target probe was fast enough for the spike, but memory use and behavior
+  at real WFM data volumes remain unmeasured.
+- The browser report identifies the expected profile/version but does not
+  cryptographically bind itself to the release ZIP or include `DOCTOR.cmd`
+  output. Acceptance relies on the supported release workflow the report was
+  returned from; a future report schema should include build identity and host
+  doctor status.
+- The target reported `online: true`; no-network execution is independently
+  proven by CI, not by this target run.
 - Pyodide/scikit-learn/statsmodels prove model execution, not forecast quality.
   HiGHS proves MIP execution, not that an OR-Tools scheduling formulation can
   be translated with acceptable performance or semantics.
 - The blocked full native graph still requires an IT-authored allow policy,
   trusted signing/catalog rules, or managed deployment. It is now a separate
   trusted/server profile, not the target portable fallback.
-- GitHub-hosted Windows can prove package completeness and ordinary Windows
-  runtime behavior. It cannot reproduce the target company's policy.
+- Company policy or Edge versions can change. Retain the compatibility report
+  and rerun the five probes for future runtime upgrades.
 
 ## Next executable steps
 
-1. Download the `v0.2.0-phase0.4` release asset, not GitHub's source archive.
-2. Extract it on the target workstation, run `DOCTOR.cmd`, then run all
-   five browser probes from `WFMHub.cmd`; return
-   `data/compatibility/last-browser-report.json`.
-3. If the host passes but a browser capability fails, keep that capability
-   optional and remove it from the first RTA slice. Do not block the core.
-4. Once the exact target gate passes, port the first governed RTA vertical
-   slice from WFMHub-Portable: source refresh -> SQLite -> service/attendance
-   -> staffing gap -> React command centre -> Excel export.
-5. Reach old-portable business parity before declaring WFMHub 2 the operational
+1. Inventory and selectively port the old product's governed source contracts,
+   mappings, formulas, SQLite migrations, upgrades, and synthetic tests; never
+   copy operational/user data.
+2. Deliver the first governed RTA vertical slice: read-only local source
+   refresh -> canonical SQLite facts -> service/attendance -> staffing gap ->
+   React command centre -> Excel export.
+3. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+   a measured RTA workflow; deterministic host logic remains the fallback.
+4. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
@@ -381,7 +403,20 @@ only through a recorded decision with evidence.
 - Local result: 29 pytest, strict Pyright, Ruff, TypeScript, 8 Vitest, Biome,
   production build, two real-browser offline smokes, cross-launch OPFS
   persistence, deterministic member assembly, and ordinary-Windows execution
-  all pass. Only the managed target-policy run is pending.
+  all passed. At that checkpoint, only the managed target-policy run remained;
+  the next entry records its successful result.
+
+### 2026-09-20 — Phase 0.4 accepted on the managed workstation
+
+- Received a schema-valid report from the exact Phase 0.4 profile on managed
+  Windows / Edge 153 with `overallStatus: pass` and every expected probe present
+  exactly once.
+- The target permits cross-origin-isolated Worker WebAssembly, DuckDB-Wasm
+  OPFS checkpoint/reopen, Pyodide scientific models, and HiGHS-Wasm integer
+  optimization. The full sequence completed in about 13.8 seconds.
+- Phase 0.4 is accepted and Phase 1 begins. No claim is made yet about forecast
+  accuracy, production-scale performance, scheduling equivalence, or finished
+  WFM usefulness.
 
 ### 2026-09-20 — Target Phase 0.3 native-policy boundary proven
 

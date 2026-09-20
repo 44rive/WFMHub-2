@@ -2,6 +2,14 @@
 
 The roadmap is organized by **WFM capability**, not by framework implementation.
 
+## Current status
+
+The portable foundation passed its exact managed-workstation Phase 0.4 gate on
+2026-09-20. The active delivery is the first governed RTA vertical slice and
+then useful-workflow parity with WFMHub-Portable. Browser analytics,
+forecasting, and optimization remain optional capabilities rather than
+prerequisites for core RTA operation.
+
 ## Foundation — platform and governed data
 
 - official embedded-CPython runtime + CMD/localhost-browser lifecycle;

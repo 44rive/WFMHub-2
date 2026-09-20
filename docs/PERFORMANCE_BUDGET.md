@@ -80,6 +80,22 @@ profile; the OPFS counter advanced from 1 to 2. These Linux/Chromium figures
 establish feasibility, not budgets for the managed Windows workstation or
 production datasets.
 
+### Managed-workstation result
+
+The exact Phase 0.4 release passed on the target Windows workstation under
+Edge 153:
+
+- stdlib/SQLite host: 21 ms;
+- Worker WebAssembly: 39 ms;
+- DuckDB-Wasm OPFS checkpoint/terminate/reopen: 2.251 seconds;
+- Pyodide plus both small model fits: 11.350 seconds;
+- HiGHS-Wasm integer staffing solve: 128 ms;
+- complete reported sequence: approximately 13.8 seconds.
+
+These figures close the compatibility spike only. Production-data throughput,
+browser memory, refresh latency, and RTA interaction budgets remain Phase 1
+measurements.
+
 ## Benchmark scales
 
 Synthetic fixtures should cover at least:

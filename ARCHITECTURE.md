@@ -181,7 +181,8 @@ proposal; domain validation remains authoritative.
 
 ## Delivery sequence
 
-1. Pass the exact Phase 0.4 hybrid ZIP on the target corporate workstation.
+1. **Complete:** the exact Phase 0.4 hybrid ZIP passed all five probes on the
+   target corporate workstation under Edge 153.
 2. Port the old product's governed source contracts, SQLite migrations,
    formulas, mappings, upgrades, and synthetic tests.
 3. Deliver one RTA vertical slice: refresh -> service/attendance -> staffing
