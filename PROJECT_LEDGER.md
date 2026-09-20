@@ -11,19 +11,19 @@ state instead of repeating discovery.
 Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
-**Active milestone: Phase 0.3 — CPython 3.13 policy-compatibility trial.** Phase
-0.2 proved the complete embedded-CPython package on ordinary Windows, but the
-target policy stopped CPython 3.14.7 before the doctor could start. Keep the
-same full stack, security model, and CMD/browser lifecycle while changing only
-the runtime generation to the CPython 3.13.7 generation used by the still-known
-working old portable. CI now proves ordinary-Windows technical compatibility
-only; the exact trial ZIP must still pass on the target corporate PC.
+**Active milestone: Phase 0.4 — target-compatible core architecture.** Phase
+0.3 proved that official CPython 3.13.7, isolated source Python, SQLite, and the
+pure-Python Excel stack execute on the target workstation. The same doctor also
+proved that company App Control rejects the current third-party native
+analytics/API binaries. Stop iterating on packaging for the full native graph;
+either obtain an IT-managed trust decision or qualify a pure-Python/SQLite
+portable profile based on the already proven old-portable boundary.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 0.3 CPython 3.13.7 compatibility baseline | Fast-forwarded after run `35526661488` passed; target corporate gate remains open |
+| `origin/main` | Phase 0.3 CPython 3.13.7 compatibility baseline | Target doctor starts, but 10 native capability probes are policy-blocked |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -54,6 +54,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-014 | The full doctor must start with only the standard library and isolate native probes in child processes. | One blocked or crashing `.pyd`/`.dll` must produce a named failure rather than prevent diagnosis of the rest of the stack. |
 | D-015 | Corporate-PC execution of the exact extracted ZIP is a release gate, not an assumption. | CMD does not bypass WDAC/AppLocker rules applied to bundled native libraries. |
 | D-016 | Test CPython 3.13.7 as a separate compatibility release; do not silently replace or call it a policy bypass. | The old portable proves this Python generation can launch on the target, but its pure-Python dependency surface does not prove the new native stack. |
+| D-017 | Stop treating the complete native analytics graph as target-portable under the current company policy. | The exact Phase 0.3 doctor passed Python/SQLite/Excel but App Control blocked Pydantic Core, DuckDB, Polars/native loading, PyArrow, NumPy and every dependent forecasting/ML/optimization probe. More ZIP/CMD/version changes cannot authorize those binaries. |
 
 ## Evidence already collected
 
@@ -133,6 +134,19 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   irrelevant exception reported by the cross-platform audit is Linux-only
   `nvidia-nccl-cu13`. This makes a same-stack 3.13.7 package technically
   feasible; it does not make it corporate-policy compatible.
+- The exact `v0.2.0-phase0.3` doctor ran to completion on the target corporate
+  workstation. Four checks passed: portable paths, runtime isolation, SQLite,
+  and the OpenPyXL/XlsxWriter Excel round-trip. Ten checks failed with explicit
+  App Control DLL blocks: the FastAPI/Pydantic boundary (`_pydantic_core`),
+  DuckDB/DuckLake (`_duckdb`), Polars/native loading, PyArrow, StatsForecast,
+  MLForecast, HierarchicalForecast, Clarabel, XGBoost, and OR-Tools. Several
+  downstream failures converge on blocked NumPy `_multiarray_umath`; `_ctypes`
+  / its native dependency is another repeated boundary. This is policy
+  enforcement, not a corrupt NumPy install.
+- The old portable's viable boundary is independently reflected in this test:
+  it uses CPython 3.13.7, `sqlite3`, `http.server`, OpenPyXL, XlsxWriter, and
+  pure-Python application code. It does not import FastAPI/Pydantic, DuckDB,
+  Polars, NumPy, PyArrow, XGBoost, or OR-Tools.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -255,17 +269,16 @@ only through a recorded decision with evidence.
 | Official 3.13.7 provenance | PASS | Official archive SHA-256 `f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65`; exact native manifest and old-portable `python.exe` hash match |
 | Source and frontend quality | PASS | Local CPython 3.13.7: Ruff, strict Pyright, 22 pytest, native-stack probe; frontend: Biome, TypeScript, 6 Vitest, production build |
 | Ordinary-Windows exact ZIP | PASS | All 14 doctor probes plus outbound-blocked API/storage/browser lifecycle passed in run `35526661488` |
-| Target CPython startup | TODO | `DOCTOR.cmd` reaches and reports the supervisor on the corporate workstation |
-| Target native capabilities | TODO | All 14 isolated probes pass, or every blocked capability is identified from doctor plus CodeIntegrity events |
+| Target CPython startup | PASS | Exact Phase 0.3 `DOCTOR.cmd` completed under embedded CPython 3.13.7 |
+| Target native capabilities | FAIL | 10 of 14 probes were explicitly stopped by App Control while Python/SQLite/Excel passed |
 
 ## Current risks and fallbacks
 
-- **Primary risk is now observed:** the exact release was stopped before the
-  doctor supervisor produced output. Identify the initial blocked file in the
-  Windows CodeIntegrity 3077/3089 events. Even if CPython 3.13.7 restores
-  startup, the complete stack still adds 371 unsigned third-party PE files that
-  may be blocked individually. Remove/replace blocked capabilities or request a
-  narrow IT allowlist; do not attempt a policy bypass.
+- **Primary risk is now confirmed:** CPython 3.13.7 restores the supervisor, but
+  the target policy rejects the third-party native graph. A full local stack
+  requires an IT-authored allow policy, trusted signing/catalog rules, or
+  managed deployment. Without that administrative path, the target portable
+  must remove native dependencies; do not attempt a policy bypass.
 - The release will be large: roughly `795 MiB` of unpacked `site-packages`
   before runtime/app/assets, about 13,000 dependency files, and likely a ZIP in
   the high hundreds of MiB. Extraction/antivirus scanning may dominate first
@@ -283,19 +296,36 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Read the target attempt's newest enforcement event 3077 and correlated 3089
-   under `Microsoft/Windows/CodeIntegrity/Operational`; record the blocked file
-   and policy name without changing or bypassing policy.
-2. Confirm the existing old portable's CPython 3.13.7 still starts on the same
-   workstation while the frozen 3.13.7 current-stack variant is CI-qualified.
-3. Download and run only the portable ZIP from prerelease
-   `v0.2.0-phase0.3`. If unsigned analytical children are blocked,
-   stop pursuing the full native stack without an IT allowlist and define a
-   pure-Python/SQLite local core with explicitly deferred/replaced capabilities.
-4. After a target-compatible boundary is proven, begin the first RTA vertical slice using the
-   governed contracts preserved from the old portable repo.
+1. Preserve the Phase 0.3 doctor output as the target-policy acceptance result.
+   Optionally collect correlated CodeIntegrity 3077/3089 events for an IT
+   request; exact events are no longer needed to choose the architecture.
+2. Decide between the only honest paths: IT-managed authorization for the full
+   native payload, or a target-portable pure-Python/SQLite profile.
+3. For the no-IT path, qualify the smallest spike first: CPython 3.13.7,
+   `http.server`, SQLite, OpenPyXL/XlsxWriter, compiled React assets, the same
+   ephemeral loopback token, and no Pydantic/FastAPI/Uvicorn/DuckDB/DuckLake/
+   Polars/NumPy/PyArrow/forecasting/XGBoost/OR-Tools imports.
+4. If that exact spike passes the target, port the first RTA vertical slice and
+   governed contracts from the old portable. Use SQLite/streaming CSV/Excel for
+   ingestion and deterministic pure-Python WFM calculations. Keep unavailable
+   native capabilities explicit rather than silently approximating them.
 
 ## Session log
+
+### 2026-09-20 — Target Phase 0.3 native-policy boundary proven
+
+- The exact prerelease doctor completed on the corporate workstation under
+  embedded CPython 3.13.7. Portable paths, runtime isolation, SQLite, and Excel
+  passed, proving the CMD/embedded-Python operating model and the useful local
+  core boundary.
+- App Control explicitly blocked `_pydantic_core`, `_duckdb`, PyArrow native
+  loading, NumPy `_multiarray_umath`, and repeated `_ctypes`-dependent paths.
+  Consequently FastAPI plus every DuckDB/Polars/forecasting/ML/optimization
+  capability failed. This is not a package corruption or version mismatch.
+- Superseded the assumption that the complete native stack can be made target-
+  portable through a different shell or CPython version. Further work now
+  requires either IT-managed authorization or a pure-Python/SQLite portable
+  profile; implementation awaits that scope decision.
 
 ### 2026-09-20 — CPython 3.13 policy-compatibility trial started
 
