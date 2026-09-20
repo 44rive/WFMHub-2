@@ -21,7 +21,11 @@ class SinglePageApplication(StaticFiles):
     """Serve compiled assets with an index fallback for client-side routes."""
 
     async def get_response(self, path: str, scope: Scope) -> Response:
-        if path.startswith("api/"):
+        # Starlette normalizes mounted paths with the host OS separator, so the
+        # same URL arrives here as ``api\\...`` on Windows. API misses must
+        # never fall through to the browser shell on either platform.
+        normalized_path = path.replace("\\", "/").lstrip("/")
+        if normalized_path.startswith("api/"):
             raise StarletteHTTPException(status_code=status.HTTP_404_NOT_FOUND)
         try:
             response = await super().get_response(path, scope)

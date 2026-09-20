@@ -76,6 +76,14 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 - The browser architecture needs no WebView runtime. Compiled React assets and
   FastAPI share one ephemeral `127.0.0.1` origin, with a fresh per-launch
   credential; the CMD console owns shutdown.
+- GitHub Actions run `35507061319` passed the complete Linux job but stopped in
+  Windows source tests before packaging. It exposed two Windows-specific bugs:
+  Starlette hands a mounted static application backslash-normalized paths, so an
+  unknown `/api/...` route incorrectly received the SPA fallback, and SQLite's
+  context manager did not close the temporary backup connection, leaving the
+  file locked during cleanup. API prefix normalization and explicit SQLite
+  connection closing now have local regression coverage; the corrected Windows
+  pipeline remains pending.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -214,17 +222,33 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Commit the completed local runtime/packaging/docs qualification and merge
-   current `origin/main` without touching the dirty local `main` worktree.
-2. Push the integration branch and keep repairing
-   Windows CI until the embedded release artifact is green.
-3. Publish the green embedded portable ZIP and adjacent SHA-256 as a prerelease.
+1. Push the Windows portability repair and keep repairing CI until the embedded
+   release artifact is green.
+2. Record the final archive hash, size, file count, doctor duration, and startup
+   evidence in this ledger and rerun the final commit through CI.
+3. Merge the qualified branch to `main` and publish the exact green embedded
+   portable ZIP plus adjacent SHA-256 as a prerelease.
 4. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
    This is the go/no-go point for the full all-at-once stack.
 5. After the target gate passes, begin the first RTA vertical slice using the
    governed contracts preserved from the old portable repo.
 
 ## Session log
+
+### 2026-09-20 — First embedded Windows CI repair
+
+- Pushed the integrated embedded-runtime migration after merging current
+  `origin/main`; Linux passed in run `35507061319`.
+- Windows run `35507061319` stopped before packaging with 2 of 21 tests failed.
+  The SPA's API exclusion assumed POSIX separators, and two raw `sqlite3`
+  backup connections stayed open because their transaction context managers do
+  not close them. Windows consequently served the browser shell for a missing
+  API route and could not remove the temporary SQLite backup.
+- Normalized the mounted route before the API-prefix check, added a regression
+  using Starlette's Windows path representation, and explicitly closed both
+  SQLite backup connections. Local Python 3.14.7 Ruff, strict Pyright, and all
+  21 tests pass; frontend Biome, TypeScript, 6 Vitest tests, and production
+  build also pass. Corrected Windows package evidence is still pending.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 

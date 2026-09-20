@@ -1,10 +1,13 @@
 from pathlib import Path
 from typing import cast
 
+import anyio
+import pytest
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from wfmhub2.api.main import create_app
+from wfmhub2.api.main import SinglePageApplication, create_app
 from wfmhub2.core.settings import Settings
 from wfmhub2.doctor import DoctorReport, ProbeCheck
 
@@ -136,6 +139,16 @@ def test_compiled_frontend_is_served_same_origin_with_spa_fallback(tmp_path: Pat
     assert client_route.status_code == 200
     assert "WFMHub browser shell" in client_route.text
     assert missing_api.status_code == 404
+
+    # Starlette passes OS-normalized mounted paths to StaticFiles. Exercise the
+    # Windows representation even when this test suite is running on Linux.
+    with pytest.raises(StarletteHTTPException) as exc_info:
+        anyio.run(
+            SinglePageApplication(directory=web_dir, html=True).get_response,
+            r"api\not-a-route",
+            {"type": "http", "method": "GET", "path": "/api/not-a-route"},
+        )
+    assert exc_info.value.status_code == 404
 
 
 def test_missing_compiled_frontend_fails_before_server_start(tmp_path: Path) -> None:

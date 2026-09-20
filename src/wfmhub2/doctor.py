@@ -5,6 +5,7 @@ import sqlite3
 import sys
 import tempfile
 from collections.abc import Callable
+from contextlib import closing
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Protocol, cast
@@ -164,9 +165,15 @@ def _probe_sqlite(settings: DoctorSettings) -> dict[str, object]:
 
     with tempfile.TemporaryDirectory(prefix="wfmhub2-sqlite-probe-") as folder:
         backup_path = Path(folder) / "control-backup.sqlite"
-        with connect(settings.control_db_path) as source, sqlite3.connect(backup_path) as backup:
+        # A sqlite3 connection's context manager commits/rolls back but does not
+        # close it. Keep the explicit closing wrapper: Windows cannot remove the
+        # temporary backup while either connection still owns a file handle.
+        with (
+            connect(settings.control_db_path) as source,
+            closing(sqlite3.connect(backup_path)) as backup,
+        ):
             source.backup(backup)
-        with sqlite3.connect(backup_path) as backup:
+        with closing(sqlite3.connect(backup_path)) as backup:
             backup_row = backup.execute(
                 "SELECT probe_value FROM system_probe WHERE probe_key = 'doctor'"
             ).fetchone()
