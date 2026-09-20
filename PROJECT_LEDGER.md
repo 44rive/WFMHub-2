@@ -100,7 +100,14 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   probes passed and the app served React, returned health, rejected an
   unauthenticated protected request with 401, completed authenticated storage
   and refresh operations, created Parquet, and shut down cleanly. The final run
-  will correct timing scope and add memory evidence before release.
+  corrected timing scope and added memory evidence before release.
+- Final qualification run `35508043118` passed again on commit `a347391`. It
+  reproduced the same archive size and SHA-256 byte-for-byte. The measured
+  second full doctor took 10.224 seconds, normal server readiness took 1.345
+  seconds, and the two-process runtime used 102,010,880 working-set bytes and
+  61,902,848 private-memory bytes after the authenticated API/storage smoke.
+  GitHub's coarse extraction step took 19 seconds. These are hosted-runner
+  baselines; target-PC antivirus and policy behavior remain a separate gate.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -210,7 +217,7 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Exact ZIP verification | PASS | 13,375 members/hash-verified; no user data or custom application executable; adjacent SHA-256 independently passed |
 | Windows offline/lifecycle | PASS | Outbound-blocked exact ZIP served React/API, persisted storage, and shut down cleanly in run `35507582306` |
 | Corporate App Control | BLOCKED | User runs `DOCTOR.cmd` from the exact release ZIP on the managed workstation; every native child probe passes |
-| Operational budget | TODO | Size/count recorded; corrected doctor, true readiness, and normal-memory measurements pending final CI run |
+| Operational budget | PASS | 300,607,038-byte ZIP; 852,233,445 bytes/13,375 files extracted; 10.224 s doctor; 1.345 s readiness; 102,010,880-byte working set |
 
 Phase 0.2 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
@@ -239,15 +246,12 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Push the corrected timing/memory evidence instrumentation and run the final
-   commit through CI.
-2. Record the final archive hash, size, file count, doctor duration, true
-   readiness, and normal-memory evidence in this ledger.
-3. Merge the qualified branch to `main` and publish the exact final green embedded
-   portable ZIP plus adjacent SHA-256 as a prerelease.
-4. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
+1. Run this final evidence-ledger commit through CI.
+2. Merge the qualified branch to `main` and publish the exact final green
+   embedded portable ZIP plus adjacent SHA-256 as a prerelease.
+3. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
    This is the go/no-go point for the full all-at-once stack.
-5. After the target gate passes, begin the first RTA vertical slice using the
+4. After the target gate passes, begin the first RTA vertical slice using the
    governed contracts preserved from the old portable repo.
 
 ## Session log
@@ -279,6 +283,13 @@ only through a recorded decision with evidence.
   because its prior readiness timer included doctor/API work and it omitted
   normal-process memory; this does not invalidate runtime behavior but does
   leave the operational-budget evidence incomplete.
+- Final run `35508043118` passed the corrected evidence collection and
+  reproduced the archive byte-for-byte. The second full doctor was 10.224
+  seconds, true process-to-ready time was 1.345 seconds, and the steady
+  two-process runtime measured 102,010,880 working-set bytes / 61,902,848
+  private bytes after the authenticated API/storage smoke. The hosted runner's
+  archive expansion step was 19 seconds. The operational-budget gate now
+  passes; only execution under the target company's policy remains blocked.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 

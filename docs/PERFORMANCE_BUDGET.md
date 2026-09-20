@@ -32,8 +32,27 @@ they are not the baseline for the embedded-CPython release.
 
 ## Phase 0.2 embedded-runtime budget
 
-The locked Windows graph is expected to be roughly 795 MiB and 13,000 files
-before CPython, application code, web assets, and DuckLake. CI must record:
+Final Windows qualification run `35508043118` measured the exact extracted
+release:
+
+- ZIP: 300,607,038 bytes;
+- extracted payload: 852,233,445 bytes across 13,375 files;
+- SHA-256: `dee1588bbe7d96fa401c473c4754a5835dd3d571b8629e92712a68f7b4543ad6`;
+- hosted-runner archive expansion step: 19 seconds;
+- second full 14-capability subprocess doctor: 10.224 seconds;
+- normal process-to-ready time: 1.345 seconds;
+- post-smoke runtime: 2 processes, 102,010,880 working-set bytes and
+  61,902,848 private-memory bytes.
+
+Run `35507582306` produced the same archive bytes and SHA-256, providing a
+reproducibility check across independent builds. The smoke ran from a
+space/non-ASCII path with outbound traffic blocked, and heavy capability
+imports remained outside normal startup.
+
+These are GitHub-hosted Windows runner measurements, not promises for the
+managed target workstation. Antivirus extraction overhead and company-policy
+compatibility must still be measured by running the exact release there. The
+CI budget records:
 
 - exact ZIP and extracted bytes;
 - extracted file/native-image counts;
@@ -41,9 +60,8 @@ before CPython, application code, web assets, and DuckLake. CI must record:
 - normal cold readiness and idle memory;
 - extraction/antivirus-sensitive first-use time.
 
-No target is marked `PASS` until the exact ZIP is measured on Windows. Heavy
-forecasting/optimization imports stay out of normal startup even though every
-capability ships in the same release.
+Heavy forecasting/optimization imports stay out of normal startup even though
+every capability ships in the same release.
 
 ## Benchmark scales
 
