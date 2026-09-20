@@ -16,17 +16,17 @@ and expanding only after the governed evidence and operational workflow work.
 target policy stopped CPython 3.14.7 before the doctor could start. Keep the
 same full stack, security model, and CMD/browser lifecycle while changing only
 the runtime generation to the CPython 3.13.7 generation used by the still-known
-working old portable. CI success will prove technical compatibility only; the
-exact trial ZIP must still pass on the target corporate PC.
+working old portable. CI now proves ordinary-Windows technical compatibility
+only; the exact trial ZIP must still pass on the target corporate PC.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `791b37b` | Qualified Phase 0.2 source, release ledger, and published diagnostic release | Target corporate gate failed after publication |
+| `origin/main` at `3927ecd` | Qualified Phase 0.2 source plus target-policy diagnosis | Phase 0.3 will fast-forward only after its ordinary-Windows qualification |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
-| `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | CI in progress; merge to `main` only after green |
-| `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Implementation and qualification in progress |
+| `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
+| `integration/python313-policy-compat` (current) | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -251,10 +251,10 @@ only through a recorded decision with evidence.
 
 | Gate | Status | Required evidence |
 | --- | --- | --- |
-| Frozen CPython 3.13 graph | TODO | Regenerated `uv.lock`; frozen Linux and Windows installs under exactly 3.13.7 |
-| Official 3.13.7 provenance | TODO | Official archive SHA-256 `f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65`; exact native manifest |
+| Frozen CPython 3.13 graph | PASS | Regenerated `uv.lock`; frozen Linux and Windows installs under exactly 3.13.7 in run `35526661488` |
+| Official 3.13.7 provenance | PASS | Official archive SHA-256 `f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65`; exact native manifest and old-portable `python.exe` hash match |
 | Source and frontend quality | PASS | Local CPython 3.13.7: Ruff, strict Pyright, 22 pytest, native-stack probe; frontend: Biome, TypeScript, 6 Vitest, production build |
-| Ordinary-Windows exact ZIP | TODO | Full doctor plus outbound-blocked API/storage/browser lifecycle from the extracted CI artifact |
+| Ordinary-Windows exact ZIP | PASS | All 14 doctor probes plus outbound-blocked API/storage/browser lifecycle passed in run `35526661488` |
 | Target CPython startup | TODO | `DOCTOR.cmd` reaches and reports the supervisor on the corporate workstation |
 | Target native capabilities | TODO | All 14 isolated probes pass, or every blocked capability is identified from doctor plus CodeIntegrity events |
 
@@ -288,8 +288,8 @@ only through a recorded decision with evidence.
    and policy name without changing or bypassing policy.
 2. Confirm the existing old portable's CPython 3.13.7 still starts on the same
    workstation while the frozen 3.13.7 current-stack variant is CI-qualified.
-3. Download and run only the distinct Phase 0.3 compatibility asset after CI
-   passes. If unsigned analytical children are blocked,
+3. Download and run only the portable ZIP from prerelease
+   `v0.2.0-phase0.3`. If unsigned analytical children are blocked,
    stop pursuing the full native stack without an IT allowlist and define a
    pure-Python/SQLite local core with explicitly deferred/replaced capabilities.
 4. After a target-compatible boundary is proven, begin the first RTA vertical slice using the
@@ -310,9 +310,17 @@ only through a recorded decision with evidence.
   pytest tests, and real DuckDB/Polars/forecast/XGBoost/OR-Tools/Excel native
   operations. The frontend passes Biome, TypeScript, all 6 Vitest tests, and
   its production build.
-- This is not yet a target-compatible release. The complete Windows
-  build/extracted-ZIP smoke and the target corporate doctor remain required in
-  that order.
+- Run `35526661488` passed the complete Linux and Windows pipeline. The exact
+  Windows ZIP passed all 14 isolated probes plus the outbound-blocked
+  browser/API/SQLite/DuckLake lifecycle and clean shutdown. It is 299,178,314
+  bytes, has 13,372 members / 847,656,982 expanded bytes, and SHA-256
+  `2aea1d3f08d053ad8ac0741bcd132d09238c540a472fd80480b50e3da7a6a6cb`.
+  Embedded `python.exe` has the same
+  `d932e5e2f324d57f392e8fd063dcf6d0185be8a664c57c6d24e7762ed02c28ca`
+  hash as the known-working old portable.
+- Published the exact CI artifact and checksum as prerelease
+  `v0.2.0-phase0.3`. This is still a diagnostic compatibility trial: the
+  target corporate doctor remains the decisive gate.
 
 ### 2026-09-20 — First embedded Windows CI repair
 
