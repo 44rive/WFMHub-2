@@ -91,6 +91,16 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   so mixed-case dependency filenames produced a false list-order mismatch. The
   comparison now canonicalizes both sides as strings and reports any real
   missing, unexpected, or duplicate members; ZIP/runtime execution is pending.
+- Run `35507582306` passed the complete Linux and Windows pipeline. The exact
+  CI-produced ZIP was independently downloaded and its adjacent SHA-256
+  verified: 300,607,038 bytes, 13,375 files, 852,233,445 extracted bytes, and
+  SHA-256
+  `dee1588bbe7d96fa401c473c4754a5835dd3d571b8629e92712a68f7b4543ad6`.
+  From a space/non-ASCII path with outbound traffic blocked, all 14 isolated
+  probes passed and the app served React, returned health, rejected an
+  unauthenticated protected request with 401, completed authenticated storage
+  and refresh operations, created Parquet, and shut down cleanly. The final run
+  will correct timing scope and add memory evidence before release.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -191,16 +201,16 @@ Status values: `TODO`, `PASS`, `FAIL`, or `BLOCKED`.
 | Gate | Status | Required evidence |
 | --- | --- | --- |
 | Frozen Python/frontend inputs | PASS | Existing `uv.lock` and `pnpm-lock.yaml`; exact versions remain enforced in CI |
-| Official embedded CPython provenance | TODO | Download hash, origin manifest, unchanged signed CPython-native manifest, isolated `_pth` |
-| Complete dependency payload | TODO | Entire frozen production closure installed without pip/build activity on the target |
+| Official embedded CPython provenance | PASS | Hash-pinned 3.14.7 archive, origin/native manifests, isolated `_pth`, exact-ZIP runtime probe |
+| Complete dependency payload | PASS | 75-distribution frozen closure installed at build time; exact ZIP passed all capability probes |
 | Python/frontend quality | PASS | Local Python 3.14.7: Ruff format/lint, strict Pyright, 21 pytest; frontend: Biome, TypeScript, 6 Vitest, production build |
-| Full subprocess doctor | TODO | Every storage, dataframe, forecast, reconciliation, ML, optimization, Excel, API, and web capability executes independently |
-| Offline DuckLake | TODO | Explicit bundled extension writes physical Parquet, reopens, and reads with extension auto-install/autoload disabled |
-| Browser/API security | TODO | Ephemeral loopback, clean browser bootstrap, authenticated/unauthenticated HTTP tests, strict host/origin boundary |
-| Exact ZIP verification | TODO | Deterministic archive, complete member/native hashes, no user data or custom application executable |
-| Windows offline/lifecycle | TODO | Expanded ZIP runs with outbound blocked, serves React/API, persists/restarts, and stops cleanly |
+| Full subprocess doctor | PASS | Exact extracted ZIP passed all 14 isolated core/heavy probes in run `35507582306` |
+| Offline DuckLake | PASS | Bundled extension explicitly loaded with auto-install/autoload disabled; physical Parquet write/reopen passed |
+| Browser/API security | PASS | Ephemeral loopback, per-launch token, 401/authenticated HTTP, host/origin tests, same-origin React passed |
+| Exact ZIP verification | PASS | 13,375 members/hash-verified; no user data or custom application executable; adjacent SHA-256 independently passed |
+| Windows offline/lifecycle | PASS | Outbound-blocked exact ZIP served React/API, persisted storage, and shut down cleanly in run `35507582306` |
 | Corporate App Control | BLOCKED | User runs `DOCTOR.cmd` from the exact release ZIP on the managed workstation; every native child probe passes |
-| Operational budget | TODO | Record ZIP/extracted size, file count, doctor duration, and normal cold-start/memory measurements |
+| Operational budget | TODO | Size/count recorded; corrected doctor, true readiness, and normal-memory measurements pending final CI run |
 
 Phase 0.2 is complete only when all gates pass. A gate may be deliberately removed
 only through a recorded decision with evidence.
@@ -229,11 +239,11 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Push the canonical ZIP-inventory repair and keep repairing CI until the
-   embedded release artifact is green.
-2. Record the final archive hash, size, file count, doctor duration, and startup
-   evidence in this ledger and rerun the final commit through CI.
-3. Merge the qualified branch to `main` and publish the exact green embedded
+1. Push the corrected timing/memory evidence instrumentation and run the final
+   commit through CI.
+2. Record the final archive hash, size, file count, doctor duration, true
+   readiness, and normal-memory evidence in this ledger.
+3. Merge the qualified branch to `main` and publish the exact final green embedded
    portable ZIP plus adjacent SHA-256 as a prerelease.
 4. Run `DOCTOR.cmd` from that exact ZIP on the target corporate workstation.
    This is the go/no-go point for the full all-at-once stack.
@@ -262,6 +272,13 @@ only through a recorded decision with evidence.
   string ordering is case-sensitive. Canonical string ordering and actionable
   inventory diagnostics replace that false comparison; another exact package
   run is pending.
+- Run `35507582306` passed every gate and produced an independently checksum-
+  verified 300,607,038-byte ZIP with 13,375 files and 852,233,445 extracted
+  bytes. Every isolated capability and the outbound-blocked browser/API/storage
+  lifecycle passed. Before release, the smoke evidence is being tightened
+  because its prior readiness timer included doctor/API work and it omitted
+  normal-process memory; this does not invalidate runtime behavior but does
+  leave the operational-budget evidence incomplete.
 
 ### 2026-09-20 — Embedded-CPython portable migration implemented locally
 

@@ -45,7 +45,6 @@ $Process = $null
 $DescendantIds = @()
 $OutputLog = Join-Path $PortableRoot "embedded-smoke.stdout.log"
 $ErrorLog = Join-Path $PortableRoot "embedded-smoke.stderr.log"
-$StartedAt = [DateTimeOffset]::UtcNow
 $PriorSessionToken = $env:WFMHUB2_SESSION_TOKEN
 $PriorPythonHome = $env:PYTHONHOME
 $PriorPythonPath = $env:PYTHONPATH
@@ -64,11 +63,15 @@ try {
   $env:PYTHONHOME = ""
   $env:PYTHONPATH = ""
 
+  $DoctorStartedAt = [DateTimeOffset]::UtcNow
   $DoctorOutput = @(
     & $PythonPath -I -m wfmhub2.portable_doctor `
       --home $PortableRoot `
       --ducklake-extension $ExtensionPath `
       --full --require-offline --json
+  )
+  $DoctorMilliseconds = [math]::Round(
+    ([DateTimeOffset]::UtcNow - $DoctorStartedAt).TotalMilliseconds
   )
   if ($LASTEXITCODE -ne 0) {
     throw "The exact embedded Python failed its full offline doctor: $($DoctorOutput -join [Environment]::NewLine)"
@@ -107,6 +110,7 @@ try {
     "portable",
     "--no-browser"
   )
+  $ServerStartedAt = [DateTimeOffset]::UtcNow
   $Process = Start-Process `
     -FilePath $PythonPath `
     -ArgumentList $Arguments `
@@ -139,6 +143,9 @@ try {
   if ($null -eq $Port) {
     throw "Embedded Python did not emit readiness within $TimeoutSeconds seconds."
   }
+  $ReadyMilliseconds = [math]::Round(
+    ([DateTimeOffset]::UtcNow - $ServerStartedAt).TotalMilliseconds
+  )
 
   $BaseUrl = "http://127.0.0.1:$Port"
   $Headers = @{ "X-WFMHub-Token" = $SessionToken }
@@ -167,17 +174,35 @@ try {
   }
 
   $DescendantIds = @(Get-DescendantProcessIds -ParentProcessId $Process.Id)
+  $RuntimeProcessIds = @([int]$Process.Id) + $DescendantIds
+  $RuntimeProcesses = @(
+    $RuntimeProcessIds |
+      ForEach-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }
+  )
+  if ($RuntimeProcesses.Count -eq 0) {
+    throw "Embedded runtime exited before its memory measurement."
+  }
+  $WorkingSetBytes = [int64](
+    ($RuntimeProcesses | Measure-Object -Property WorkingSet64 -Sum).Sum
+  )
+  $PrivateMemoryBytes = [int64](
+    ($RuntimeProcesses | Measure-Object -Property PrivateMemorySize64 -Sum).Sum
+  )
   $Evidence = [ordered]@{
     architecture = "official-embedded-cpython-local-browser"
     blocked_outbound = [bool]$BlockOutbound
+    doctor_milliseconds = $DoctorMilliseconds
     ducklake_catalog_exists = Test-Path -LiteralPath (Join-Path $PortableRoot "data/lake/catalog.ducklake")
     health = $Health.status
     legacy_custom_executables_absent = $true
     full_doctor = $Doctor.status
+    normal_private_memory_bytes = $PrivateMemoryBytes
+    normal_process_count = $RuntimeProcesses.Count
+    normal_working_set_bytes = $WorkingSetBytes
     parquet_file_count = @(Get-ChildItem -LiteralPath (Join-Path $PortableRoot "data/lake/files") -Filter "*.parquet" -File -Recurse).Count
     python_path = $PythonPath
     react_entrypoint_served = $true
-    ready_milliseconds = [math]::Round(([DateTimeOffset]::UtcNow - $StartedAt).TotalMilliseconds)
+    ready_milliseconds = $ReadyMilliseconds
     refresh_plan = $Refresh.status
     stack_probe = $Stack.status
     unauthenticated_probe_status = $Unauthorized.StatusCode
