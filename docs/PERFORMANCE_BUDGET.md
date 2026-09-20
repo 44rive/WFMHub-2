@@ -67,9 +67,9 @@ every capability ships in the same release.
 
 The local deterministic build produced:
 
-- ZIP: 73,143,767 bytes;
+- ZIP: 73,143,851 bytes;
 - extracted stage: approximately 146 MiB across 84 files;
-- SHA-256: `e26be8dcae3a23f24ae1e52fa40b0313cd3bafafeb30a01a133f5a5af0f66abc`;
+- SHA-256: `279d040263bf3645e01373a6ab527b0892d9efa1a7e58d13b179a842f1ff76d4`;
 - DuckDB-Wasm OPFS checkpoint/terminate/reopen: 3.683 seconds;
 - Pyodide plus two small forecast-model fits: 26.366 seconds;
 - HiGHS-Wasm integer staffing solve: 0.305 seconds.

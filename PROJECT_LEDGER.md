@@ -170,10 +170,16 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   `127.0.0.1:8420` origin. The DuckDB OPFS counter advanced from 1 to 2,
   proving cross-launch persistence; OPFS remains only a rebuildable cache.
 - The deterministic Phase 0.4 Windows compatibility ZIP has 84 files,
-  73,143,767 bytes, and SHA-256
-  `e26be8dcae3a23f24ae1e52fa40b0313cd3bafafeb30a01a133f5a5af0f66abc`.
-  Its extracted stage is about 146 MiB. This is local build evidence; exact
-  embedded-Windows and target-policy execution remain pending.
+  73,143,851 bytes, and SHA-256
+  `279d040263bf3645e01373a6ab527b0892d9efa1a7e58d13b179a842f1ff76d4`.
+  Its extracted stage is about 146 MiB. Ordinary Windows CI has passed the
+  profile; target corporate-policy execution remains pending.
+- GitHub Actions run `35536020333` passed the Linux job and the complete new
+  Windows hybrid job: exact ZIP assembly/extraction, embedded host doctor, and
+  all five Edge probes with outbound DNS blocked. The separate legacy native
+  Windows job exposed Windows `SO_REUSEADDR` allowing a live same-port bind;
+  the hybrid server now uses `SO_EXCLUSIVEADDRUSE` on Windows and
+  `SO_REUSEADDR` elsewhere, with collision/restart regression coverage.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -351,6 +357,10 @@ only through a recorded decision with evidence.
 - Independent final review found and drove fixes for browser readiness racing,
   stale nested asset staging, default-browser ambiguity, weak report
   validation, ephemeral-origin OPFS loss, and immediate fixed-port restart.
+- GitHub run `35536020333` proved the exact Windows hybrid artifact and all five
+  offline Edge capabilities. Its legacy native job then caught Windows' live
+  port-reuse semantics; the host now requests exclusive address ownership on
+  Windows while retaining immediate-restart behavior.
 - Local result: 29 pytest, strict Pyright, Ruff, TypeScript, 8 Vitest, Biome,
   production build, two real-browser offline smokes, cross-launch OPFS
   persistence, and two identical deterministic ZIP assemblies all pass.

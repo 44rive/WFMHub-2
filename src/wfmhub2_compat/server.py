@@ -6,6 +6,7 @@ import mimetypes
 import os
 import secrets
 import shutil
+import socket
 import subprocess
 import sys
 import webbrowser
@@ -45,7 +46,12 @@ mimetypes.add_type("application/zip", ".whl")
 
 class CompatibilityServer(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    allow_reuse_address = sys.platform != "win32"
+
+    def server_bind(self) -> None:
+        if sys.platform == "win32":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
     def __init__(self, home: Path, web_root: Path, session_token: str, port: int = 0) -> None:
         self.home = home
