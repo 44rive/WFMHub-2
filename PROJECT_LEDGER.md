@@ -15,20 +15,21 @@ and expanding only after the governed evidence and operational workflow work.
 0.3 proved that official CPython 3.13.7, isolated source Python, SQLite, and the
 pure-Python Excel stack execute on the target workstation. The same doctor also
 proved that company App Control rejects the current third-party native
-analytics/API binaries. The Phase 0.4 hybrid spike now passes locally with
-outbound resolution blocked: stdlib/SQLite on the host plus DuckDB-Wasm/OPFS,
-Pyodide forecasting, and HiGHS-Wasm in browser workers. The blocking gate is
-the exact extracted hybrid ZIP on the target corporate workstation.
+analytics/API binaries. The Phase 0.4 hybrid spike passes locally and on an
+ordinary Windows CI runner with outbound resolution blocked: stdlib/SQLite on
+the host plus DuckDB-Wasm/OPFS, Pyodide forecasting, and HiGHS-Wasm in browser
+workers. The only blocking compatibility gate is the exact release ZIP on the
+target corporate workstation.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 0.3 CPython 3.13.7 compatibility baseline | Target doctor starts, but 10 native capability probes are policy-blocked |
+| `origin/main` | Phase 0.4 browser-WASM hybrid spike | Qualified in run `35536783063`; target-PC run pending |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Locally implemented and offline-smoked; target-PC run pending |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Qualified in run `35536783063`; merged/released as `v0.2.0-phase0.4` |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -186,6 +187,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
   adjacent checksum verified. The builder now normalizes CMD files to CRLF so
   every platform stages identical member contents. The Windows CI ZIP is the
   canonical release container because DEFLATE output can vary by zlib build.
+- Final run `35536783063` also passed all three jobs after launcher
+  normalization. Its exact hybrid ZIP and adjacent checksum independently
+  verify 73,143,871 bytes and SHA-256
+  `2f1bb4349fcf8f857e28247efd563e18e0805069a823347df08cc5433a1ad765`.
 - The lines below retain historical qualification evidence for the superseded
   Tauri/PyInstaller Phase 0.1 experiment.
 - The complete major-update tree, documentation, source, tests, packaging, and
@@ -332,8 +337,8 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Run CI for the Phase 0.4 branch and retain its exact hybrid ZIP/checksum.
-2. Extract that ZIP on the target workstation, run `DOCTOR.cmd`, then run all
+1. Download the `v0.2.0-phase0.4` release asset, not GitHub's source archive.
+2. Extract it on the target workstation, run `DOCTOR.cmd`, then run all
    five browser probes from `WFMHub.cmd`; return
    `data/compatibility/last-browser-report.json`.
 3. If the host passes but a browser capability fails, keep that capability
@@ -370,10 +375,13 @@ only through a recorded decision with evidence.
 - Corrected run `35536284746` passed all Linux, hybrid Windows, and legacy
   native Windows gates. The exact CI hybrid ZIP/checksum was downloaded and
   verified before release preparation.
+- Final run `35536783063` passed the same complete matrix after cross-platform
+  launcher normalization; its canonical Windows artifact is the Phase 0.4
+  release payload.
 - Local result: 29 pytest, strict Pyright, Ruff, TypeScript, 8 Vitest, Biome,
   production build, two real-browser offline smokes, cross-launch OPFS
-  persistence, and two identical deterministic ZIP assemblies all pass.
-  Managed-Windows execution is pending.
+  persistence, deterministic member assembly, and ordinary-Windows execution
+  all pass. Only the managed target-policy run is pending.
 
 ### 2026-09-20 — Target Phase 0.3 native-policy boundary proven
 
