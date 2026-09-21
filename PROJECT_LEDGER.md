@@ -425,6 +425,12 @@ only through a recorded decision with evidence.
   retained for the compatible runtime profile even though this is a Phase 1
   source-readiness preview. Target workstation validation with real source
   files remains to be done for this increment.
+- Fast-forwarded `main` to `7908143` after the green run and published the
+  prerelease `v0.2.0-phase1-source-preview` with the exact CI-produced ZIP and
+  checksum. ZIP SHA-256:
+  `6cfb17afd1d8609a2d41e75e442f750bc3e2fb088b61b1943da0a6039ca089f7`.
+  The ZIP's phase0.4 filename is an inherited runtime-profile label, not a
+  claim that Phase 1 business workflows are complete.
 
 ### 2026-09-21 — First governed Phase 1 source contracts
 
