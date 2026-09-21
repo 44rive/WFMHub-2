@@ -23,7 +23,7 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green shell, refresh authority, and first FTE/schedule contracts integrated; run `35608395829` is green before the current source-refresh increment |
+| `origin/main` | Accepted Phase 1 source-readiness increment | Local setup, fixed-contract refresh, Command source health; run `35631034822` is green (update this row if branch state changes) |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -418,8 +418,13 @@ only through a recorded decision with evidence.
 - Local verification: 55 Python tests, Pyright strict, Ruff, 17 web tests,
   Biome, web typecheck, production web build, deterministic ZIP verification
   (90 members), and a synthetic setup/refresh/rollback smoke passed. Windows
-  CI now repeats that smoke with the exact extracted embedded runtime. Target
-  workstation validation remains to be done for this increment.
+  CI run `35631034822` passed all three jobs, including the exact extracted
+  embedded runtime's setup/refresh/rollback smoke, host doctor, and five Edge
+  browser probes. The GitHub Actions artifact is
+  `WFMHub-2-phase0.4-hybrid-windows-x64` from that run; its phase0.4 name is
+  retained for the compatible runtime profile even though this is a Phase 1
+  source-readiness preview. Target workstation validation with real source
+  files remains to be done for this increment.
 
 ### 2026-09-21 — First governed Phase 1 source contracts
 
