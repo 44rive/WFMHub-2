@@ -1,11 +1,16 @@
 # WFMHub 2 generated design references
 
 These images were generated with the built-in image generation tool on
-2026-09-20. They translate the WFMHub-Portable design tokens and Phase 1
-information architecture into reviewable desktop concepts. They contain only
-synthetic names and values and are not executable product screens.
+2026-09-20 and 2026-09-21. They translate the WFMHub-Portable design tokens
+into reviewable desktop concepts. The original three-screen RTA study has an
+earlier five-item nav; the nine-screen full-product pack uses the authoritative
+six-workspace shell in [FULL_PRODUCT_UI.md](../FULL_PRODUCT_UI.md). All names
+and values are synthetic. None of these are executable product screens or
+business-calculation authority.
 
 ## Saved outputs
+
+### Phase 1 RTA studies
 
 - `wfmhub2-command-center.png` — 1586 x 992, SHA-256
   `cc45ba6acdf01c6dde31e12521b24e323c1832dba11ff689d1351ddc302f37a1`
@@ -13,6 +18,24 @@ synthetic names and values and are not executable product screens.
   `5ea0f47f9d199d7c0659d45cfdc0214ab129686f4268c845969c792fbc69f52a`
 - `wfmhub2-risk-decision.png` — 1586 x 992, SHA-256
   `500553f2d2dc415dfc982a49180efee0f4f754e6279be218bac95fe64261ed49`
+
+### Full-product pack
+
+| Image | SHA-256 |
+| --- | --- |
+| `wfmhub2-full-command.png` | `462f18c058d755bb54c8af4f12534510de2e2e18ec4cded4419fd83d844fc259` |
+| `wfmhub2-forecast-demand.png` | `6a63b78daba7823b6cfe13ee7bfa3df6147265f132a79c582a21d97b871a765b` |
+| `wfmhub2-staffing-requirements.png` | `f8c5502501920ff46d77e71a549485b010e6f172923038e188e72a113a803884` |
+| `wfmhub2-schedule-quality.png` | `2cf7ac90fcd15c967968511034579cd34e3e670e6f033ba9ece0e8b4948fe0b9` |
+| `wfmhub2-shrinkage-absence.png` | `ceefc2e985813a66d426f95a72676474ae1380c3ca84170d6e91d779c23ea2ae` |
+| `wfmhub2-scenario-optimization.png` | `ea12339e531f7d38f625947690f7769d8fd6f0e6d9d8b39b64c09c738b1759f8` |
+| `wfmhub2-capacity-hiring.png` | `a9bf46f47d2e08711bc937ef17e4f31f2165e86dd8727834860376bfe550f1fc` |
+| `wfmhub2-realisations-outcomes.png` | `a6c209aa2dd25adcc7fb3740ae9356cbdcb0c61f8b7979ac85792079a218f423` |
+| `wfmhub2-governance-delivery.png` | `a35c2acb81606d9209c83158e69d037f965c97b8d05e9651fd3ff6702c826c5c` |
+
+The normalized final prompt set for the full-product pack is in
+[FULL_PRODUCT_PROMPTS.md](FULL_PRODUCT_PROMPTS.md). Each generation used the
+existing RTA Command Center as a style reference, not as an edit target.
 
 ## Final prompt — RTA Command Center
 

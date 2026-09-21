@@ -55,8 +55,11 @@ The **RTA Command Center** is the first-class operational surface. For every con
 
 Core products include service/coverage monitoring, attendance evidence, staffing-gap decomposition, near-term risk, intervention recommendations, and a decision/outcome log.
 
-The proposed Phase 1 shell, navigation, component skeleton, and three visual
-references are in [docs/UI_BLUEPRINT.md](docs/UI_BLUEPRINT.md).
+The Phase 1 RTA screen study and three visual references are in
+[docs/UI_BLUEPRINT.md](docs/UI_BLUEPRINT.md).
+The product-wide workspace structure and nine additional tactical, strategic,
+review, and governance concepts are in
+[docs/FULL_PRODUCT_UI.md](docs/FULL_PRODUCT_UI.md).
 
 ### Tactical WFM intelligence
 

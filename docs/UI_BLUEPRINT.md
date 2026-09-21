@@ -1,7 +1,9 @@
 # WFMHub 2 UI blueprint
 
-Status: proposed Phase 1 design baseline. This document defines the product
-shell and screen hierarchy before production UI implementation begins.
+Status: Phase 1 RTA screen study. The six-workspace shell and full product
+hierarchy in [FULL_PRODUCT_UI.md](FULL_PRODUCT_UI.md) supersede this document's
+earlier five-item navigation and route sketch. The three RTA screen concepts
+and shared visual tokens remain valid.
 
 ## Design outcome
 
@@ -29,29 +31,33 @@ not the visual baseline for the WFM product.
   operational cost before it can be recorded as a decision.
 - React renders governed results. KPI formulas do not live in components.
 
-## Phase 1 information architecture
+## Phase 1 screen subset
 
 Only working capabilities appear in navigation. Workspaces and pages are
 enabled progressively as their governed contracts become functional; the
-shell must not ship dead Review, Govern, or future planning tabs.
+shell must not ship dead pages. The full product has six workspaces, with
+Plan and Capacity present in route metadata but hidden until useful pages
+work. The table below records the original RTA study's page grouping; use
+the full-product route placement when implementing.
 
 | Workspace | Pages | Primary question |
 | --- | --- | --- |
-| Command | RTA Command Center | What needs attention now and next? |
+| Command | Cross-horizon Workbench; Decision Register | What needs attention at each horizon, and what was chosen? |
 | Operate | Service & Demand; Staffing & Coverage; Attendance | What is happening in service and people? |
-| Decide | Action Queue; Decision Log | Why is it happening, what can I do, and what did I choose? |
+| Plan | Forecast, requirements, schedule, shrinkage and scenarios | What should be planned or compared? |
+| Capacity | Tactical and strategic workforce plans | How much supply is needed, where and when? |
 | Review | Schedule Integrity; Outcome Review | What remained unresolved and did the action work? |
 | Govern | Data Readiness; Refresh History; Reports | Can the evidence be trusted and reproduced? |
 
-Add a top-level **Plan** workspace only when at least one real planning product
-is ready. Its later pages are Forecast Accuracy, Schedule Quality, Scenario
-Lab, and Capacity.
+The RTA Command Center itself lives under Operate; the cross-horizon Command
+page links to it. Intraday action proposals remain contextual in Operate;
+recorded decisions aggregate in Command and measured outcomes in Review.
 
 ## Global shell
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ WFMHUB 2 | COMMAND  OPERATE  DECIDE  REVIEW  GOVERN       DATA THROUGH 14:15│
+│ WFMHUB 2 | COMMAND OPERATE PLAN CAPACITY REVIEW GOVERN   DATA THROUGH 14:15│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ Kicker + page title | local tabs | global scope | Export | Refresh evidence │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -182,7 +188,11 @@ Readability deliberately improves on the old browser UI:
   least WCAG AA contrast are implementation gates.
 - Suggested actions never alter schedules, activities, or source files.
 
-## Proposed React skeleton
+## Original RTA React skeleton
+
+This sketch is retained for the Phase 1 component study. Use the full-product
+feature folders in [FULL_PRODUCT_UI.md](FULL_PRODUCT_UI.md#component-and-route-skeleton)
+for implementation.
 
 ```text
 web/src/
