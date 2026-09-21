@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview hotfix | Verified July StartEndTimes trailing-column fix; run `35647757596` is green; managed-workstation refresh remains |
+| `origin/main` | Phase 1 source-readiness preview `.2` | Exact FTE/July compatibility fix is published; run `35657552395` is green; managed-workstation refresh remains |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | Local-folder setup, fixed-contract refresh API, source-health Command view, and previous-cut rollback are implemented; operational RTA outputs remain |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | Exact old-portable FTE and July schedule attachments now refresh compatibly; operational RTA outputs remain |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -432,6 +432,15 @@ only through a recorded decision with evidence.
 - Advanced the hybrid package candidate to
   `v0.2.0-phase1-source-preview.2`; publication must use the exact green
   Windows CI artifact rather than a locally compressed archive.
+- CI run `35657552395` passed all three jobs: Linux source/frozen checks, the
+  exact target-compatible Windows ZIP with embedded doctor/source rollback/all
+  five offline Edge probes, and the legacy full-native Windows regression.
+  The downloaded CI artifact independently verified at 73,174,938 bytes, 90
+  members, 152,501,718 expanded bytes, and SHA-256
+  `9b683c51af7271c95a9ddd03a3abe02312019f56ae9490940f814dc0150059b4`.
+- Fast-forwarded GitHub `main` to `5f01b5f` and published the exact CI ZIP and
+  checksum as prerelease `v0.2.0-phase1-source-preview.2`. The next evidence is
+  one refresh of this exact extracted release on the managed workstation.
 
 ### 2026-09-21 — Verified July StartEndTimes 422 and scoped hotfix
 
