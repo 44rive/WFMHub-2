@@ -23,7 +23,7 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview `.2` | Exact FTE/July compatibility fix is published; CI and managed-workstation refresh pass |
+| `origin/main` | Phase 1 source-readiness preview `.3` | Optional streaming Agent Status/LILO evidence is published; target validation is next |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -437,6 +437,14 @@ only through a recorded decision with evidence.
   passed. The independently downloaded canonical CI ZIP is 73,183,059 bytes,
   has 93 unique members, passes ZIP CRC validation, and has SHA-256
   `f8e18e61d36359a15418d07f68b19ce8be75092dec3ab243c5627986846714c7`.
+- Fast-forwarded GitHub `main` to `fc7c740`; main qualification run
+  `35663242355` independently passed the same Linux, target-compatible Windows,
+  and legacy full-native Windows gates. Published the exact main-run ZIP and
+  checksum as prerelease `v0.2.0-phase1-source-preview.3`. The release ZIP is
+  73,183,059 bytes with SHA-256
+  `f8e18e61d36359a15418d07f68b19ce8be75092dec3ab243c5627986846714c7`.
+  The next external gate is a fresh extracted `.3` refresh against the user's
+  real Agent Status/LILO folders on the managed workstation.
 - An independent Claude architecture review was attempted through the project
   orchestrator but could not authenticate because its OAuth session had
   expired. The native legacy-contract audit completed read-only; no external
