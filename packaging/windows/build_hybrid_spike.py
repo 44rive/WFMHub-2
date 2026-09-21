@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the cross-platform Phase 0.4 browser-WASM compatibility ZIP."""
+"""Build the cross-platform policy-compatible browser-WASM portable ZIP."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ PYTHON_VERSION = "3.13.7"
 PYTHON_ARCHIVE = f"python-{PYTHON_VERSION}-embed-amd64.zip"
 PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/{PYTHON_ARCHIVE}"
 PYTHON_SHA256 = "f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65"
-PRODUCT_VERSION = "0.2.0-phase0.4-hybrid-spike"
+PRODUCT_VERSION = "0.2.0-phase1-source-preview.1"
 TOP_LEVEL = "WFMHub-2"
 NATIVE_SUFFIXES = (".dll", ".exe", ".pyd", ".so", ".duckdb_extension")
 HASH_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
@@ -271,7 +271,7 @@ def build_stage(web_dist: Path) -> Path:
     (stage / "README-FIRST.txt").write_text(
         "\n".join(
             (
-                "WFMHub 2 Phase 0.4 Hybrid Compatibility Spike",
+                "WFMHub 2 Phase 1 Source Preview",
                 "",
                 "Phase 1 preview: local source readiness, not yet the replacement WFM product.",
                 "",

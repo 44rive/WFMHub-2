@@ -45,8 +45,10 @@ def main() -> int:
         schedule.parent.mkdir(parents=True)
         with schedule.open("w", encoding="cp1252", newline="") as stream:
             writer = csv.writer(stream, delimiter="\t")
-            writer.writerow(["Name", "Data Source IDs", "08/01/2026"])
-            writer.writerow(["Ada Agent", "00123", "Off"])
+            writer.writerow(
+                ["Name", "Data Source IDs", *(f"07/{day:02d}/2026" for day in range(1, 32)), ""]
+            )
+            writer.writerow(["Ada Agent", "00123", *(["Off"] * 31), ""])
 
         source_hashes = (_sha256(roster), _sha256(schedule))
         configure_source_root(home, sources)
@@ -57,8 +59,12 @@ def main() -> int:
             raise RuntimeError("packaged source refresh did not publish a ready cut")
         if health["sources"]["roster"]["agentCount"] != 1:
             raise RuntimeError("packaged roster fact count was incorrect")
-        if health["sources"]["schedule"]["shiftCount"] != 1:
+        if health["sources"]["schedule"]["shiftCount"] != 31:
             raise RuntimeError("packaged schedule fact count was incorrect")
+        if health["sources"]["schedule"]["minDate"] != "2026-07-01":
+            raise RuntimeError("packaged schedule lost the first July date")
+        if health["sources"]["schedule"]["maxDate"] != "2026-07-31":
+            raise RuntimeError("packaged schedule lost the last July date")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
         if source_hashes != (_sha256(roster), _sha256(schedule)):
@@ -66,8 +72,10 @@ def main() -> int:
 
         with schedule.open("w", encoding="cp1252", newline="") as stream:
             writer = csv.writer(stream, delimiter="\t")
-            writer.writerow(["Name", "Data Source IDs", "08/01/2026"])
-            writer.writerow(["Ada Agent", "00123", "not an interval"])
+            writer.writerow(
+                ["Name", "Data Source IDs", *(f"07/{day:02d}/2026" for day in range(1, 32)), ""]
+            )
+            writer.writerow(["Ada Agent", "00123", "not an interval", *(["Off"] * 30), ""])
         active_id = health["activeGenerationId"]
         try:
             coordinator.refresh()

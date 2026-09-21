@@ -70,6 +70,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-028 | Stage source versions and quality findings in namespaced SQLite refresh generations; publish facts and switch the active pointer in one transaction. | A failed rebuild must leave the previous validated state active. The compatibility report schema remains additive and the target host remains standard-library-only. |
 | D-029 | Treat FTE Count and published wide StartEndTimes as the first governed Phase 1 contracts, with source provenance and generation-keyed Bronze/Silver tables. | They establish effective roster, PTO/Away, and scheduled coverage without inventing live attendance, service, or required-FTE evidence. Numeric Excel IDs are rejected because lost leading zeroes cannot be recovered safely. |
 | D-030 | Let the user point `SETUP.cmd` at the existing WFM Database folder; refresh reads only fixed FTE/schedule subpaths and accepts no upload or path from the browser. | Matches the old portable's local-folder workflow and keeps employee data off network services. A changed source pointer makes the old active cut stale until refreshed. |
+| D-031 | Accept data-free trailing TSV columns in published StartEndTimes exports, retaining physical date-column provenance; reject populated unlabelled cells. Surface a bounded, path-scrubbed contract reason to the local UI. | The exact old-portable July attachment has 31 date columns plus an empty 34th header/cell; the released Phase 1 parser rejected that structural detail, producing the user's 422. This is a verified compatibility correction, not a general relaxation of non-date headers. |
 
 ## Evidence already collected
 
@@ -400,6 +401,26 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Verified July StartEndTimes 422 and scoped hotfix
+
+- The user reported `INVALID_PUBLISHED_SCHEDULE` for the July StartEndTimes
+  export. The old portable repository's `attachments/` directory contains that
+  exact file. Structural inspection only: 34 TSV header columns, the last
+  blank; all 182 data rows also have an empty final cell. The released parser
+  reproduces the rejection, while the old parser and scoped candidate accept
+  the empty trailing column. No operational attachment was committed.
+- The scoped candidate preserves all 31 July dates and physical columns; its
+  read-only parse of the attachment yielded 5,642 schedule cells and no
+  blocking parse findings with a diagnostic empty roster. It does **not**
+  qualify roster scope or the full real-data refresh, since the attachment
+  lacks the user's FTE workbook.
+- Added a synthetic 31-day trailing-tab regression and changed the packaged
+  Windows smoke to exercise it. Other speculative date-order changes were
+  deliberately removed after inspecting the actual US-format header.
+- A distinct `0.2.0-phase1-source-preview.1` ZIP is planned. Do not claim the
+  hotfix shipped until the exact Windows ZIP and CI are green and the user
+  reruns the managed-workstation refresh.
 
 ### 2026-09-21 — Local source refresh and Command readiness
 

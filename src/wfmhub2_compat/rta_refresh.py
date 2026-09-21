@@ -35,9 +35,9 @@ DEFAULT_SOURCE_ROOT = Path("extracts")
 FTE_DIRECTORY = Path("FTE")
 SCHEDULE_DIRECTORY = Path("Verint/Schedules & Activities")
 MAX_SOURCE_POINTER_BYTES = 4096
-REFRESH_MODEL_VERSION = "rta-fte-schedule-v1"
+REFRESH_MODEL_VERSION = "rta-fte-schedule-v2"
 REFRESH_CATALOG_SHA256 = hashlib.sha256(
-    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|v1"
+    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|v2"
 ).hexdigest()
 
 
@@ -226,10 +226,23 @@ def _discover_schedules(source_root: Path, roster: FteSnapshot) -> tuple[Schedul
                     roster=roster,
                 )
             )
-        except (SourceContractError, csv.Error, UnicodeError, OSError) as exc:
+        except SourceContractError as exc:
+            detail = str(exc).replace(str(source_root), "<source-root>")[:240]
             raise RefreshFailedError(
                 "INVALID_PUBLISHED_SCHEDULE",
-                f"Published schedule {_source_key(source_root, path)} failed its data contract.",
+                f"Published schedule {_source_key(source_root, path)} failed: {detail}",
+            ) from exc
+        except (csv.Error, UnicodeError, OSError) as exc:
+            problem = (
+                "Malformed TSV quoting or field boundary"
+                if isinstance(exc, csv.Error)
+                else "Text encoding could not be read"
+                if isinstance(exc, UnicodeError)
+                else "Source file could not be read"
+            )
+            raise RefreshFailedError(
+                "INVALID_PUBLISHED_SCHEDULE",
+                f"Published schedule {_source_key(source_root, path)} failed: {problem}.",
             ) from exc
     return tuple(schedules)
 

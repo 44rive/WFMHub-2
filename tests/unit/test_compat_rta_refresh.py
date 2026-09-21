@@ -176,6 +176,30 @@ def test_rta_http_requires_token_and_never_accepts_upload_payload(tmp_path: Path
         assert response.status == 422
         assert json.loads(response.read())["code"] == "MISSING_FTE_SOURCE"
         connection.close()
+
+        _, schedule_dir = _sources(tmp_path)
+        with (schedule_dir / "StartEndTimes.txt").open(
+            "w", encoding="cp1252", newline=""
+        ) as stream:
+            writer = csv.writer(stream, delimiter="\t")
+            writer.writerow(["Name", "Data Source IDs", "08/01/2026", "Total"])
+            writer.writerow(["Ada Agent", "00123", "Off", "private assignment"])
+        connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        connection.request(
+            "POST",
+            "/api/rta/refresh",
+            body=b"{}",
+            headers={"X-WFMHub-Token": "launch-secret", "Content-Type": "application/json"},
+        )
+        response = connection.getresponse()
+        result = json.loads(response.read())
+        assert response.status == 422
+        assert result["code"] == "INVALID_PUBLISHED_SCHEDULE"
+        assert "header column 4 is not a business date" in result["message"]
+        assert "Ada Agent" not in result["message"]
+        assert "private assignment" not in result["message"]
+        assert str(tmp_path) not in result["message"]
+        connection.close()
     finally:
         server.shutdown()
         server.server_close()

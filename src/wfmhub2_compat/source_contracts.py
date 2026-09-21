@@ -24,9 +24,9 @@ from typing import Any, Literal, Protocol, cast
 from wfmhub2_compat.refresh_store import QualityIssue, RefreshStore, SourceVersion
 
 FTE_ADAPTER_VERSION = "fte-count-v1"
-SCHEDULE_ADAPTER_VERSION = "start-end-times-v1"
+SCHEDULE_ADAPTER_VERSION = "start-end-times-v2"
 FTE_POLICY_FINGERPRINT = "effective-roster-pto-away-v1"
-SCHEDULE_POLICY_FINGERPRINT = "published-start-end-explicit-overnight-v1"
+SCHEDULE_POLICY_FINGERPRINT = "published-start-end-explicit-overnight-v2"
 
 _MAX_XLSX_BYTES = 64 * 1024 * 1024
 _MAX_SCHEDULE_BYTES = 128 * 1024 * 1024
@@ -878,22 +878,37 @@ def parse_start_end_times(
         ]
         if len(headers) < 3 or headers[:2] != ["Name", "Data Source IDs"]:
             raise SourceContractError("StartEndTimes must begin with Name and Data Source IDs")
-        parsed_dates = [_parse_schedule_date(value) for value in headers[2:]]
-        if any(value is None for value in parsed_dates):
-            raise SourceContractError(
-                "every StartEndTimes column after identity must be a business date"
-            )
-        business_dates = cast(list[date], parsed_dates)
+        date_columns: list[tuple[int, date]] = []
+        blank_columns: list[int] = []
+        for index, header in enumerate(headers[2:], 2):
+            if not header:
+                blank_columns.append(index)
+                continue
+            parsed_date = _parse_schedule_date(header)
+            if parsed_date is None:
+                raise SourceContractError(
+                    f"StartEndTimes header column {index + 1} is not a business date"
+                )
+            date_columns.append((index, parsed_date))
+        if not date_columns:
+            raise SourceContractError("StartEndTimes contains no business-date columns")
+        business_dates = [business_date for _, business_date in date_columns]
         if len(business_dates) != len(set(business_dates)):
             raise SourceContractError("StartEndTimes contains duplicate business-date columns")
         for source_row, values in enumerate(reader, 2):
+            for index in blank_columns:
+                if index < len(values) and _clean(values[index]) is not None:
+                    raise SourceContractError(
+                        f"StartEndTimes row {source_row}, column {index + 1} has data "
+                        "without a header"
+                    )
             name = _clean(values[0] if values else None)
             raw_id_value = values[1] if len(values) > 1 else None
             source_agent_id = _normalize_id(raw_id_value)
             raw_agent_id = _normalize_id(raw_id_value, reject_placeholders=False)
             if name is None and raw_agent_id is None:
                 continue
-            for offset, business_date in enumerate(business_dates, 2):
+            for offset, business_date in date_columns:
                 raw = _clean(values[offset] if offset < len(values) else None)
                 if raw is None:
                     continue

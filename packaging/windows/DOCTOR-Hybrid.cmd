@@ -25,6 +25,6 @@ exit /b %EXIT_CODE%
 
 :missing_runtime
 echo ERROR: The official embedded Python runtime is missing.
-echo Extract the complete Phase 0.4 Hybrid Spike ZIP first.
+echo Extract the complete WFMHub 2 Source Preview ZIP first.
 pause
 exit /b 9009

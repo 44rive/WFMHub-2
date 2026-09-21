@@ -356,6 +356,60 @@ def test_schedule_requires_unambiguous_wide_business_date_columns(tmp_path: Path
         parse_start_end_times(schedule_path, source_key="synthetic/schedule.txt", roster=roster)
 
 
+def test_schedule_accepts_empty_trailing_header_without_losing_date_column(
+    tmp_path: Path,
+) -> None:
+    fte_path = tmp_path / "FTE Count.xlsx"
+    schedule_path = tmp_path / "StartEndTimes.txt"
+    valid_fte(fte_path)
+    roster = parse_fte_workbook(fte_path, source_key="synthetic/fte.xlsx")
+    write_schedule(
+        schedule_path,
+        (("Ada Agent", "00123", "Off", ""),),
+        "08/01/2026",
+        "",
+    )
+
+    schedule = parse_start_end_times(
+        schedule_path, source_key="synthetic/schedule.txt", roster=roster
+    )
+
+    assert len(schedule.shifts) == 1
+    assert schedule.shifts[0].business_date.isoformat() == "2026-08-01"
+    assert schedule.shifts[0].source_column == 3
+
+    write_schedule(
+        schedule_path,
+        (("Ada Agent", "00123", "Off", "unlabelled data"),),
+        "08/01/2026",
+        "",
+    )
+    with pytest.raises(SourceContractError, match="row 2, column 4 has data without a header"):
+        parse_start_end_times(schedule_path, source_key="synthetic/schedule.txt", roster=roster)
+
+
+def test_monthly_schedule_with_trailing_tab_keeps_all_31_dates(tmp_path: Path) -> None:
+    fte_path = tmp_path / "FTE Count.xlsx"
+    schedule_path = tmp_path / "VERINT_ALL_07-2026_01072026_31072026_StartEndTimes.txt"
+    valid_fte(fte_path)
+    roster = parse_fte_workbook(fte_path, source_key="synthetic/fte.xlsx")
+    write_schedule(
+        schedule_path,
+        (("Ada Agent", "00123", *(["Off"] * 31), ""),),
+        *(f"07/{day:02d}/2026" for day in range(1, 32)),
+        "",
+    )
+
+    schedule = parse_start_end_times(
+        schedule_path, source_key="synthetic/schedule.txt", roster=roster
+    )
+
+    assert len(schedule.shifts) == 31
+    assert schedule.date_from.isoformat() == "2026-07-01"
+    assert schedule.date_to.isoformat() == "2026-07-31"
+    assert schedule.shifts[-1].source_column == 33
+
+
 def test_activation_atomically_publishes_generation_keyed_raw_and_canonical_facts(
     tmp_path: Path,
 ) -> None:
