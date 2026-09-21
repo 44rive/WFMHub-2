@@ -1,6 +1,6 @@
 # WFMHub 2 Project Ledger
 
-Last updated: 2026-09-20
+Last updated: 2026-09-21
 
 This is the durable project handoff. Read it before exploring the repository.
 Update it after material work so the next human or AI session starts from known
@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 0.4 browser-WASM hybrid spike | CI and managed target passed; Phase 1 RTA work may begin |
+| `origin/main` | Accepted hybrid foundation plus Phase 1 product design | CI, target browser, and target doctor passed; UI implementation awaits blueprint review |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 0.4 stdlib/SQLite host plus browser-WASM compatibility gate | Accepted on target; merged/released as `v0.2.0-phase0.4` |
+| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and proposed Phase 1 UI baseline | Target accepted; design documented before production UI work |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -62,6 +62,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-021 | HiGHS-Wasm and Pyodide models are candidates, not claimed drop-in replacements for OR-Tools/XGBoost/StatsForecast. | Scheduling formulations and forecast quality require independent WFM validation and performance evidence. |
 | D-022 | Use stable loopback origin `127.0.0.1:8420` for the browser-WASM profile while retaining a fresh 256-bit token per launch. | OPFS is scoped to origin; an ephemeral port destroys cross-launch cache continuity. Startup fails if the fixed port is occupied. This supersedes D-008 for Phase 0.4 only. |
 | D-023 | Accept the hybrid architecture as the target portable foundation and begin the governed RTA slice. | The exact Phase 0.4 release passed all five probes under the real corporate policy. This proves execution feasibility, not forecast quality, optimization semantics, production-data scale, or WFM product parity. |
+| D-024 | Evolve the WFMHub-Portable navy/teal/gold visual system for WFMHub 2 instead of introducing an unrelated product theme. | The user requested continuity with the proven product; Phase 1 will improve readability and decision flow while preserving its operational identity. |
 
 ## Evidence already collected
 
@@ -342,11 +343,10 @@ only through a recorded decision with evidence.
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
   at real WFM data volumes remain unmeasured.
-- The browser report identifies the expected profile/version but does not
-  cryptographically bind itself to the release ZIP or include `DOCTOR.cmd`
-  output. Acceptance relies on the supported release workflow the report was
-  returned from; a future report schema should include build identity and host
-  doctor status.
+- The user separately confirmed that the exact target doctor passed. The
+  browser report still does not cryptographically bind itself to the release
+  ZIP or embed the doctor result; a future report schema should include build
+  identity and host-doctor status in one artifact.
 - The target reported `online: true`; no-network execution is independently
   proven by CI, not by this target run.
 - Pyodide/scikit-learn/statsmodels prove model execution, not forecast quality.
@@ -360,18 +360,43 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Inventory and selectively port the old product's governed source contracts,
+1. Review the proposed Phase 1 shell, information architecture, and three
+   screen concepts in `docs/UI_BLUEPRINT.md`; then implement the shared design
+   tokens, application shell, typed synthetic contracts, and Command Center.
+2. Inventory and selectively port the old product's governed source contracts,
    mappings, formulas, SQLite migrations, upgrades, and synthetic tests; never
    copy operational/user data.
-2. Deliver the first governed RTA vertical slice: read-only local source
+3. Deliver the first governed RTA vertical slice: read-only local source
    refresh -> canonical SQLite facts -> service/attendance -> staffing gap ->
    React command centre -> Excel export.
-3. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+4. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
-4. Reach old-portable business parity before declaring WFMHub 2 the operational
+5. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Target doctor confirmed and Phase 1 UI baseline drafted
+
+- The user confirmed that the exact target doctor passed in addition to the
+  previously accepted five-probe browser report. This closes the remaining
+  target host-compatibility observation; future reports should bind doctor,
+  browser results, and build identity in one artifact.
+- Audited the WFMHub-Portable product contract, design tokens, web shell,
+  navigation, filters, operational tables, timelines, and evidence patterns.
+- Drafted `docs/UI_BLUEPRINT.md`: a desktop-first Phase 1 shell organised as
+  Command, Operate, Decide, Review, and Govern, with Plan hidden until it has a
+  working product.
+- Generated and inspected three synthetic 1586 x 992 design references for the
+  RTA Command Center, Attendance & Coverage, and Risk & Decision Workspace.
+  They preserve the old navy/teal/gold theme while improving readability and
+  making the decision/outcome loop first class.
+- A contract-focused review caught and corrected synthetic portfolio service
+  aggregation, staffing arithmetic, missing-evidence classifications, active-
+  shift early-leave language, and unvalidated service-impact claims before the
+  images were accepted as references.
+- No production UI or business formula changed. The next implementation step
+  starts only after the proposed hierarchy is reviewed.
 
 ### 2026-09-20 — Phase 0.4 hybrid browser-WASM spike implemented locally
 
