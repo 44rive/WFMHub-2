@@ -23,11 +23,12 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus Phase 1 UI foundation | Target browser/doctor accepted; product shell is implemented locally and awaiting Windows release qualification |
+| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green product shell and stdlib refresh control integrated; exact new Windows ZIP still awaits qualification |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell/doctor route implemented; source-driven RTA work remains |
+| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell, doctor route, and stdlib refresh authority implemented; source-driven RTA work remains |
+| `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -66,6 +67,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-025 | Make the full product shell six workspaces: Command, Operate, Plan, Capacity, Review, Govern. Put scenarios/optimization inside Plan and the decision register in Command; show only functional pages. | The Phase 1 five-item RTA study did not cover tactical/strategic WFM. Decisions span horizons, while optimization is a method; six groups fit a desktop workbench without dead or duplicate navigation. This supersedes the earlier UI blueprint's top-level navigation, not its visual tokens or RTA screen concepts. |
 | D-026 | Replace bright-blue information accents with the old report workbook's green `#1F7A53` / pale green `#DDF3E8`; keep navy structural, teal action, gold rule, and credit the UI **by Anass ASSRI**. | The user approved the product design with these two corrections. The workbook and old design tokens confirm the exact colors and authorship convention. |
 | D-027 | Begin Phase 1 with an honest capability-gated shell and preserve the five-probe doctor under Govern. | Source-driven RTA APIs do not exist yet; a visible empty state is safer than fabricated KPIs or dead Plan/Capacity links. |
+| D-028 | Stage source versions and quality findings in namespaced SQLite refresh generations; publish facts and switch the active pointer in one transaction. | A failed rebuild must leave the previous validated state active. The compatibility report schema remains additive and the target host remains standard-library-only. |
 
 ## Evidence already collected
 
@@ -350,6 +352,10 @@ only through a recorded decision with evidence.
   refresh, service/attendance facts, or requirement input. Its Command page is
   deliberately empty; the doctor is the only live workflow. A true required-
   FTE shortage also needs the separate Verint Staff Type requirement source.
+- SQLite generation/manifest/quality control is now implemented, but no source
+  files are parsed and no canonical facts are published yet. An activation
+  callback must validate and write its generation-keyed facts transactionally;
+  the existence of a generation is not evidence of business-data readiness.
 - The changed frontend and browser smoke passed locally, but the exact new
   Windows release ZIP has not been built or retested on the managed workstation.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
@@ -373,9 +379,9 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Integrate and qualify the pure-stdlib/SQLite refresh-generation foundation,
-   then port the old product's governed source contracts and synthetic tests;
-   never copy operational/user data.
+1. Port the reviewed FTE roster and published-schedule source contracts into
+   the pure-stdlib host with synthetic fixtures, exact scope rules, and read-
+   only local file access; never copy operational/user data.
 2. Deliver the first governed RTA vertical slice: read-only local source
    refresh -> canonical SQLite facts -> service/attendance -> staffing gap ->
    React command centre -> Excel export.
@@ -390,6 +396,26 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Additive stdlib refresh authority
+
+- Added `wfm_refresh_generation`, `wfm_active_generation`, source-manifest, and
+  quality-issue tables to the existing SQLite control database without losing
+  compatibility reports. Active source versions resolve through generation
+  lineage; source removals and explicit pointer restoration are supported.
+- A failed publish callback rolls back fact writes and the active pointer;
+  blocking quality issues and stale concurrent generations cannot activate.
+  This is a storage primitive, not a completed source refresh or RTA result.
+- Added a bounded, hashed reader for the old five-column queue-map format,
+  including normalized duplicate checks. It successfully read the reviewed
+  old default catalog's 89 mapping rows without importing user data.
+- Target-host tests passed `16/16`. After integration, the frozen Python
+  3.13.7 environment passed all `38` repository tests, Ruff format/lint, and
+  strict Pyright. The real local host/Chrome smoke again passed all five
+  browser probes, and the stable-origin OPFS counter advanced to `2` across
+  launches. The exact new Windows ZIP and managed-workstation run remain
+  separate gates.
+
 
 ### 2026-09-21 — Phase 1 product shell and palette correction
 

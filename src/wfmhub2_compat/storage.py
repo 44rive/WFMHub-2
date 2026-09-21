@@ -30,6 +30,58 @@ CREATE TABLE IF NOT EXISTS compatibility_run (
     failed_count INTEGER NOT NULL,
     report_path TEXT NOT NULL
 );
+
+-- The compatible host owns these authoritative tables. The older native
+-- prototype has a different source_manifest schema, so do not share its names.
+CREATE TABLE IF NOT EXISTS wfm_refresh_generation (
+    id INTEGER PRIMARY KEY,
+    started_at TEXT NOT NULL,
+    finished_at TEXT,
+    status TEXT NOT NULL CHECK(status IN ('running', 'succeeded', 'failed')),
+    base_generation_id INTEGER REFERENCES wfm_refresh_generation(id),
+    catalog_sha256 TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    failure_reason TEXT
+);
+
+CREATE TABLE IF NOT EXISTS wfm_active_generation (
+    singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+    generation_id INTEGER REFERENCES wfm_refresh_generation(id)
+);
+
+INSERT OR IGNORE INTO wfm_active_generation (singleton, generation_id) VALUES (1, NULL);
+
+CREATE TABLE IF NOT EXISTS wfm_source_manifest (
+    id INTEGER PRIMARY KEY,
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_type TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'present' CHECK(state IN ('present', 'removed')),
+    file_size INTEGER NOT NULL CHECK(file_size >= 0),
+    mtime_ns INTEGER NOT NULL CHECK(mtime_ns >= 0),
+    content_sha256 TEXT NOT NULL,
+    adapter_version TEXT NOT NULL,
+    policy_fingerprint TEXT NOT NULL,
+    row_count INTEGER CHECK(row_count IS NULL OR row_count >= 0),
+    recorded_at TEXT NOT NULL,
+    UNIQUE(generation_id, source_type, source_key)
+);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_manifest_source
+ON wfm_source_manifest(source_type, source_key, generation_id);
+
+CREATE TABLE IF NOT EXISTS wfm_quality_issue (
+    id INTEGER PRIMARY KEY,
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT,
+    issue_code TEXT NOT NULL,
+    severity TEXT NOT NULL CHECK(severity IN ('info', 'warning', 'error')),
+    details TEXT NOT NULL,
+    recorded_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_quality_generation
+ON wfm_quality_issue(generation_id, severity);
 """
 
 
