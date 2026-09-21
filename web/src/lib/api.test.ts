@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createEngineClient,
+  decodeRtaSourceHealth,
   type EngineConnection,
   resolveEngineConnection,
   sessionTokenFromFragment,
@@ -66,6 +67,59 @@ describe('browser engine discovery', () => {
 })
 
 describe('engine API client', () => {
+  it('decodes the governed source-health contract and rejects drift', () => {
+    const health = {
+      status: 'not_ready',
+      ready: false,
+      sourceRoot: { mode: 'default', displayName: 'extracts' },
+      configuredSources: { fte: 'FTE', publishedSchedules: 'Verint/Schedules & Activities' },
+      activeGenerationId: null,
+      activeGeneration: null,
+      latestRefresh: null,
+      quality: { error: 0, warning: 0, info: 0 },
+      sources: {
+        roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
+        schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
+      },
+    }
+    expect(decodeRtaSourceHealth(health).ready).toBe(false)
+    expect(() => decodeRtaSourceHealth({ ...health, quality: { errors: 0 } })).toThrow()
+  })
+
+  it('refreshes only the fixed local source contract', async () => {
+    const health = {
+      status: 'not_ready',
+      ready: false,
+      sourceRoot: { mode: 'default', displayName: 'extracts' },
+      configuredSources: { fte: 'FTE', publishedSchedules: 'Verint/Schedules & Activities' },
+      activeGenerationId: null,
+      activeGeneration: null,
+      latestRefresh: null,
+      quality: { error: 0, warning: 0, info: 0 },
+      sources: {
+        roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
+        schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
+      },
+    }
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ status: 'succeeded', generationId: 1, sourceHealth: health }),
+          { status: 200 },
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createEngineClient(readyConnection).refreshRtaSources()).resolves.toMatchObject({
+      generationId: 1,
+    })
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:43127/api/rta/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-WFMHub-Token': 'launch-secret' },
+      body: '{}',
+    })
+  })
+
   it('reads the Phase 0.4 host health endpoint from the product shell', async () => {
     const fetchMock = vi.fn(
       async () =>

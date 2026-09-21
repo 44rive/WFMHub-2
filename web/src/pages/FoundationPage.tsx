@@ -1,8 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { createEngineClient, getEngineConnection } from '../lib/api'
+import { createEngineClient, getEngineConnection, type RtaSourceHealth } from '../lib/api'
 
 export function FoundationPage() {
+  const queryClient = useQueryClient()
   const connection = useQuery({
     queryKey: ['engine-connection'],
     queryFn: getEngineConnection,
@@ -16,6 +17,28 @@ export function FoundationPage() {
     },
     enabled: connection.data?.phase === 'ready',
     retry: false,
+  })
+
+  const sourceHealth = useQuery({
+    queryKey: ['rta-source-health', connection.data?.baseUrl],
+    queryFn: () => {
+      if (!connection.data) throw new Error('Local host connection is unavailable')
+      return createEngineClient(connection.data).getRtaSourceHealth()
+    },
+    enabled: host.data?.status === 'ok' && connection.data?.phase === 'ready',
+    retry: false,
+  })
+  const refresh = useMutation({
+    mutationFn: () => {
+      if (!connection.data) throw new Error('Local host connection is unavailable')
+      return createEngineClient(connection.data).refreshRtaSources()
+    },
+    onSuccess: (result) => {
+      queryClient.setQueryData(['rta-source-health', connection.data?.baseUrl], result.sourceHealth)
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ['rta-source-health'] })
+    },
   })
 
   const hostReady = host.data?.status === 'ok'
@@ -39,7 +62,8 @@ export function FoundationPage() {
             <h1 tabIndex={-1}>Workforce decision workbench</h1>
             <p className="page-lede">
               One local place for evidence, planning, decisions, and outcomes. The Phase 1 RTA
-              workflow is being built; this screen reports platform readiness only.
+              workflow is being built; this screen shows local source readiness, not operational
+              KPIs.
             </p>
           </div>
           <Link to="/compatibility" className="button button-secondary">
@@ -56,16 +80,27 @@ export function FoundationPage() {
           </div>
           <div className="evidence-strip-item">
             <span className="evidence-label">RTA business evidence</span>
-            <span className="evidence-value">Not connected</span>
+            <span className="evidence-value">
+              {sourceHealth.data?.ready ? 'Validated local sources' : 'Not ready'}
+            </span>
           </div>
           <div className="evidence-strip-item">
             <span className="evidence-label">Operational data cut</span>
-            <span className="evidence-value">Not connected</span>
+            <span className="evidence-value">
+              {sourceHealth.data?.ready ? formatDateRange(sourceHealth.data) : 'Unknown'}
+            </span>
           </div>
         </section>
 
         <div className="product-grid">
-          <RtaEmptyState />
+          <RtaSourcePanel
+            health={sourceHealth.data}
+            loading={hostReady && sourceHealth.isPending}
+            error={refresh.error ?? sourceHealth.error}
+            refreshing={refresh.isPending}
+            canRefresh={hostReady && connection.data?.phase === 'ready'}
+            onRefresh={() => refresh.mutate()}
+          />
 
           <aside className="panel" aria-labelledby="platform-heading">
             <div className="panel-heading">
@@ -80,7 +115,7 @@ export function FoundationPage() {
               </div>
               <div>
                 <dt>Business data</dt>
-                <dd>Not connected</dd>
+                <dd>{sourceHealth.data?.ready ? 'Local source cut validated' : 'Not ready'}</dd>
               </div>
               <div>
                 <dt>Browser analytics</dt>
@@ -101,7 +136,7 @@ export function FoundationPage() {
           <ol className="delivery-steps">
             <li>
               <strong>Read-only source refresh</strong>
-              <span>Map old-product source contracts into canonical SQLite evidence.</span>
+              <span>FTE and published schedule evidence into generation-scoped SQLite.</span>
             </li>
             <li>
               <strong>Governed RTA position</strong>
@@ -120,25 +155,128 @@ export function FoundationPage() {
   )
 }
 
-export function RtaEmptyState() {
+function formatDateRange(health: RtaSourceHealth): string {
+  const from = health.sources.schedule.minDate
+  const to = health.sources.schedule.maxDate
+  if (!from || !to) return 'Unknown'
+  return from === to ? from : `${from} – ${to}`
+}
+
+type RtaSourcePanelProps = {
+  health?: RtaSourceHealth
+  loading: boolean
+  error: Error | null
+  refreshing: boolean
+  canRefresh: boolean
+  onRefresh: () => void
+}
+
+export function RtaSourcePanel({
+  health,
+  loading,
+  error,
+  refreshing,
+  canRefresh,
+  onRefresh,
+}: RtaSourcePanelProps) {
+  const latestFailed = health?.latestRefresh?.status === 'failed'
+  const activeId = health?.activeGenerationId
+  const rootLabel =
+    health?.sourceRoot.mode === 'configured'
+      ? 'Existing local folder set by SETUP.cmd'
+      : health?.sourceRoot.mode === 'invalid'
+        ? 'Source folder configuration needs repair'
+        : 'Portable extracts folder'
   return (
     <section className="panel panel-feature" aria-labelledby="first-slice-heading">
       <div className="panel-heading">
-        <p className="eyebrow">Phase 1 / first governed slice</p>
-        <h2 id="first-slice-heading">RTA Command Center is not connected yet</h2>
+        <p className="eyebrow">Phase 1 / local evidence</p>
+        <h2 id="first-slice-heading">RTA source readiness</h2>
       </div>
       <p>
-        This screen cannot show service level, staffing gap, attendance position, or an action queue
-        until a governed RTA data API is connected. Missing evidence will remain unknown—not zero,
-        absent, or compliant.
+        Read your existing FTE and Verint schedule exports in place. Refresh does not upload, copy,
+        or modify those files. This cut is source evidence only: service level, staffing gap, and
+        action queues are not connected yet.
       </p>
-      <div className="empty-state">
+      <div className="source-actions">
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={!canRefresh || refreshing}
+          onClick={onRefresh}
+        >
+          {refreshing ? 'Refreshing local sources…' : 'Refresh local sources'}
+        </button>
+        <span
+          className={`state-pill state-${health?.ready ? 'ready' : 'unavailable'}`}
+          role="status"
+        >
+          {loading
+            ? 'Checking sources'
+            : health?.ready
+              ? 'Source cut ready'
+              : health?.status === 'source_changed'
+                ? 'Source folder changed'
+                : 'Sources not ready'}
+        </span>
+      </div>
+      {error && (
+        <p className="source-error" role="alert">
+          {error.message}
+        </p>
+      )}
+      {latestFailed && (
+        <p className="source-warning" role="status">
+          The last refresh failed ({health.latestRefresh?.failureCode ?? 'unknown reason'}).
+          {activeId !== null
+            ? ' The previous validated cut remains stored.'
+            : ' No cut was published.'}
+        </p>
+      )}
+      <dl className="fact-list source-facts">
+        <div>
+          <dt>Source folder</dt>
+          <dd>{rootLabel}</dd>
+        </div>
+        <div>
+          <dt>FTE roster</dt>
+          <dd>{health?.ready ? `${health.sources.roster.agentCount} agents` : 'Not validated'}</dd>
+        </div>
+        <div>
+          <dt>Published schedules</dt>
+          <dd>
+            {health?.ready ? `${health.sources.schedule.shiftCount} assignments` : 'Not validated'}
+          </dd>
+        </div>
+        <div>
+          <dt>Schedule dates</dt>
+          <dd>{health?.ready ? formatDateRange(health) : 'Unknown'}</dd>
+        </div>
+        <div>
+          <dt>Quality findings</dt>
+          <dd>
+            {health?.ready
+              ? `${health.quality.error} errors · ${health.quality.warning} warnings`
+              : 'Unknown'}
+          </dd>
+        </div>
+        <div>
+          <dt>Active cut</dt>
+          <dd>{health?.ready ? `Generation ${activeId}` : 'None current'}</dd>
+        </div>
+      </dl>
+      <p className="source-help">
+        Run <code>SETUP.cmd</code> once to select your existing WFM Database folder, or place
+        extracts under <code>extracts/FTE</code> and{' '}
+        <code>extracts/Verint/Schedules &amp; Activities</code>.
+      </p>
+      <div className="empty-state compact-empty">
         <span className="empty-state-icon" aria-hidden="true">
           —
         </span>
         <div>
           <strong>No operational metrics to display</strong>
-          <span>This screen is not connected to a governed RTA data API yet.</span>
+          <span>Source readiness is not an RTA performance position.</span>
         </div>
       </div>
     </section>

@@ -42,6 +42,58 @@ export type StackProbe = {
   checks: ProbeCheck[]
 }
 
+export type SourceRoot = {
+  mode: 'default' | 'configured' | 'invalid'
+  displayName?: string
+  pointerPath?: string
+  errorCode?: string
+}
+
+export type SourceQuality = { error: number; warning: number; info: number }
+
+export type SourceRefreshSummary = {
+  generationId: number
+  status: 'running' | 'succeeded' | 'failed'
+  startedAt: string
+  finishedAt: string | null
+  counts: {
+    rosterAgents: number
+    timeOffRecords: number
+    scheduleAssignments: number
+    sourceFiles: number
+  }
+  dateRange: { from: string | null; to: string | null }
+  qualityCounts: SourceQuality
+  failureCode?: string
+}
+
+export type RtaSourceHealth = {
+  status: string
+  sourceRoot: SourceRoot
+  activeGenerationId: number | null
+  activeGeneration: SourceRefreshSummary | null
+  latestRefresh: SourceRefreshSummary | null
+  configuredSources: { fte: string; publishedSchedules: string }
+  sources: {
+    roster: { ready: boolean; agentCount: number; timeOffCount: number; fileCount: number }
+    schedule: {
+      ready: boolean
+      shiftCount: number
+      fileCount: number
+      minDate: string | null
+      maxDate: string | null
+    }
+  }
+  quality: SourceQuality
+  ready: boolean
+}
+
+export type RtaRefreshResult = {
+  status: 'succeeded'
+  generationId: number
+  sourceHealth: RtaSourceHealth
+}
+
 const sessionTokenFragmentKey = 'wfmhub_token'
 const sessionTokenStorageKey = 'wfmhub2.session-token'
 
@@ -160,14 +212,49 @@ export function createEngineClient(connection: EngineConnection) {
   }
 
   const baseUrl = validateLoopbackBaseUrl(connection.baseUrl)
+  const sessionToken = connection.sessionToken
+
+  const errorFromResponse = async (response: Response): Promise<Error> => {
+    let message: string | null = null
+    try {
+      const payload: unknown = await response.json()
+      if (isRecord(payload)) {
+        if (typeof payload.message === 'string') {
+          message = payload.message
+        } else if (typeof payload.detail === 'string') {
+          message = payload.detail
+        } else if (isRecord(payload.error) && typeof payload.error.message === 'string') {
+          message = payload.error.message
+        }
+      }
+    } catch {
+      // A non-JSON response still receives the stable status-only fallback below.
+    }
+
+    if (message) {
+      const safeMessage = Array.from(message.replaceAll(sessionToken, '[redacted]'))
+        .map((character) => {
+          const code = character.charCodeAt(0)
+          return code < 32 || code === 127 ? ' ' : character
+        })
+        .join('')
+        .trim()
+        .slice(0, 300)
+      if (safeMessage) {
+        return new Error(`Engine request failed (${response.status}): ${safeMessage}`)
+      }
+    }
+    return new Error(`Engine request failed: ${response.status}`)
+  }
+
   const request = async <T>(path: string): Promise<T> => {
     const response = await fetch(`${baseUrl}${path}`, {
       headers: {
-        'X-WFMHub-Token': connection.sessionToken as string,
+        'X-WFMHub-Token': sessionToken,
       },
     })
     if (!response.ok) {
-      throw new Error(`Engine request failed: ${response.status}`)
+      throw await errorFromResponse(response)
     }
     return response.json() as Promise<T>
   }
@@ -177,12 +264,12 @@ export function createEngineClient(connection: EngineConnection) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-WFMHub-Token': connection.sessionToken as string,
+        'X-WFMHub-Token': sessionToken,
       },
       body: JSON.stringify(body),
     })
     if (!response.ok) {
-      throw new Error(`Engine request failed: ${response.status}`)
+      throw await errorFromResponse(response)
     }
     return response.json() as Promise<T>
   }
@@ -193,5 +280,87 @@ export function createEngineClient(connection: EngineConnection) {
     getStackProbe: () => request<StackProbe>('/stack/probe'),
     saveCompatibilityReport: (report: unknown) =>
       post<SavedCompatibilityReport>('/compat/report', report),
+    getRtaSourceHealth: async () =>
+      decodeRtaSourceHealth(await request<unknown>('/rta/source-health')),
+    refreshRtaSources: async () => decodeRtaRefreshResult(await post<unknown>('/rta/refresh', {})),
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isQuality(value: unknown): value is SourceQuality {
+  return (
+    isRecord(value) &&
+    typeof value.error === 'number' &&
+    typeof value.warning === 'number' &&
+    typeof value.info === 'number'
+  )
+}
+
+function isSummary(value: unknown): value is SourceRefreshSummary {
+  return (
+    isRecord(value) &&
+    typeof value.generationId === 'number' &&
+    ['running', 'succeeded', 'failed'].includes(String(value.status)) &&
+    typeof value.startedAt === 'string' &&
+    (value.finishedAt === null || typeof value.finishedAt === 'string') &&
+    isRecord(value.counts) &&
+    typeof value.counts.rosterAgents === 'number' &&
+    typeof value.counts.timeOffRecords === 'number' &&
+    typeof value.counts.scheduleAssignments === 'number' &&
+    typeof value.counts.sourceFiles === 'number' &&
+    isRecord(value.dateRange) &&
+    (value.dateRange.from === null || typeof value.dateRange.from === 'string') &&
+    (value.dateRange.to === null || typeof value.dateRange.to === 'string') &&
+    isQuality(value.qualityCounts)
+  )
+}
+
+export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
+  if (
+    !isRecord(value) ||
+    typeof value.status !== 'string' ||
+    !isRecord(value.sourceRoot) ||
+    !['default', 'configured', 'invalid'].includes(String(value.sourceRoot.mode)) ||
+    !(value.activeGenerationId === null || typeof value.activeGenerationId === 'number') ||
+    !(value.activeGeneration === null || isSummary(value.activeGeneration)) ||
+    !(value.latestRefresh === null || isSummary(value.latestRefresh)) ||
+    !isRecord(value.configuredSources) ||
+    typeof value.configuredSources.fte !== 'string' ||
+    typeof value.configuredSources.publishedSchedules !== 'string' ||
+    !isRecord(value.sources) ||
+    !isRecord(value.sources.roster) ||
+    typeof value.sources.roster.ready !== 'boolean' ||
+    typeof value.sources.roster.agentCount !== 'number' ||
+    typeof value.sources.roster.timeOffCount !== 'number' ||
+    typeof value.sources.roster.fileCount !== 'number' ||
+    !isRecord(value.sources.schedule) ||
+    typeof value.sources.schedule.ready !== 'boolean' ||
+    typeof value.sources.schedule.shiftCount !== 'number' ||
+    typeof value.sources.schedule.fileCount !== 'number' ||
+    !(
+      value.sources.schedule.minDate === null || typeof value.sources.schedule.minDate === 'string'
+    ) ||
+    !(
+      value.sources.schedule.maxDate === null || typeof value.sources.schedule.maxDate === 'string'
+    ) ||
+    !isQuality(value.quality) ||
+    typeof value.ready !== 'boolean'
+  ) {
+    throw new Error('Local source-health response did not match the supported contract')
+  }
+  return value as RtaSourceHealth
+}
+
+export function decodeRtaRefreshResult(value: unknown): RtaRefreshResult {
+  if (!isRecord(value) || value.status !== 'succeeded' || typeof value.generationId !== 'number') {
+    throw new Error('Local refresh response did not match the supported contract')
+  }
+  return {
+    status: 'succeeded',
+    generationId: value.generationId,
+    sourceHealth: decodeRtaSourceHealth(value.sourceHealth),
   }
 }
