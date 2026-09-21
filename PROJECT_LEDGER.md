@@ -23,7 +23,7 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview `.2` | Exact FTE/July compatibility fix is published; run `35657552395` is green; managed-workstation refresh remains |
+| `origin/main` | Phase 1 source-readiness preview `.2` | Exact FTE/July compatibility fix is published; CI and managed-workstation refresh pass |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -361,9 +361,9 @@ only through a recorded decision with evidence.
   generations retain manifest and quality evidence while attempted fact
   publication is rolled back. Incremental planning remains unimplemented;
   each successful refresh reparses the first two source contracts.
-- The exact post-shell Windows ZIP passed ordinary Windows CI. That exact ZIP
-  has not yet been rerun on the managed workstation; the earlier accepted
-  Phase 0.4 target report remains the policy-compatibility evidence.
+- Exact preview `.2` launch and source refresh now pass on the managed
+  workstation. Its doctor and five Edge probes pass Windows CI; the last full
+  on-device capability report remains the accepted Phase 0.4 report.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
@@ -385,20 +385,18 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Qualify the exact current portable ZIP in Windows CI, then have the user
-   test setup and refresh on the managed workstation with real source copies.
-2. Port Agent Status and LILO, then Call-by-Call, to create governed actual-
+1. Port Agent Status and LILO, then Call-by-Call, to create governed actual-
    attendance and service facts before exposing operational Command KPIs.
-3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
+2. Add Verint Staff Type forecast/requirement before claiming a required-FTE
    shortage; the first four-source stage may show observed versus scheduled
    coverage only.
-4. Add governed operational read models to Command and bounded Excel export,
+3. Add governed operational read models to Command and bounded Excel export,
    preserving explicit freshness and source-quality states.
-5. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
+4. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
    after source refresh and UI/runtime integration.
-6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
-7. Reach old-portable business parity before declaring WFMHub 2 the operational
+6. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
@@ -428,7 +426,8 @@ only through a recorded decision with evidence.
   precedence, unsupported-status quarantine, invalid PTO quarantine, and
   canonical alias publication. Full local result: Ruff format/lint, strict
   Pyright, 58 pytest tests, and the native-stack probe pass. Exact Windows ZIP
-  and managed-workstation validation remain the release gates.
+  and managed-workstation validation were still the release gates at that
+  checkpoint.
 - Advanced the hybrid package candidate to
   `v0.2.0-phase1-source-preview.2`; publication must use the exact green
   Windows CI artifact rather than a locally compressed archive.
@@ -441,6 +440,9 @@ only through a recorded decision with evidence.
 - Fast-forwarded GitHub `main` to `5f01b5f` and published the exact CI ZIP and
   checksum as prerelease `v0.2.0-phase1-source-preview.2`. The next evidence is
   one refresh of this exact extracted release on the managed workstation.
+- The user confirmed that exact preview `.2` works on the managed workstation.
+  This closes the first FTE Count plus published StartEndTimes source-refresh
+  gate; the next product increment is Agent Status/LILO ingestion.
 
 ### 2026-09-21 — Verified July StartEndTimes 422 and scoped hotfix
 
