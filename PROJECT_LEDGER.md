@@ -23,7 +23,7 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted Phase 1 source-readiness increment | Local setup, fixed-contract refresh, Command source health; run `35631034822` is green (update this row if branch state changes) |
+| `origin/main` | Phase 1 source-readiness preview hotfix | Verified July StartEndTimes trailing-column fix; run `35647757596` is green; managed-workstation refresh remains |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -418,9 +418,18 @@ only through a recorded decision with evidence.
 - Added a synthetic 31-day trailing-tab regression and changed the packaged
   Windows smoke to exercise it. Other speculative date-order changes were
   deliberately removed after inspecting the actual US-format header.
-- A distinct `0.2.0-phase1-source-preview.1` ZIP is planned. Do not claim the
-  hotfix shipped until the exact Windows ZIP and CI are green and the user
-  reruns the managed-workstation refresh.
+- CI run `35647757596` passed all three jobs. Its exact extracted Windows ZIP
+  passed synthetic 31-day trailing-tab refresh/rollback, host doctor, offline
+  Edge probes, and archive verification. The prerelease
+  `v0.2.0-phase1-source-preview.1` was published from that CI artifact; ZIP
+  SHA-256 is
+  `7e664c4d4e2c6d962ee2d62308b1774f5b5eff7949c3727e2d82e954399fdf31`.
+  The user still needs to validate the full refresh with the real FTE roster
+  on the managed workstation.
+- The old portable repository is public and its `attachments/` folder includes
+  a schedule file with Name and Data Source IDs columns. If those are real
+  employee records, the owner should review exposure and remove/redact them;
+  this project does not copy or commit any attachment data.
 
 ### 2026-09-21 — Local source refresh and Command readiness
 
