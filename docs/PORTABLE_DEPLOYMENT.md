@@ -38,6 +38,7 @@ WFMHub-2/
    │  ├─ python.exe            official CPython 3.13.7
    │  └─ wheels/               four reviewed pure-Python Excel wheels
    ├─ app/wfmhub2_compat/      stdlib-only host
+   ├─ config/                  governed immutable source mappings
    ├─ web/                     React, Workers, WASM, Pyodide packages
    └─ manifests/               origin and exact SHA-256 inventories
 ```
@@ -46,13 +47,15 @@ WFMHub-2/
 extraction. Releases never contain operational extracts, databases, reports,
 logs, local configuration, or employee/customer data.
 
-`SETUP.cmd` asks for the existing folder containing `FTE` and `Verint` (for
-example, the old `WFM Database` folder). It stores only the absolute folder
-pointer in `data/source-root.txt`. The source files remain untouched. If you
-prefer a self-contained folder, put the same source tree under `extracts`
-beside `WFMHub.cmd` and skip setup. In Command, select **Refresh local sources**.
-The first cut validates FTE Count and wide StartEndTimes only; source counts
-and dates are not service, attendance, or staffing KPIs.
+`SETUP.cmd` asks for the existing folder containing `FTE`, `Verint`, and
+optionally `Storm` (for example, the old `WFM Database` folder). It stores only
+the absolute folder pointer in `data/source-root.txt`. The source files remain
+untouched. If you prefer a self-contained folder, put the same source tree
+under `extracts` beside `WFMHub.cmd` and skip setup. In Command, select
+**Refresh local sources**. The current cut requires FTE Count and wide
+StartEndTimes and optionally reads `Storm/Agent Status/*.csv` and
+`Storm/LILO/*.csv`; source counts and dates are not service, attendance, or
+staffing KPIs.
 
 The FTE adapter follows the proven old-portable contract. Integral Excel IDs
 are normalized to canonical text, blank roster IDs can use an exact unique-name
@@ -60,6 +63,16 @@ crosswalk to a populated operational ID, and duplicate/status/PTO exceptions
 are retained as quality findings while invalid rows are excluded from
 canonical facts. These row-level exceptions do not reject an otherwise usable
 refresh; malformed file structures and schedule intervals still do.
+
+Agent Status and LILO use the old portable's exact bracketed CSV headers and
+UTF-8/BOM contract. Agent Status row timestamps are authoritative and its
+durations may exceed 24 hours. LILO preserves dated blank-boundary no-show
+evidence and adjusts an earlier logout into the next day, while a range
+filename never invents a missing row date. Both adapters stream in bounded
+batches, scope against the effective roster, and publish inside the same
+generation transaction as roster and schedule. Agent Status is primary
+observed evidence and LILO is fallback only; the attendance model is the next
+slice.
 
 ## Launch and security contract
 

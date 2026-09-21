@@ -196,6 +196,8 @@ class AgentScope:
             match = "name"
         if row is None or not row.eligible_on(business_date):
             return None
+        # Preserve a populated operational source ID on an exact-name fallback.
+        # Blank operational IDs remain outside scope; identity is not invented.
         canonical_client_id = row.client_id if match == "id" else source_agent_id
         if canonical_client_id is None:
             return None

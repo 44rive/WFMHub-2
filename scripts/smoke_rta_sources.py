@@ -50,7 +50,40 @@ def main() -> int:
             )
             writer.writerow(["Ada Agent", "00123", *(["Off"] * 31), ""])
 
-        source_hashes = (_sha256(roster), _sha256(schedule))
+        status = sources / "Storm/Agent Status/status.csv"
+        status.parent.mkdir(parents=True)
+        with status.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(
+                [
+                    "[Serial Number]",
+                    "[Status]",
+                    "[Status Start Date and Time]",
+                    "[Agent]",
+                    "[Agent ID]",
+                    "[Status Duration]",
+                    "[Queue]",
+                ]
+            )
+            writer.writerow(
+                [
+                    "1",
+                    "Available",
+                    "07/01/2026 08:00",
+                    "Ada Agent",
+                    "00123",
+                    "00:30:00",
+                    "Synthetic",
+                ]
+            )
+        lilo = sources / "Storm/LILO/LILO_2026-07-01.csv"
+        lilo.parent.mkdir(parents=True)
+        with lilo.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(["[Agent]", "[Agent ID]", "[First Log-on Time]", "[Last Log-off Time]"])
+            writer.writerow(["Ada Agent", "00123", "07/01/2026 08:00", "07/01/2026 16:00"])
+
+        source_hashes = (_sha256(roster), _sha256(schedule), _sha256(status), _sha256(lilo))
         configure_source_root(home, sources)
         coordinator = RtaRefreshCoordinator(home)
         result = coordinator.refresh()
@@ -65,9 +98,18 @@ def main() -> int:
             raise RuntimeError("packaged schedule lost the first July date")
         if health["sources"]["schedule"]["maxDate"] != "2026-07-31":
             raise RuntimeError("packaged schedule lost the last July date")
+        if health["sources"]["agentStatus"]["rowCount"] != 1:
+            raise RuntimeError("packaged Agent Status fact count was incorrect")
+        if health["sources"]["lilo"]["rowCount"] != 1:
+            raise RuntimeError("packaged LILO fact count was incorrect")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
-        if source_hashes != (_sha256(roster), _sha256(schedule)):
+        if source_hashes != (
+            _sha256(roster),
+            _sha256(schedule),
+            _sha256(status),
+            _sha256(lilo),
+        ):
             raise RuntimeError("source refresh modified the input files")
 
         with schedule.open("w", encoding="cp1252", newline="") as stream:

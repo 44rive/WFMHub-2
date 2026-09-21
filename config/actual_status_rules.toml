@@ -1,0 +1,131 @@
+# Reviewed Operations Agent Status reference inherited from WFMHub-Portable.
+# Exact labels win. Unlisted values use the conservative classifier in the
+# adapter. This file is immutable product policy inside the portable package.
+
+[[status_rules]]
+status = "Brief"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Conférence"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Réunion"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Meeting"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Ops Support"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Support"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Training"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Formation"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Back Office (BO)"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Backoffice"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Back-Office"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Other Tasks"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Break"
+attendance_category = "Break"
+
+[[status_rules]]
+status = "Personal"
+attendance_category = "Break"
+
+[[status_rules]]
+status = "Available"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Disponible"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "RONA"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "IT downtime"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Prépa Appel entrant"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Entrant"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Post-appel"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Prépa Appel sortant"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Sortants en attente"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Sortant"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Appel entrant de rappel"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Entrant en attente"
+attendance_category = "Productive"
+
+[[status_rules]]
+status = "Statut non disponible"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Consultation"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Meal"
+attendance_category = "Lunch"
+
+[[status_rules]]
+status = "Indisponible"
+attendance_category = "Auxiliary"
+
+[[status_rules]]
+status = "Lunch"
+attendance_category = "Lunch"
+
+[[status_rules]]
+status = "Consultation en attente"
+attendance_category = "Auxiliary"

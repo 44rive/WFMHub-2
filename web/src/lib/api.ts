@@ -60,9 +60,18 @@ export type SourceRefreshSummary = {
     rosterAgents: number
     timeOffRecords: number
     scheduleAssignments: number
+    agentStatusRows: number
+    liloRows: number
     sourceFiles: number
+    scheduleFiles: number
+    agentStatusFiles: number
+    liloFiles: number
   }
   dateRange: { from: string | null; to: string | null }
+  actualDateRanges: {
+    agentStatus: { from: string | null; to: string | null }
+    lilo: { from: string | null; to: string | null }
+  }
   qualityCounts: SourceQuality
   failureCode?: string
 }
@@ -73,12 +82,31 @@ export type RtaSourceHealth = {
   activeGenerationId: number | null
   activeGeneration: SourceRefreshSummary | null
   latestRefresh: SourceRefreshSummary | null
-  configuredSources: { fte: string; publishedSchedules: string }
+  configuredSources: {
+    fte: string
+    publishedSchedules: string
+    agentStatus: string
+    lilo: string
+  }
   sources: {
     roster: { ready: boolean; agentCount: number; timeOffCount: number; fileCount: number }
     schedule: {
       ready: boolean
       shiftCount: number
+      fileCount: number
+      minDate: string | null
+      maxDate: string | null
+    }
+    agentStatus: {
+      ready: boolean
+      rowCount: number
+      fileCount: number
+      minDate: string | null
+      maxDate: string | null
+    }
+    lilo: {
+      ready: boolean
+      rowCount: number
       fileCount: number
       minDate: string | null
       maxDate: string | null
@@ -299,6 +327,25 @@ function isQuality(value: unknown): value is SourceQuality {
   )
 }
 
+function isDateRange(value: unknown): value is { from: string | null; to: string | null } {
+  return (
+    isRecord(value) &&
+    (value.from === null || typeof value.from === 'string') &&
+    (value.to === null || typeof value.to === 'string')
+  )
+}
+
+function isActualSource(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.ready === 'boolean' &&
+    typeof value.rowCount === 'number' &&
+    typeof value.fileCount === 'number' &&
+    (value.minDate === null || typeof value.minDate === 'string') &&
+    (value.maxDate === null || typeof value.maxDate === 'string')
+  )
+}
+
 function isSummary(value: unknown): value is SourceRefreshSummary {
   return (
     isRecord(value) &&
@@ -310,10 +357,16 @@ function isSummary(value: unknown): value is SourceRefreshSummary {
     typeof value.counts.rosterAgents === 'number' &&
     typeof value.counts.timeOffRecords === 'number' &&
     typeof value.counts.scheduleAssignments === 'number' &&
+    typeof value.counts.agentStatusRows === 'number' &&
+    typeof value.counts.liloRows === 'number' &&
     typeof value.counts.sourceFiles === 'number' &&
-    isRecord(value.dateRange) &&
-    (value.dateRange.from === null || typeof value.dateRange.from === 'string') &&
-    (value.dateRange.to === null || typeof value.dateRange.to === 'string') &&
+    typeof value.counts.scheduleFiles === 'number' &&
+    typeof value.counts.agentStatusFiles === 'number' &&
+    typeof value.counts.liloFiles === 'number' &&
+    isDateRange(value.dateRange) &&
+    isRecord(value.actualDateRanges) &&
+    isDateRange(value.actualDateRanges.agentStatus) &&
+    isDateRange(value.actualDateRanges.lilo) &&
     isQuality(value.qualityCounts)
   )
 }
@@ -330,6 +383,8 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
     !isRecord(value.configuredSources) ||
     typeof value.configuredSources.fte !== 'string' ||
     typeof value.configuredSources.publishedSchedules !== 'string' ||
+    typeof value.configuredSources.agentStatus !== 'string' ||
+    typeof value.configuredSources.lilo !== 'string' ||
     !isRecord(value.sources) ||
     !isRecord(value.sources.roster) ||
     typeof value.sources.roster.ready !== 'boolean' ||
@@ -346,6 +401,8 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
     !(
       value.sources.schedule.maxDate === null || typeof value.sources.schedule.maxDate === 'string'
     ) ||
+    !isActualSource(value.sources.agentStatus) ||
+    !isActualSource(value.sources.lilo) ||
     !isQuality(value.quality) ||
     typeof value.ready !== 'boolean'
   ) {

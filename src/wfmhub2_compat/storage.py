@@ -151,6 +151,43 @@ CREATE TABLE IF NOT EXISTS wfm_raw_schedule_shift (
     PRIMARY KEY (generation_id, source_key, source_row, source_column)
 );
 
+CREATE TABLE IF NOT EXISTS wfm_raw_lilo (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    extract_date TEXT NOT NULL,
+    source_agent_id TEXT,
+    roster_client_id TEXT NOT NULL,
+    agent_name TEXT,
+    first_login TEXT,
+    raw_last_logout TEXT,
+    last_logout TEXT,
+    overnight_adjusted INTEGER NOT NULL CHECK(overnight_adjusted IN (0, 1)),
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name')),
+    PRIMARY KEY (generation_id, source_key, source_row)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_raw_agent_status (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    serial_number TEXT NOT NULL,
+    extract_date TEXT NOT NULL,
+    source_agent_id TEXT,
+    roster_client_id TEXT NOT NULL,
+    agent_name TEXT,
+    status TEXT,
+    actual_category TEXT NOT NULL CHECK(actual_category IN (
+        'Productive', 'Auxiliary', 'Break', 'Lunch', 'Unavailable', 'Logged Off'
+    )),
+    status_start TEXT NOT NULL,
+    status_end TEXT NOT NULL,
+    duration_seconds INTEGER NOT NULL CHECK(duration_seconds > 0),
+    queue TEXT,
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name')),
+    PRIMARY KEY (generation_id, source_key, source_row)
+);
+
 -- Generation-keyed Silver facts.  Consumers join these tables to the single
 -- active-generation pointer rather than selecting the newest timestamp.
 CREATE TABLE IF NOT EXISTS wfm_agent_roster (
@@ -223,6 +260,12 @@ ON wfm_schedule_shift(generation_id, business_date, roster_client_id);
 
 CREATE INDEX IF NOT EXISTS ix_wfm_time_off_active_date
 ON wfm_time_off(generation_id, start_date, end_date, client_id);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_lilo_active_date
+ON wfm_raw_lilo(generation_id, extract_date, roster_client_id);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_status_active_interval
+ON wfm_raw_agent_status(generation_id, extract_date, roster_client_id, status_start);
 """
 
 

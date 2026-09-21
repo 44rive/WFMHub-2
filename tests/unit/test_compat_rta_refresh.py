@@ -132,6 +132,57 @@ def test_source_change_marks_previous_generation_stale(tmp_path: Path) -> None:
     assert str(alternate) not in json.dumps(health)
 
 
+def test_refresh_publishes_optional_agent_status_and_lilo_health(tmp_path: Path) -> None:
+    source, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    status = source / "Storm/Agent Status/status.csv"
+    status.parent.mkdir(parents=True)
+    with status.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(
+            [
+                "[Serial Number]",
+                "[Status]",
+                "[Status Start Date and Time]",
+                "[Agent]",
+                "[Agent ID]",
+                "[Status Duration]",
+                "[Queue]",
+            ]
+        )
+        writer.writerow(
+            ["1", "Available", "08/01/2026 08:00", "Ada Agent", "00123", "00:30:00", "Q1"]
+        )
+    lilo = source / "Storm/LILO/LILO_2026-08-01.csv"
+    lilo.parent.mkdir(parents=True)
+    with lilo.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["[Agent]", "[Agent ID]", "[First Log-on Time]", "[Last Log-off Time]"])
+        writer.writerow(["Ada Agent", "00123", "08/01/2026 08:00", "08/01/2026 16:00"])
+
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    result = coordinator.refresh()
+    health = result["sourceHealth"]
+
+    assert health["ready"] is True
+    assert health["sources"]["agentStatus"] == {
+        "ready": True,
+        "rowCount": 1,
+        "fileCount": 1,
+        "minDate": "2026-08-01",
+        "maxDate": "2026-08-01",
+    }
+    assert health["sources"]["lilo"] == {
+        "ready": True,
+        "rowCount": 1,
+        "fileCount": 1,
+        "minDate": "2026-08-01",
+        "maxDate": "2026-08-01",
+    }
+    assert health["activeGeneration"]["counts"]["sourceFiles"] == 4
+    assert str(source) not in json.dumps(health)
+
+
 def test_rta_http_requires_token_and_never_accepts_upload_payload(tmp_path: Path) -> None:
     web = tmp_path / "web"
     web.mkdir()

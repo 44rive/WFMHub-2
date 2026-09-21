@@ -1,6 +1,6 @@
 # WFMHub 2 Project Ledger
 
-Last updated: 2026-09-21
+Last updated: 2026-09-22
 
 This is the durable project handoff. Read it before exploring the repository.
 Update it after material work so the next human or AI session starts from known
@@ -27,7 +27,7 @@ with the useful workflows in WFMHub-Portable.
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | Exact old-portable FTE and July schedule attachments now refresh compatibly; operational RTA outputs remain |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | FTE/schedule plus optional streaming Agent Status/LILO evidence are integrated; operational RTA outputs remain |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -72,6 +72,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-030 | Let the user point `SETUP.cmd` at the existing WFM Database folder; refresh reads only fixed FTE/schedule subpaths and accepts no upload or path from the browser. | Matches the old portable's local-folder workflow and keeps employee data off network services. A changed source pointer makes the old active cut stale until refreshed. |
 | D-031 | Accept data-free trailing TSV columns in published StartEndTimes exports, retaining physical date-column provenance; reject populated unlabelled cells. Surface a bounded, path-scrubbed contract reason to the local UI. | The exact old-portable July attachment has 31 date columns plus an empty 34th header/cell; the released Phase 1 parser rejected that structural detail, producing the user's 422. This is a verified compatibility correction, not a general relaxation of non-date headers. |
 | D-032 | Normalize lossless integral Excel Client IDs to canonical text, allow blank roster IDs to scope through an exact unique-name match to a populated operational source ID, and quarantine invalid/ambiguous FTE rows as warnings instead of rejecting the complete refresh. | The exact old-portable FTE attachment uses numeric and blank IDs by design. The old product accepts those rows, resolves duplicate IDs deterministically, excludes unsupported statuses from effective scope, and skips malformed PTO/Away rows. The new policy reproduces that behavior while retaining every raw row and quality finding. |
+| D-033 | Add Agent Status and LILO as optional, streaming Bronze evidence in the same atomic refresh generation; Agent Status is primary attendance evidence and LILO remains fallback. | These CSVs can be large and missing evidence must remain unknown. Preflight is bounded-memory and byte-bound; activation replays 5,000-row batches inside the SQLite transaction and rolls back on source mutation. Missing Storm folders do not block roster/schedule readiness, while present malformed files do. Attendance derivation remains a separate governed slice. |
 
 ## Evidence already collected
 
@@ -352,15 +353,16 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
-- The Phase 1 shell has source-health and refresh APIs but still no live
-  status, LILO, call-service facts, or requirement input. Command shows source
-  readiness only, not operational KPIs. A true required-FTE shortage also
-  needs the separate Verint Staff Type requirement source.
-- FTE Count and published StartEndTimes now refresh into byte-bound,
-  generation-keyed roster, time-off, and scheduled-shift facts. Failed
-  generations retain manifest and quality evidence while attempted fact
-  publication is rolled back. Incremental planning remains unimplemented;
-  each successful refresh reparses the first two source contracts.
+- The Phase 1 shell has source-health and refresh APIs and now ingests raw
+  Agent Status/LILO evidence, but still has no attendance read model,
+  call-service facts, or requirement input. Command shows source readiness
+  only, not operational KPIs. A true required-FTE shortage also needs the
+  separate Verint Staff Type requirement source.
+- FTE Count, published StartEndTimes, optional Agent Status, and optional LILO
+  now refresh into byte-bound, generation-keyed evidence. Failed generations
+  retain manifest and quality evidence while attempted fact publication is
+  rolled back. Large actuals are streamed in bounded batches, but incremental
+  planning remains unimplemented and every refresh re-reads configured files.
 - Exact preview `.2` launch and source refresh now pass on the managed
   workstation. Its doctor and five Edge probes pass Windows CI; the last full
   on-device capability report remains the accepted Phase 0.4 report.
@@ -385,8 +387,9 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Port Agent Status and LILO, then Call-by-Call, to create governed actual-
-   attendance and service facts before exposing operational Command KPIs.
+1. Port Call-by-Call to create governed service/demand facts, then build the
+   status-primary/LILO-fallback attendance read model before exposing
+   operational Command KPIs.
 2. Add Verint Staff Type forecast/requirement before claiming a required-FTE
    shortage; the first four-source stage may show observed versus scheduled
    coverage only.
@@ -400,6 +403,37 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-22 — Streaming Agent Status and LILO evidence integrated
+
+- Audited the old portable's exact CSV contracts and authority rules: fixed
+  bracketed headers, UTF-8/BOM input, row-authoritative Agent Status dates,
+  duration values above 24 hours, LILO row/timestamp/single-date-filename date
+  precedence, dated blank no-show evidence, overnight logout adjustment, and
+  exact-ID then unique-name roster scope. Populated operational IDs are
+  preserved after name matching; blank IDs remain out of scope.
+- Added bounded-memory preflight and transactional replay for
+  `Storm/Agent Status/*.csv` and `Storm/LILO/*.csv`. Each file is bound to size,
+  nanosecond mtime, SHA-256, adapter version, and policy fingerprint, then
+  reverified before and after 5,000-row SQLite batches. Mutation or parsing
+  failure rolls the generation back and preserves the active cut.
+- Added generation-keyed raw Agent Status/LILO tables, aggregate rejected and
+  scoped-out findings, exact Operations status categories in a packaged TOML
+  policy, additive source-health counts/date ranges, and UI readiness rows.
+  Storm folders are optional; present malformed files fail safely.
+- This slice deliberately does not infer presence, no-show, adherence, or
+  staffing metrics. Agent Status/LILO are governed evidence only until the
+  attendance read model is implemented and tested.
+- Local verification passes: Ruff format/lint, strict Pyright, 65 pytest tests,
+  native-stack probe, 17 Vitest tests, TypeScript, Biome, React production
+  build, packaged synthetic refresh/rollback smoke, and deterministic ZIP
+  expansion/hash verification. The local `.3` candidate has 93 members and
+  SHA-256 `afcbefa5b5360ebaf902632566ae8bc9d5bc23f31f307e90b62319564998c3a2`;
+  Windows CI remains the release authority.
+- An independent Claude architecture review was attempted through the project
+  orchestrator but could not authenticate because its OAuth session had
+  expired. The native legacy-contract audit completed read-only; no external
+  review claim is made.
 
 ### 2026-09-21 — Exact FTE attachment compatibility restored
 

@@ -72,7 +72,12 @@ describe('engine API client', () => {
       status: 'not_ready',
       ready: false,
       sourceRoot: { mode: 'default', displayName: 'extracts' },
-      configuredSources: { fte: 'FTE', publishedSchedules: 'Verint/Schedules & Activities' },
+      configuredSources: {
+        fte: 'FTE',
+        publishedSchedules: 'Verint/Schedules & Activities',
+        agentStatus: 'Storm/Agent Status',
+        lilo: 'Storm/LILO',
+      },
       activeGenerationId: null,
       activeGeneration: null,
       latestRefresh: null,
@@ -80,6 +85,8 @@ describe('engine API client', () => {
       sources: {
         roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
         schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        agentStatus: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        lilo: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
       },
     }
     expect(decodeRtaSourceHealth(health).ready).toBe(false)
@@ -91,7 +98,12 @@ describe('engine API client', () => {
       status: 'not_ready',
       ready: false,
       sourceRoot: { mode: 'default', displayName: 'extracts' },
-      configuredSources: { fte: 'FTE', publishedSchedules: 'Verint/Schedules & Activities' },
+      configuredSources: {
+        fte: 'FTE',
+        publishedSchedules: 'Verint/Schedules & Activities',
+        agentStatus: 'Storm/Agent Status',
+        lilo: 'Storm/LILO',
+      },
       activeGenerationId: null,
       activeGeneration: null,
       latestRefresh: null,
@@ -99,6 +111,8 @@ describe('engine API client', () => {
       sources: {
         roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
         schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        agentStatus: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        lilo: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
       },
     }
     const fetchMock = vi.fn(

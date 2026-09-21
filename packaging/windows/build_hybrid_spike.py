@@ -21,7 +21,7 @@ PYTHON_VERSION = "3.13.7"
 PYTHON_ARCHIVE = f"python-{PYTHON_VERSION}-embed-amd64.zip"
 PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/{PYTHON_ARCHIVE}"
 PYTHON_SHA256 = "f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65"
-PRODUCT_VERSION = "0.2.0-phase1-source-preview.2"
+PRODUCT_VERSION = "0.2.0-phase1-source-preview.3"
 TOP_LEVEL = "WFMHub-2"
 NATIVE_SUFFIXES = (".dll", ".exe", ".pyd", ".so", ".duckdb_extension")
 HASH_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
@@ -207,6 +207,9 @@ def validate_stage(stage: Path, cpython_native: dict[str, str]) -> None:
             f"hybrid root mismatch: missing={sorted(expected_roots - actual_roots)}, "
             f"unexpected={sorted(actual_roots - expected_roots)}"
         )
+    status_policy = stage / "_system/config/actual_status_rules.toml"
+    if not status_policy.is_file():
+        raise RuntimeError("hybrid host is missing the governed Agent Status policy")
     actual_native = native_manifest(stage)
     expected_prefixed = {f"_system/runtime/{name}": value for name, value in cpython_native.items()}
     if actual_native != expected_prefixed:
@@ -251,6 +254,7 @@ def build_stage(web_dist: Path) -> Path:
     configure_runtime(runtime, wheel_manifest)
 
     copy_tree(ROOT / "src/wfmhub2_compat", stage / "_system/app/wfmhub2_compat")
+    copy_tree(ROOT / "config", stage / "_system/config")
     copy_tree(web_dist, stage / "_system/web")
     copy_windows_text(ROOT / "packaging/windows/WFMHub-Hybrid.cmd", stage / "WFMHub.cmd")
     copy_windows_text(ROOT / "packaging/windows/DOCTOR-Hybrid.cmd", stage / "DOCTOR.cmd")
@@ -280,7 +284,8 @@ def build_stage(web_dist: Path) -> Path:
                 "3. Run SETUP.cmd and paste the existing folder containing FTE and Verint.",
                 "   Your source files remain in place and are read only.",
                 "4. Run WFMHub.cmd. Microsoft Edge opens the local workbench.",
-                "5. Select Refresh local sources on Command to inspect roster/schedule health.",
+                "5. Select Refresh local sources on Command to inspect roster, schedule,",
+                "   Agent Status, and LILO evidence. The two Storm folders are optional.",
                 "6. Govern > Compatibility Doctor still runs the five browser probes.",
                 "7. Close the browser tab and press Ctrl+C in the WFMHub console.",
                 "",

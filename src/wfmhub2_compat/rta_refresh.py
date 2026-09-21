@@ -17,6 +17,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
+from wfmhub2_compat.actual_contracts import (
+    ActualKind,
+    ActualSourcePlan,
+    StatusPolicy,
+    load_status_policy,
+    preflight_actual_source,
+    publish_actual_plans,
+    stage_actual_plans,
+)
 from wfmhub2_compat.refresh_store import RefreshStore
 from wfmhub2_compat.source_contracts import (
     FteSnapshot,
@@ -34,10 +43,13 @@ SOURCE_POINTER = Path("data/source-root.txt")
 DEFAULT_SOURCE_ROOT = Path("extracts")
 FTE_DIRECTORY = Path("FTE")
 SCHEDULE_DIRECTORY = Path("Verint/Schedules & Activities")
+AGENT_STATUS_DIRECTORY = Path("Storm/Agent Status")
+LILO_DIRECTORY = Path("Storm/LILO")
 MAX_SOURCE_POINTER_BYTES = 4096
-REFRESH_MODEL_VERSION = "rta-fte-schedule-v3"
+REFRESH_MODEL_VERSION = "rta-fte-schedule-actuals-v4"
 REFRESH_CATALOG_SHA256 = hashlib.sha256(
-    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|v3"
+    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|"
+    b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|v4"
 ).hexdigest()
 
 
@@ -247,6 +259,51 @@ def _discover_schedules(source_root: Path, roster: FteSnapshot) -> tuple[Schedul
     return tuple(schedules)
 
 
+def _actual_candidates(source_root: Path, directory: Path) -> list[Path]:
+    source_directory = source_root / directory
+    if not source_directory.is_dir():
+        return []
+    return sorted(
+        (path for path in source_directory.iterdir() if _is_candidate_file(path, ".csv")),
+        key=lambda path: path.name.casefold(),
+    )
+
+
+def _discover_actuals(
+    source_root: Path,
+    roster: FteSnapshot,
+) -> tuple[tuple[ActualSourcePlan, ...], StatusPolicy | None]:
+    status_paths = _actual_candidates(source_root, AGENT_STATUS_DIRECTORY)
+    lilo_paths = _actual_candidates(source_root, LILO_DIRECTORY)
+    status_policy = load_status_policy() if status_paths else None
+    plans: list[ActualSourcePlan] = []
+    source_sets: tuple[tuple[ActualKind, list[Path]], ...] = (
+        ("agent_status", status_paths),
+        ("lilo", lilo_paths),
+    )
+    for kind, paths in source_sets:
+        for path in paths:
+            source_key = _source_key(source_root, path)
+            try:
+                plans.append(
+                    preflight_actual_source(
+                        path,
+                        source_key=source_key,
+                        kind=kind,
+                        roster=roster,
+                        status_policy=status_policy,
+                    )
+                )
+            except SourceContractError as exc:
+                label = "Agent Status" if kind == "agent_status" else "LILO"
+                detail = str(exc).replace(str(source_root), "<source-root>")[:240]
+                raise RefreshFailedError(
+                    f"INVALID_{kind.upper()}_SOURCE",
+                    f"{label} source {source_key} failed: {detail}",
+                ) from exc
+    return tuple(plans), status_policy
+
+
 def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> dict[str, Any]:
     connection.row_factory = sqlite3.Row
     generation = connection.execute(
@@ -264,15 +321,40 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
           (SELECT count(*) FROM wfm_agent_roster WHERE generation_id = ?) AS roster_agents,
           (SELECT count(*) FROM wfm_time_off WHERE generation_id = ?) AS time_off_records,
           (SELECT count(*) FROM wfm_schedule_shift WHERE generation_id = ?) AS schedule_assignments,
+          (SELECT count(*) FROM wfm_raw_agent_status WHERE generation_id = ?) AS agent_status_rows,
+          (SELECT count(*) FROM wfm_raw_lilo WHERE generation_id = ?) AS lilo_rows,
           (SELECT count(*) FROM wfm_source_manifest
-             WHERE generation_id = ? AND state = 'present') AS source_files
+             WHERE generation_id = ? AND state = 'present') AS source_files,
+          (SELECT count(*) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'published_schedule') AS schedule_files,
+          (SELECT count(*) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'agent_status') AS agent_status_files,
+          (SELECT count(*) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'lilo') AS lilo_files
         """,
-        (generation_id, generation_id, generation_id, generation_id),
+        (generation_id,) * 9,
     ).fetchone()
     schedule_range = connection.execute(
         """
         SELECT min(business_date), max(business_date)
         FROM wfm_schedule_shift WHERE generation_id = ?
+        """,
+        (generation_id,),
+    ).fetchone()
+    status_range = connection.execute(
+        """
+        SELECT min(extract_date), max(extract_date)
+        FROM wfm_raw_agent_status WHERE generation_id = ?
+        """,
+        (generation_id,),
+    ).fetchone()
+    lilo_range = connection.execute(
+        """
+        SELECT min(extract_date), max(extract_date)
+        FROM wfm_raw_lilo WHERE generation_id = ?
         """,
         (generation_id,),
     ).fetchone()
@@ -294,11 +376,20 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
             "rosterAgents": int(counts["roster_agents"]),
             "timeOffRecords": int(counts["time_off_records"]),
             "scheduleAssignments": int(counts["schedule_assignments"]),
+            "agentStatusRows": int(counts["agent_status_rows"]),
+            "liloRows": int(counts["lilo_rows"]),
             "sourceFiles": int(counts["source_files"]),
+            "scheduleFiles": int(counts["schedule_files"]),
+            "agentStatusFiles": int(counts["agent_status_files"]),
+            "liloFiles": int(counts["lilo_files"]),
         },
         "dateRange": {
             "from": schedule_range[0],
             "to": schedule_range[1],
+        },
+        "actualDateRanges": {
+            "agentStatus": {"from": status_range[0], "to": status_range[1]},
+            "lilo": {"from": lilo_range[0], "to": lilo_range[1]},
         },
         "qualityCounts": quality,
         "sourceCatalogFingerprint": str(generation["catalog_sha256"]),
@@ -347,6 +438,7 @@ class RtaRefreshCoordinator:
             )
         active_counts = active["counts"] if active is not None else None
         active_range = active["dateRange"] if active is not None else None
+        active_actual_ranges = active["actualDateRanges"] if active is not None else None
         source_ready = (
             active is not None
             and selected_fingerprint is not None
@@ -371,6 +463,8 @@ class RtaRefreshCoordinator:
             "configuredSources": {
                 "fte": FTE_DIRECTORY.as_posix(),
                 "publishedSchedules": SCHEDULE_DIRECTORY.as_posix(),
+                "agentStatus": AGENT_STATUS_DIRECTORY.as_posix(),
+                "lilo": LILO_DIRECTORY.as_posix(),
             },
             "activeGeneration": active,
             "activeGenerationId": active["generationId"] if active is not None else None,
@@ -388,9 +482,35 @@ class RtaRefreshCoordinator:
                 "schedule": {
                     "ready": source_ready,
                     "shiftCount": active_counts["scheduleAssignments"] if active_counts else 0,
-                    "fileCount": active_counts["sourceFiles"] - 1 if active_counts else 0,
+                    "fileCount": active_counts["scheduleFiles"] if active_counts else 0,
                     "minDate": active_range["from"] if active_range else None,
                     "maxDate": active_range["to"] if active_range else None,
+                },
+                "agentStatus": {
+                    "ready": bool(
+                        source_ready and active_counts and active_counts["agentStatusFiles"] > 0
+                    ),
+                    "rowCount": active_counts["agentStatusRows"] if active_counts else 0,
+                    "fileCount": active_counts["agentStatusFiles"] if active_counts else 0,
+                    "minDate": (
+                        active_actual_ranges["agentStatus"]["from"]
+                        if active_actual_ranges
+                        else None
+                    ),
+                    "maxDate": (
+                        active_actual_ranges["agentStatus"]["to"] if active_actual_ranges else None
+                    ),
+                },
+                "lilo": {
+                    "ready": bool(
+                        source_ready and active_counts and active_counts["liloFiles"] > 0
+                    ),
+                    "rowCount": active_counts["liloRows"] if active_counts else 0,
+                    "fileCount": active_counts["liloFiles"] if active_counts else 0,
+                    "minDate": active_actual_ranges["lilo"]["from"]
+                    if active_actual_ranges
+                    else None,
+                    "maxDate": active_actual_ranges["lilo"]["to"] if active_actual_ranges else None,
                 },
             },
         }
@@ -407,18 +527,29 @@ class RtaRefreshCoordinator:
             )
             roster = _discover_roster(root.path)
             schedules = _discover_schedules(root.path, roster)
+            actuals, status_policy = _discover_actuals(root.path, roster)
             snapshot = SourceSnapshot(roster, schedules)
             stage_sources(self.store, generation_id, snapshot)
             stage_findings(self.store, generation_id, snapshot)
+            stage_actual_plans(self.store, generation_id, actuals)
             if any(finding.severity == "error" for finding in snapshot.findings):
                 raise RefreshFailedError(
                     "BLOCKING_SOURCE_QUALITY",
                     "Source validation found blocking errors. Correct the source rows and retry.",
                 )
-            self.store.activate_generation(
-                generation_id,
-                publish=make_source_publish(snapshot),
-            )
+            source_publish = make_source_publish(snapshot)
+
+            def publish(connection: sqlite3.Connection, active_generation_id: int) -> None:
+                source_publish(connection, active_generation_id)
+                publish_actual_plans(
+                    connection,
+                    active_generation_id,
+                    actuals,
+                    roster=roster,
+                    status_policy=status_policy,
+                )
+
+            self.store.activate_generation(generation_id, publish=publish)
             return {
                 "status": "succeeded",
                 "generationId": generation_id,

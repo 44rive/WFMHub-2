@@ -129,6 +129,14 @@ Optionally refresh the rebuildable browser cache
 A failed refresh leaves the previous validated state active. Full historical
 rebuild is an explicit maintenance operation, not the normal daily path.
 
+Potentially large Agent Status and LILO CSVs use a two-pass bounded-memory
+contract. Preflight validates headers, computes aggregate quality counts, and
+binds each plan to file size, nanosecond modification time, SHA-256, adapter,
+and policy version. Activation re-verifies the bytes, streams accepted rows in
+5,000-row SQLite batches, and verifies the bytes again before commit. Any
+source change or parser failure rolls back the entire generation. Missing
+Storm folders are optional; a present but malformed file is blocking.
+
 ## Domain and intelligence boundaries
 
 ```text

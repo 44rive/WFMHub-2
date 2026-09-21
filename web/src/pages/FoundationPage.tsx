@@ -194,9 +194,9 @@ export function RtaSourcePanel({
         <h2 id="first-slice-heading">RTA source readiness</h2>
       </div>
       <p>
-        Read your existing FTE and Verint schedule exports in place. Refresh does not upload, copy,
-        or modify those files. This cut is source evidence only: service level, staffing gap, and
-        action queues are not connected yet.
+        Read your existing FTE, Verint schedule, Agent Status, and LILO exports in place. Refresh
+        does not upload, copy, or modify those files. Agent Status and LILO are optional evidence;
+        attendance metrics and action queues are not connected yet.
       </p>
       <div className="source-actions">
         <button
@@ -251,6 +251,22 @@ export function RtaSourcePanel({
         <div>
           <dt>Schedule dates</dt>
           <dd>{health?.ready ? formatDateRange(health) : 'Unknown'}</dd>
+        </div>
+        <div>
+          <dt>Agent Status</dt>
+          <dd>
+            {health?.ready && health.sources.agentStatus.ready
+              ? `${health.sources.agentStatus.rowCount} intervals`
+              : 'Optional source not loaded'}
+          </dd>
+        </div>
+        <div>
+          <dt>LILO</dt>
+          <dd>
+            {health?.ready && health.sources.lilo.ready
+              ? `${health.sources.lilo.rowCount} daily records`
+              : 'Optional fallback not loaded'}
+          </dd>
         </div>
         <div>
           <dt>Quality findings</dt>
