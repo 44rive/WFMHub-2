@@ -229,6 +229,124 @@ def test_fte_parser_reports_duplicates_unknown_status_and_invalid_register(tmp_p
     assert not snapshot.time_off[0].valid
 
 
+def test_legacy_numeric_blank_and_duplicate_roster_rows_refresh_without_blocking(
+    tmp_path: Path,
+) -> None:
+    fte_path = tmp_path / "FTE Count.xlsx"
+    schedule_path = tmp_path / "StartEndTimes.txt"
+    write_fte(
+        fte_path,
+        agents=(
+            (123, "Active", "Numeric Agent", None, None, None, None, None, None, None, 1, None),
+            (None, "Active", "Name Only", None, None, None, None, None, None, None, 1, None),
+            (
+                456,
+                "Transfer",
+                "Transferred Agent",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                1,
+                None,
+            ),
+            (
+                777,
+                "Leaver",
+                "Former Duplicate",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                1,
+                "2026-07-31",
+            ),
+            (777, "Active", "Current Duplicate", None, None, None, None, None, None, None, 1, None),
+        ),
+        pto=(
+            (
+                123,
+                "Numeric Agent",
+                "2026-07-01",
+                "2026-07-01",
+                "Full day",
+                None,
+                None,
+                "Vacation",
+                "Approved",
+                None,
+            ),
+            (
+                123,
+                "Numeric Agent",
+                "2026-07-02",
+                "2026-07-02",
+                None,
+                None,
+                None,
+                "Vacation",
+                "Approved",
+                None,
+            ),
+        ),
+    )
+    write_schedule(
+        schedule_path,
+        (
+            ("Numeric Agent", "123", "Off"),
+            ("Name Only", "VERINT-42", "Off"),
+        ),
+        "07/01/2026",
+    )
+
+    roster = parse_fte_workbook(fte_path, source_key="FTE/FTE Count.xlsx")
+    assert not [finding for finding in roster.findings if finding.severity == "error"]
+    assert [row.client_id for row in roster.agents] == ["123", None, "456", "777", "777"]
+    assert [row.valid for row in roster.agents] == [True, True, False, False, True]
+    assert [row.valid for row in roster.time_off] == [True, False]
+
+    schedule = parse_start_end_times(
+        schedule_path,
+        source_key="Verint/Schedules & Activities/StartEndTimes.txt",
+        roster=roster,
+    )
+    assert [(row.roster_client_id, row.scope_match) for row in schedule.shifts] == [
+        ("123", "id"),
+        ("VERINT-42", "name"),
+    ]
+
+    snapshot = SourceSnapshot(roster, (schedule,))
+    store = RefreshStore(tmp_path / "control.sqlite")
+    generation = start(store)
+    stage_sources(store, generation, snapshot)
+    stage_findings(store, generation, snapshot)
+    store.activate_generation(generation, publish=make_source_publish(snapshot))
+
+    with sqlite3.connect(store.path) as connection:
+        canonical_ids = connection.execute(
+            "SELECT client_id FROM wfm_agent_roster WHERE generation_id = ? ORDER BY client_id",
+            (generation,),
+        ).fetchall()
+        canonical_schedule = connection.execute(
+            "SELECT roster_client_id, scope_match FROM wfm_schedule_shift "
+            "WHERE generation_id = ? ORDER BY roster_client_id",
+            (generation,),
+        ).fetchall()
+        canonical_time_off = connection.execute(
+            "SELECT client_id FROM wfm_time_off WHERE generation_id = ?",
+            (generation,),
+        ).fetchall()
+    assert canonical_ids == [("123",), ("777",), ("VERINT-42",)]
+    assert canonical_schedule == [("123", "id"), ("VERINT-42", "name")]
+    assert canonical_time_off == [("123",)]
+
+
 def test_wide_schedule_preserves_business_dates_scope_off_and_explicit_overnight(
     tmp_path: Path,
 ) -> None:
@@ -305,7 +423,7 @@ def test_schedule_name_crosswalk_preserves_conflicting_explicit_source_id(
 
     row = schedule.shifts[0]
     assert row.source_agent_id == "VERINT-999"
-    assert row.roster_client_id == "00123"
+    assert row.roster_client_id == "VERINT-999"
     assert row.scope_match == "name"
     assert row.in_roster_scope
     assert [finding.code for finding in schedule.findings] == ["SCHEDULE_ID_NAME_FALLBACK"]

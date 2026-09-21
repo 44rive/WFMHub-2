@@ -35,9 +35,9 @@ DEFAULT_SOURCE_ROOT = Path("extracts")
 FTE_DIRECTORY = Path("FTE")
 SCHEDULE_DIRECTORY = Path("Verint/Schedules & Activities")
 MAX_SOURCE_POINTER_BYTES = 4096
-REFRESH_MODEL_VERSION = "rta-fte-schedule-v2"
+REFRESH_MODEL_VERSION = "rta-fte-schedule-v3"
 REFRESH_CATALOG_SHA256 = hashlib.sha256(
-    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|v2"
+    b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|v3"
 ).hexdigest()
 
 

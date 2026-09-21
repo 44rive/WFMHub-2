@@ -54,6 +54,13 @@ beside `WFMHub.cmd` and skip setup. In Command, select **Refresh local sources**
 The first cut validates FTE Count and wide StartEndTimes only; source counts
 and dates are not service, attendance, or staffing KPIs.
 
+The FTE adapter follows the proven old-portable contract. Integral Excel IDs
+are normalized to canonical text, blank roster IDs can use an exact unique-name
+crosswalk to a populated operational ID, and duplicate/status/PTO exceptions
+are retained as quality findings while invalid rows are excluded from
+canonical facts. These row-level exceptions do not reject an otherwise usable
+refresh; malformed file structures and schedule intervals still do.
+
 ## Launch and security contract
 
 `WFMHub.cmd` clears machine Python variables and invokes the embedded runtime

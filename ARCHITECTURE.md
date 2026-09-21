@@ -99,8 +99,12 @@ WFMHub does not collapse unrelated facts into one null-heavy interval table.
 - Verint Activities own finalized post-day absence and shrinkage.
 - FTE Count owns employee scope, status, FTE, PTO, and Away overlays.
 
-Unknown evidence remains unknown. Client IDs remain text. RSA Belgium service
-and capacity scopes retain their governed distinction.
+Unknown evidence remains unknown. Canonical Client IDs remain text; lossless
+integral Excel IDs are normalized to text, and blank roster IDs may scope only
+through an exact unique-name match to a populated operational source ID.
+Ambiguous or invalid roster/register rows remain in Bronze with quality
+findings but do not enter canonical facts. RSA Belgium service and capacity
+scopes retain their governed distinction.
 
 ## Refresh architecture
 

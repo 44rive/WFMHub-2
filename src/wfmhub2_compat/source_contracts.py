@@ -23,9 +23,9 @@ from typing import Any, Literal, Protocol, cast
 
 from wfmhub2_compat.refresh_store import QualityIssue, RefreshStore, SourceVersion
 
-FTE_ADAPTER_VERSION = "fte-count-v1"
+FTE_ADAPTER_VERSION = "fte-count-v2"
 SCHEDULE_ADAPTER_VERSION = "start-end-times-v2"
-FTE_POLICY_FINGERPRINT = "effective-roster-pto-away-v1"
+FTE_POLICY_FINGERPRINT = "effective-roster-pto-away-v2"
 SCHEDULE_POLICY_FINGERPRINT = "published-start-end-explicit-overnight-v2"
 
 _MAX_XLSX_BYTES = 64 * 1024 * 1024
@@ -158,6 +158,13 @@ class FteSnapshot:
 
 
 @dataclass(frozen=True)
+class ScopeResolution:
+    roster_row: FteAgentRow
+    canonical_client_id: str
+    match: ScopeMatch
+
+
+@dataclass(frozen=True)
 class AgentScope:
     by_id: dict[str, FteAgentRow]
     unique_names: dict[str, FteAgentRow]
@@ -180,14 +187,19 @@ class AgentScope:
         source_agent_id: str | None,
         agent_name: str | None,
         business_date: date,
-    ) -> tuple[FteAgentRow, ScopeMatch] | None:
+    ) -> ScopeResolution | None:
         row = self.by_id.get(source_agent_id) if source_agent_id is not None else None
         match: ScopeMatch = "id"
         if row is None:
             name_key = _normalize_name(agent_name)
             row = self.unique_names.get(name_key) if name_key is not None else None
             match = "name"
-        return (row, match) if row is not None and row.eligible_on(business_date) else None
+        if row is None or not row.eligible_on(business_date):
+            return None
+        canonical_client_id = row.client_id if match == "id" else source_agent_id
+        if canonical_client_id is None:
+            return None
+        return ScopeResolution(row, canonical_client_id, match)
 
 
 @dataclass(frozen=True)
@@ -523,25 +535,27 @@ def _parse_agents(
         end_date = _date(raw_end_date)
         raw_fte = _value(values, indexes, "fte")
         fte = _number(raw_fte)
-        errors: list[str] = []
+        advisories: list[str] = []
+        invalid: list[str] = []
         if client_id is None:
-            errors.append("BLANK_CLIENT_ID")
+            advisories.append("BLANK_CLIENT_ID")
         elif not isinstance(raw_client_id, str):
-            errors.append("CLIENT_ID_NOT_TEXT")
+            advisories.append("CLIENT_ID_NOT_TEXT")
         if agent_name is None:
-            errors.append("MISSING_AGENT_NAME")
+            invalid.append("MISSING_AGENT_NAME")
         if status is None:
-            errors.append("UNKNOWN_EMPLOYMENT_STATUS")
+            invalid.append("UNKNOWN_EMPLOYMENT_STATUS")
         if status == "Leaver" and end_date is None:
-            errors.append("LEAVER_END_DATE_REQUIRED")
+            invalid.append("LEAVER_END_DATE_REQUIRED")
         if status == "Active" and end_date is not None:
-            errors.append("ACTIVE_END_DATE_NOT_ALLOWED")
+            invalid.append("ACTIVE_END_DATE_NOT_ALLOWED")
         if _clean(raw_end_date) is not None and end_date is None:
-            errors.append("INVALID_END_DATE")
+            invalid.append("INVALID_END_DATE")
         if _clean(raw_fte) is not None and fte is None:
-            errors.append("INVALID_FTE")
+            invalid.append("INVALID_FTE")
         if fte is not None and fte < 0:
-            errors.append("NEGATIVE_FTE")
+            invalid.append("NEGATIVE_FTE")
+        validation_codes = (*advisories, *invalid)
         row = FteAgentRow(
             source_key=source_key,
             source_sheet=sheet.title,
@@ -558,16 +572,16 @@ def _parse_agents(
             city=_clean(_value(values, indexes, "city")),
             fte=fte,
             end_date=end_date,
-            valid=not errors,
-            validation_codes=tuple(errors),
+            valid=not invalid,
+            validation_codes=validation_codes,
         )
         agents.append(row)
-        for code in errors:
+        for code in validation_codes:
             findings.append(
                 _finding(
                     code,
-                    "error",
-                    f"Roster row {source_row} violates {code}",
+                    "warning",
+                    f"Roster row {source_row} requires review for {code}",
                     source_key=source_key,
                     sheet=sheet.title,
                     row=source_row,
@@ -588,21 +602,34 @@ def _parse_agents(
     counts = Counter(row.client_id for row in agents if row.client_id is not None)
     duplicate_ids = {client_id for client_id, count in counts.items() if count > 1}
     if duplicate_ids:
+        winners: dict[str, int] = {}
+        for client_id in duplicate_ids:
+            candidates = [row for row in agents if row.client_id == client_id and row.valid]
+            if candidates:
+                winner = max(
+                    candidates,
+                    key=lambda row: (
+                        row.employment_status == "Active",
+                        row.end_date or date.min,
+                        row.source_row,
+                    ),
+                )
+                winners[client_id] = winner.source_row
         revised: list[FteAgentRow] = []
         for row in agents:
             if row.client_id in duplicate_ids:
                 revised.append(
                     replace(
                         row,
-                        valid=False,
+                        valid=row.valid and winners.get(row.client_id) == row.source_row,
                         validation_codes=(*row.validation_codes, "DUPLICATE_CLIENT_ID"),
                     )
                 )
                 findings.append(
                     _finding(
                         "DUPLICATE_CLIENT_ID",
-                        "error",
-                        f"Client ID {row.client_id!r} appears more than once",
+                        "warning",
+                        "Client ID appears more than once; the Active/latest eligible row wins",
                         source_key=source_key,
                         sheet=sheet.title,
                         row=row.source_row,
@@ -688,13 +715,15 @@ def _parse_registers(
             start_date = _date(_value(values, indexes, "STARTDATE"))
             raw_end_date = _value(values, indexes, "ENDDATE")
             end_date = _date(raw_end_date)
+            advisories: list[str] = []
             errors: list[str] = []
             if client_id is None:
                 errors.append("BLANK_CLIENT_ID")
-            elif not isinstance(raw_client_id, str):
-                errors.append("CLIENT_ID_NOT_TEXT")
-            elif client_id not in roster_ids:
-                errors.append("TIME_OFF_CLIENT_NOT_IN_ROSTER")
+            else:
+                if not isinstance(raw_client_id, str):
+                    advisories.append("CLIENT_ID_NOT_TEXT")
+                if client_id not in roster_ids:
+                    errors.append("TIME_OFF_CLIENT_NOT_IN_ROSTER")
             if start_date is None:
                 errors.append("INVALID_START_DATE")
             if end_date is not None and start_date is not None and end_date < start_date:
@@ -755,15 +784,16 @@ def _parse_registers(
                 record_status=status,
                 comment=_clean(_value(values, indexes, "COMMENT")),
                 valid=not errors,
-                validation_codes=tuple(errors),
+                validation_codes=(*advisories, *errors),
             )
             rows.append(row)
-            for code in errors:
+            for code in (*advisories, *errors):
+                action = "requires review for" if code in advisories else "was quarantined for"
                 findings.append(
                     _finding(
                         code,
-                        "error",
-                        f"{kind} row {source_row} violates {code}",
+                        "warning",
+                        f"{kind} row {source_row} {action} {code}",
                         source_key=source_key,
                         sheet=sheet.title,
                         row=source_row,
@@ -914,8 +944,10 @@ def parse_start_end_times(
                     continue
                 source_column = offset + 1
                 resolution = scope.resolve(source_agent_id, name, business_date)
-                roster_row = resolution[0] if resolution is not None else None
-                scope_match: ScopeMatch = resolution[1] if resolution is not None else "none"
+                roster_client_id = (
+                    resolution.canonical_client_id if resolution is not None else None
+                )
+                scope_match: ScopeMatch = resolution.match if resolution is not None else "none"
                 in_scope = resolution is not None
                 if not in_scope:
                     scoped_out += 1
@@ -970,7 +1002,7 @@ def parse_start_end_times(
                     source_column=source_column,
                     business_date=business_date,
                     source_agent_id=raw_agent_id,
-                    roster_client_id=roster_row.client_id if roster_row is not None else None,
+                    roster_client_id=roster_client_id,
                     agent_name=name,
                     raw_assignment=raw,
                     assignment=assignment,
@@ -1094,6 +1126,26 @@ def publish_source_snapshot(
         if version.source_type == "published_schedule"
     }
     schedule_rows = [row for schedule in snapshot.schedules for row in schedule.shifts]
+    scope = AgentScope.from_snapshot(snapshot.roster)
+    canonical_agents = {
+        row.client_id: row
+        for row in snapshot.roster.agents
+        if row.valid and row.client_id is not None
+    }
+    for schedule_row in schedule_rows:
+        if not schedule_row.valid or not schedule_row.in_roster_scope:
+            continue
+        resolution = scope.resolve(
+            schedule_row.source_agent_id,
+            schedule_row.agent_name,
+            schedule_row.business_date,
+        )
+        if resolution is None or resolution.canonical_client_id != schedule_row.roster_client_id:
+            continue
+        canonical_agents.setdefault(
+            resolution.canonical_client_id,
+            replace(resolution.roster_row, client_id=resolution.canonical_client_id),
+        )
     canonical_schedule: dict[tuple[str, date], ScheduleRow] = {}
     for row in schedule_rows:
         if not row.valid or not row.in_roster_scope or row.roster_client_id is None:
@@ -1170,8 +1222,7 @@ def publish_source_snapshot(
                 row.source_sheet,
                 row.source_row,
             )
-            for row in snapshot.roster.agents
-            if row.valid
+            for row in sorted(canonical_agents.values(), key=lambda item: item.client_id or "")
         ],
     )
     connection.executemany(

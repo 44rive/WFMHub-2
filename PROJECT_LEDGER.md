@@ -68,9 +68,10 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-026 | Replace bright-blue information accents with the old report workbook's green `#1F7A53` / pale green `#DDF3E8`; keep navy structural, teal action, gold rule, and credit the UI **by Anass ASSRI**. | The user approved the product design with these two corrections. The workbook and old design tokens confirm the exact colors and authorship convention. |
 | D-027 | Begin Phase 1 with an honest capability-gated shell and preserve the five-probe doctor under Govern. | Source-driven RTA APIs do not exist yet; a visible empty state is safer than fabricated KPIs or dead Plan/Capacity links. |
 | D-028 | Stage source versions and quality findings in namespaced SQLite refresh generations; publish facts and switch the active pointer in one transaction. | A failed rebuild must leave the previous validated state active. The compatibility report schema remains additive and the target host remains standard-library-only. |
-| D-029 | Treat FTE Count and published wide StartEndTimes as the first governed Phase 1 contracts, with source provenance and generation-keyed Bronze/Silver tables. | They establish effective roster, PTO/Away, and scheduled coverage without inventing live attendance, service, or required-FTE evidence. Numeric Excel IDs are rejected because lost leading zeroes cannot be recovered safely. |
+| D-029 | Treat FTE Count and published wide StartEndTimes as the first governed Phase 1 contracts, with source provenance and generation-keyed Bronze/Silver tables. | They establish effective roster, PTO/Away, and scheduled coverage without inventing live attendance, service, or required-FTE evidence. D-032 supersedes the original numeric-ID rejection rule. |
 | D-030 | Let the user point `SETUP.cmd` at the existing WFM Database folder; refresh reads only fixed FTE/schedule subpaths and accepts no upload or path from the browser. | Matches the old portable's local-folder workflow and keeps employee data off network services. A changed source pointer makes the old active cut stale until refreshed. |
 | D-031 | Accept data-free trailing TSV columns in published StartEndTimes exports, retaining physical date-column provenance; reject populated unlabelled cells. Surface a bounded, path-scrubbed contract reason to the local UI. | The exact old-portable July attachment has 31 date columns plus an empty 34th header/cell; the released Phase 1 parser rejected that structural detail, producing the user's 422. This is a verified compatibility correction, not a general relaxation of non-date headers. |
+| D-032 | Normalize lossless integral Excel Client IDs to canonical text, allow blank roster IDs to scope through an exact unique-name match to a populated operational source ID, and quarantine invalid/ambiguous FTE rows as warnings instead of rejecting the complete refresh. | The exact old-portable FTE attachment uses numeric and blank IDs by design. The old product accepts those rows, resolves duplicate IDs deterministically, excludes unsupported statuses from effective scope, and skips malformed PTO/Away rows. The new policy reproduces that behavior while retaining every raw row and quality finding. |
 
 ## Evidence already collected
 
@@ -401,6 +402,36 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Exact FTE attachment compatibility restored
+
+- The old repository's exact `attachments/FTE Count.xlsx` reproduced the
+  managed-workstation result: numeric and blank roster IDs, duplicate IDs,
+  unsupported/blank employment statuses, and one incomplete PTO row were all
+  treated as blocking by the first Phase 1 contract.
+- Read-only comparison proved that the old portable accepts lossless numeric
+  IDs, uses exact unique-name fallback for blank roster IDs, deterministically
+  selects one eligible duplicate-ID row, excludes unsupported statuses from
+  effective scope, and quarantines malformed PTO/Away rows without rejecting
+  the complete source file.
+- Updated the FTE adapter/policy to preserve those raw findings as warnings,
+  normalize integral IDs to text, publish operational IDs reached by name
+  fallback, and keep invalid rows out of canonical facts. File-level contract
+  failures and malformed schedule intervals remain blocking.
+- The exact attached workbook plus July StartEndTimes now refreshes locally
+  with zero blocking findings. The new scope matches the old parser exactly:
+  4,712 accepted schedule cells and 930 scoped-out cells. The successful
+  generation published 272 canonical roster agents, 26 applicable time-off
+  records, and the 4,712 schedule assignments while retaining 519 warnings
+  and 930 informational findings for audit.
+- Added synthetic coverage for numeric IDs, blank-ID name fallback, duplicate
+  precedence, unsupported-status quarantine, invalid PTO quarantine, and
+  canonical alias publication. Full local result: Ruff format/lint, strict
+  Pyright, 58 pytest tests, and the native-stack probe pass. Exact Windows ZIP
+  and managed-workstation validation remain the release gates.
+- Advanced the hybrid package candidate to
+  `v0.2.0-phase1-source-preview.2`; publication must use the exact green
+  Windows CI artifact rather than a locally compressed archive.
 
 ### 2026-09-21 — Verified July StartEndTimes 422 and scoped hotfix
 
