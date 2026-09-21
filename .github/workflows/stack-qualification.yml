@@ -154,6 +154,15 @@ jobs:
           $Doctor | Set-Content qualification-evidence/hybrid-host-doctor.json -Encoding utf8
           $Doctor | Write-Host
 
+      - name: Smoke packaged local-source refresh and rollback
+        shell: pwsh
+        run: |
+          $Python = Join-Path $env:HYBRID_ROOT "_system/runtime/python.exe"
+          & $Python -I scripts/smoke_rta_sources.py --portable-root $env:HYBRID_ROOT
+          if ($LASTEXITCODE -ne 0) {
+            throw "Packaged local-source refresh smoke failed."
+          }
+
       - name: Smoke all browser capabilities with outbound resolution blocked
         shell: pwsh
         run: >-

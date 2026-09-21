@@ -61,10 +61,11 @@ The product-wide workspace structure and nine additional tactical, strategic,
 review, and governance concepts are in
 [docs/FULL_PRODUCT_UI.md](docs/FULL_PRODUCT_UI.md).
 
-The first implemented Phase 1 UI increment now has the workbook-green product
-shell, **by Anass ASSRI** credit, a truthful unconnected-RTA state, and the
+The Phase 1 UI now has the workbook-green product shell, **by Anass ASSRI**
+credit, local FTE/published-schedule source readiness and refresh, and the
 working compatibility doctor under **Govern**. It does not yet display live
-service, attendance, staffing, or decision results.
+service, attendance, staffing, or decision results. The source folder is read
+in place; there is no upload or copying step.
 
 ### Tactical WFM intelligence
 
@@ -278,6 +279,7 @@ The target Windows release is still portable/offline:
 WFMHub-2/
 ├─ WFMHub.cmd                 primary local launcher
 ├─ DOCTOR.cmd                 Python/SQLite/Excel host qualification
+├─ SETUP.cmd                  points at an existing local WFM Database folder
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
 ├─ Feed/

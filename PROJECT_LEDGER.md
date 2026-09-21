@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green shell, refresh authority, and first FTE/schedule contracts integrated; run `35608395829` is green |
+| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green shell, refresh authority, and first FTE/schedule contracts integrated; run `35608395829` is green before the current source-refresh increment |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell, doctor, refresh authority, and FTE/schedule facts implemented; source orchestration and RTA outputs remain |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | Local-folder setup, fixed-contract refresh API, source-health Command view, and previous-cut rollback are implemented; operational RTA outputs remain |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -69,6 +69,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-027 | Begin Phase 1 with an honest capability-gated shell and preserve the five-probe doctor under Govern. | Source-driven RTA APIs do not exist yet; a visible empty state is safer than fabricated KPIs or dead Plan/Capacity links. |
 | D-028 | Stage source versions and quality findings in namespaced SQLite refresh generations; publish facts and switch the active pointer in one transaction. | A failed rebuild must leave the previous validated state active. The compatibility report schema remains additive and the target host remains standard-library-only. |
 | D-029 | Treat FTE Count and published wide StartEndTimes as the first governed Phase 1 contracts, with source provenance and generation-keyed Bronze/Silver tables. | They establish effective roster, PTO/Away, and scheduled coverage without inventing live attendance, service, or required-FTE evidence. Numeric Excel IDs are rejected because lost leading zeroes cannot be recovered safely. |
+| D-030 | Let the user point `SETUP.cmd` at the existing WFM Database folder; refresh reads only fixed FTE/schedule subpaths and accepts no upload or path from the browser. | Matches the old portable's local-folder workflow and keeps employee data off network services. A changed source pointer makes the old active cut stale until refreshed. |
 
 ## Evidence already collected
 
@@ -349,15 +350,15 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
-- The Phase 1 product shell still has no governed RTA read API, live status,
-  LILO, call-service facts, or requirement input. Its Command page is
-  deliberately empty; the doctor is the only live workflow. A true required-
-  FTE shortage also needs the separate Verint Staff Type requirement source.
-- FTE Count and published StartEndTimes now parse into byte-bound,
-  generation-keyed roster, time-off, and scheduled-shift facts, but no source
-  discovery or refresh command invokes them yet. Failed generations retain
-  manifest and quality evidence while attempted fact publication is rolled
-  back.
+- The Phase 1 shell has source-health and refresh APIs but still no live
+  status, LILO, call-service facts, or requirement input. Command shows source
+  readiness only, not operational KPIs. A true required-FTE shortage also
+  needs the separate Verint Staff Type requirement source.
+- FTE Count and published StartEndTimes now refresh into byte-bound,
+  generation-keyed roster, time-off, and scheduled-shift facts. Failed
+  generations retain manifest and quality evidence while attempted fact
+  publication is rolled back. Incremental planning remains unimplemented;
+  each successful refresh reparses the first two source contracts.
 - The exact post-shell Windows ZIP passed ordinary Windows CI. That exact ZIP
   has not yet been rerun on the managed workstation; the earlier accepted
   Phase 0.4 target report remains the policy-compatibility evidence.
@@ -382,15 +383,15 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Add the read-only refresh coordinator and source-health/read APIs around the
-   implemented FTE Count and published StartEndTimes contracts.
+1. Qualify the exact current portable ZIP in Windows CI, then have the user
+   test setup and refresh on the managed workstation with real source copies.
 2. Port Agent Status and LILO, then Call-by-Call, to create governed actual-
    attendance and service facts before exposing operational Command KPIs.
 3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
    shortage; the first four-source stage may show observed versus scheduled
    coverage only.
-4. Connect the canonical read model to the React Command centre and bounded
-   Excel export, preserving explicit freshness and source-quality states.
+4. Add governed operational read models to Command and bounded Excel export,
+   preserving explicit freshness and source-quality states.
 5. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
    after source refresh and UI/runtime integration.
 6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
@@ -399,6 +400,26 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Local source refresh and Command readiness
+
+- Added `SETUP.cmd` to the portable ZIP. It stores one validated absolute
+  folder pointer in `data/source-root.txt`; sources are neither copied nor
+  changed. Without setup, the host reads its local `extracts` folder.
+- Added authenticated, fixed-contract `GET /api/rta/source-health` and
+  `POST /api/rta/refresh` with an empty JSON body. Refresh discovers one FTE
+  roster and published wide StartEndTimes files; it stages provenance and
+  quality findings, then atomically publishes the canonical generation. A
+  failed refresh leaves the prior cut active. A different configured folder
+  marks that cut stale rather than current.
+- The Command screen now shows source readiness, roster/schedule counts,
+  dates, quality, and safe failed-refresh context. It still never presents
+  service level, attendance, requirement, or staffing gaps as known.
+- Local verification: 55 Python tests, Pyright strict, Ruff, 17 web tests,
+  Biome, web typecheck, production web build, deterministic ZIP verification
+  (90 members), and a synthetic setup/refresh/rollback smoke passed. Windows
+  CI now repeats that smoke with the exact extracted embedded runtime. Target
+  workstation validation remains to be done for this increment.
 
 ### 2026-09-21 — First governed Phase 1 source contracts
 

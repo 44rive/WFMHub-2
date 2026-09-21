@@ -3,14 +3,14 @@
 ## Supported target experience
 
 ```text
-download GitHub Release ZIP -> Extract All -> DOCTOR.cmd -> WFMHub.cmd
+download GitHub Release ZIP -> Extract All -> DOCTOR.cmd -> SETUP.cmd -> WFMHub.cmd
 ```
 
 The target operating model requires no administrator rights, installed Python,
 Node, Rust, database server, installer, upload, or runtime internet. The current
-Phase 0.4 release is a compatibility gate; the Phase 1 shell on `main` is not
-yet a replacement WFM product. Its future source refresh will read configured
-local folders directly.
+Phase 0.4 release is a compatibility gate; this Phase 1 source-readiness preview
+is not yet a replacement WFM product. It reads the configured local folder
+directly and never uploads or copies workforce extracts.
 
 ## Why the Phase 0.4 profile exists
 
@@ -28,6 +28,7 @@ This is a policy-compatible architecture, not a security-control bypass.
 WFMHub-2/
 ├─ WFMHub.cmd
 ├─ DOCTOR.cmd
+├─ SETUP.cmd
 ├─ README-FIRST.txt
 ├─ SHA256SUMS.txt
 ├─ Feed/
@@ -44,6 +45,14 @@ WFMHub-2/
 `data/control.sqlite` and browser compatibility reports are created only after
 extraction. Releases never contain operational extracts, databases, reports,
 logs, local configuration, or employee/customer data.
+
+`SETUP.cmd` asks for the existing folder containing `FTE` and `Verint` (for
+example, the old `WFM Database` folder). It stores only the absolute folder
+pointer in `data/source-root.txt`. The source files remain untouched. If you
+prefer a self-contained folder, put the same source tree under `extracts`
+beside `WFMHub.cmd` and skip setup. In Command, select **Refresh local sources**.
+The first cut validates FTE Count and wide StartEndTimes only; source counts
+and dates are not service, attendance, or staffing KPIs.
 
 ## Launch and security contract
 
