@@ -430,6 +430,13 @@ only through a recorded decision with evidence.
   expansion/hash verification. The local `.3` candidate has 93 members and
   SHA-256 `afcbefa5b5360ebaf902632566ae8bc9d5bc23f31f307e90b62319564998c3a2`;
   Windows CI remains the release authority.
+- CI run `35662439167` passed all three jobs. The target-compatible Windows job
+  proved the exact embedded doctor, packaged FTE/schedule/Agent Status/LILO
+  refresh and rollback, all five offline Edge/WASM probes, and artifact upload;
+  Linux source checks and the separate full-native Windows regression also
+  passed. The independently downloaded canonical CI ZIP is 73,183,059 bytes,
+  has 93 unique members, passes ZIP CRC validation, and has SHA-256
+  `f8e18e61d36359a15418d07f68b19ce8be75092dec3ab243c5627986846714c7`.
 - An independent Claude architecture review was attempted through the project
   orchestrator but could not authenticate because its OAuth session had
   expired. The native legacy-contract audit completed read-only; no external
