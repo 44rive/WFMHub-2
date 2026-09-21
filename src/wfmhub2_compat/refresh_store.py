@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Iterable
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +33,16 @@ class SourceVersion:
     adapter_version: str
     policy_fingerprint: str
     row_count: int | None = None
+
+
+@dataclass(frozen=True)
+class QualityIssue:
+    """One generation-scoped data-quality observation."""
+
+    issue_code: str
+    severity: str
+    details: str
+    source_key: str | None = None
 
 
 @contextmanager
@@ -242,6 +252,43 @@ class RefreshStore:
                 (generation_id, source_key, issue_code, severity, details, utc_now()),
             )
             return _inserted_id(cursor)
+
+    def record_quality_issues(
+        self,
+        generation_id: int,
+        issues: Iterable[QualityIssue],
+    ) -> int:
+        """Persist a batch of findings in one write transaction."""
+        batch = tuple(issues)
+        for issue in batch:
+            _required_text(issue.issue_code, "issue_code")
+            _required_text(issue.details, "details")
+            if issue.severity not in {"info", "warning", "error"}:
+                raise ValueError("severity must be info, warning, or error")
+        if not batch:
+            return 0
+        recorded_at = utc_now()
+        with _write_transaction(self.path) as connection:
+            _running(connection, generation_id)
+            connection.executemany(
+                """
+                INSERT INTO wfm_quality_issue (
+                    generation_id, source_key, issue_code, severity, details, recorded_at
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        generation_id,
+                        issue.source_key,
+                        issue.issue_code,
+                        issue.severity,
+                        issue.details,
+                        recorded_at,
+                    )
+                    for issue in batch
+                ],
+            )
+        return len(batch)
 
     def activate_generation(
         self,

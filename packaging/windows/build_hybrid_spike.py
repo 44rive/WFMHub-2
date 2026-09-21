@@ -196,6 +196,7 @@ def validate_stage(stage: Path, cpython_native: dict[str, str]) -> None:
         "Feed",
         "README-FIRST.txt",
         "Reports",
+        "SETUP.cmd",
         "SHA256SUMS.txt",
         "WFMHub.cmd",
         "_system",
@@ -253,11 +254,11 @@ def build_stage(web_dist: Path) -> Path:
     copy_tree(web_dist, stage / "_system/web")
     copy_windows_text(ROOT / "packaging/windows/WFMHub-Hybrid.cmd", stage / "WFMHub.cmd")
     copy_windows_text(ROOT / "packaging/windows/DOCTOR-Hybrid.cmd", stage / "DOCTOR.cmd")
+    copy_windows_text(ROOT / "packaging/windows/SETUP-Hybrid.cmd", stage / "SETUP.cmd")
 
     (stage / "Feed").mkdir()
     (stage / "Feed/README.txt").write_text(
-        "The compatibility spike never uploads files. "
-        "Future WFM ingestion will read local sources.\n",
+        "WFMHub reads the configured local source folder without uploads or copying.\n",
         encoding="utf-8",
         newline="\r\n",
     )
@@ -272,14 +273,16 @@ def build_stage(web_dist: Path) -> Path:
             (
                 "WFMHub 2 Phase 0.4 Hybrid Compatibility Spike",
                 "",
-                "This is a compatibility test, not yet the replacement WFM product.",
+                "Phase 1 preview: local source readiness, not yet the replacement WFM product.",
                 "",
                 "1. Extract the complete ZIP to a normal local writable folder.",
                 "2. Run DOCTOR.cmd. It tests the proven Python/SQLite/Excel host.",
-                "3. Run WFMHub.cmd. Microsoft Edge opens the local workbench.",
-                "4. Open Govern > Compatibility Doctor, then select Run all probes.",
-                "5. Copy the result or send data\\compatibility\\last-browser-report.json.",
-                "6. Close the browser tab and press Ctrl+C in the WFMHub console.",
+                "3. Run SETUP.cmd and paste the existing folder containing FTE and Verint.",
+                "   Your source files remain in place and are read only.",
+                "4. Run WFMHub.cmd. Microsoft Edge opens the local workbench.",
+                "5. Select Refresh local sources on Command to inspect roster/schedule health.",
+                "6. Govern > Compatibility Doctor still runs the five browser probes.",
+                "7. Close the browser tab and press Ctrl+C in the WFMHub console.",
                 "",
                 "No installation, administrator rights, file upload, "
                 "or runtime internet is required.",

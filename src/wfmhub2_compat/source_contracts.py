@@ -21,7 +21,7 @@ from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any, Literal, Protocol, cast
 
-from wfmhub2_compat.refresh_store import RefreshStore, SourceVersion
+from wfmhub2_compat.refresh_store import QualityIssue, RefreshStore, SourceVersion
 
 FTE_ADAPTER_VERSION = "fte-count-v1"
 SCHEDULE_ADAPTER_VERSION = "start-end-times-v1"
@@ -1015,6 +1015,7 @@ def stage_sources(store: RefreshStore, generation_id: int, snapshot: SourceSnaps
 
 def stage_findings(store: RefreshStore, generation_id: int, snapshot: SourceSnapshot) -> None:
     """Persist parser findings before attempting generation activation."""
+    issues: list[QualityIssue] = []
     for finding in snapshot.findings:
         location: list[str] = []
         if finding.source_sheet is not None:
@@ -1026,13 +1027,15 @@ def stage_findings(store: RefreshStore, generation_id: int, snapshot: SourceSnap
         details = finding.details
         if location:
             details = f"{details} ({', '.join(location)})"
-        store.record_quality_issue(
-            generation_id,
-            issue_code=finding.code,
-            severity=finding.severity,
-            details=details,
-            source_key=finding.source_key,
+        issues.append(
+            QualityIssue(
+                issue_code=finding.code,
+                severity=finding.severity,
+                details=details,
+                source_key=finding.source_key,
+            )
         )
+    store.record_quality_issues(generation_id, issues)
 
 
 def _iso(value: date | datetime | time | None) -> str | None:
@@ -1070,6 +1073,29 @@ def publish_source_snapshot(
     if any(finding.severity == "error" for finding in snapshot.findings):
         raise ValueError("source snapshot contains blocking quality findings")
     _require_source_evidence(connection, generation_id, snapshot)
+    schedule_precedence = {
+        version.source_key: (version.mtime_ns, version.source_key)
+        for version in snapshot.versions
+        if version.source_type == "published_schedule"
+    }
+    schedule_rows = [row for schedule in snapshot.schedules for row in schedule.shifts]
+    canonical_schedule: dict[tuple[str, date], ScheduleRow] = {}
+    for row in schedule_rows:
+        if not row.valid or not row.in_roster_scope or row.roster_client_id is None:
+            continue
+        key = (row.roster_client_id, row.business_date)
+        existing = canonical_schedule.get(key)
+        row_rank = (*schedule_precedence[row.source_key], row.source_row, row.source_column)
+        if existing is None:
+            canonical_schedule[key] = row
+            continue
+        existing_rank = (
+            *schedule_precedence[existing.source_key],
+            existing.source_row,
+            existing.source_column,
+        )
+        if row_rank > existing_rank:
+            canonical_schedule[key] = row
     connection.executemany(
         """
         INSERT INTO wfm_raw_fte_agent (
@@ -1194,7 +1220,6 @@ def publish_source_snapshot(
             if row.valid
         ],
     )
-    schedule_rows = [row for schedule in snapshot.schedules for row in schedule.shifts]
     connection.executemany(
         """
         INSERT INTO wfm_raw_schedule_shift (
@@ -1257,8 +1282,14 @@ def publish_source_snapshot(
                 row.source_row,
                 row.source_column,
             )
-            for row in schedule_rows
-            if row.valid and row.in_roster_scope
+            for row in sorted(
+                canonical_schedule.values(),
+                key=lambda item: (
+                    item.business_date,
+                    item.roster_client_id or "",
+                    item.source_key,
+                ),
+            )
         ],
     )
 

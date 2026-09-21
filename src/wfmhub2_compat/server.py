@@ -19,10 +19,17 @@ from typing import Any, cast
 from urllib.parse import urlencode, urlsplit
 
 from wfmhub2_compat import __version__
+from wfmhub2_compat.rta_refresh import (
+    RefreshBusyError,
+    RefreshFailedError,
+    RtaRefreshCoordinator,
+    validate_refresh_body,
+)
 from wfmhub2_compat.storage import MAX_REPORT_BYTES, initialize_database, save_report
 
 SESSION_TOKEN_FRAGMENT_KEY = "wfmhub_token"
 COMPATIBILITY_PORT = 8420
+MAX_REFRESH_BODY_BYTES = 256
 SECURITY_HEADERS = {
     "Cache-Control": "no-store",
     "Content-Security-Policy": (
@@ -57,6 +64,7 @@ class CompatibilityServer(ThreadingHTTPServer):
         self.home = home
         self.web_root = web_root
         self.session_token = session_token
+        self.rta = RtaRefreshCoordinator(home)
         super().__init__(("127.0.0.1", port), CompatibilityHandler)
 
 
@@ -114,6 +122,11 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if self._reject_invalid_host():
             return
         path = urlsplit(self.path).path
+        if path == "/api/rta/source-health":
+            if not self._require_api_auth():
+                return
+            self._json_response(HTTPStatus.OK, self.compatibility_server.rta.source_health())
+            return
         if path == "/api/compat/health":
             if not self._require_api_auth():
                 return
@@ -136,6 +149,11 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if self._reject_invalid_host():
             return
         path = urlsplit(self.path).path
+        if path == "/api/rta/source-health":
+            if not self._require_api_auth():
+                return
+            self._json_response(HTTPStatus.OK, self.compatibility_server.rta.source_health())
+            return
         if path == "/api/compat/health":
             if not self._require_api_auth():
                 return
@@ -150,6 +168,9 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if self._reject_invalid_host():
             return
         path = urlsplit(self.path).path
+        if path == "/api/rta/refresh":
+            self._post_rta_refresh()
+            return
         if path != "/api/compat/report":
             self._json_response(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
             return
@@ -178,6 +199,46 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
                 "relativePath": destination.relative_to(self.compatibility_server.home).as_posix(),
             },
         )
+
+    def _post_rta_refresh(self) -> None:
+        if not self._require_api_auth():
+            return
+        if self.headers.get_content_type() != "application/json":
+            self._json_response(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, {"error": "JSON required"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        if not 1 <= length <= MAX_REFRESH_BODY_BYTES:
+            self._json_response(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, {"error": "invalid size"})
+            return
+        try:
+            validate_refresh_body(json.loads(self.rfile.read(length)))
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+            self._json_response(HTTPStatus.BAD_REQUEST, {"error": "refresh requires JSON {}"})
+            return
+        try:
+            result = self.compatibility_server.rta.refresh()
+        except RefreshBusyError:
+            self._json_response(
+                HTTPStatus.CONFLICT,
+                {"code": "REFRESH_BUSY", "message": "A source refresh is already running."},
+            )
+            return
+        except RefreshFailedError as exc:
+            self._json_response(
+                HTTPStatus.UNPROCESSABLE_ENTITY,
+                {
+                    "status": "failed",
+                    "code": exc.code,
+                    "message": exc.message,
+                    "generationId": exc.generation_id,
+                    "sourceHealth": self.compatibility_server.rta.source_health(),
+                },
+            )
+            return
+        self._json_response(HTTPStatus.OK, result)
 
     def send_head(self):  # type: ignore[no-untyped-def]
         path = urlsplit(self.path).path
