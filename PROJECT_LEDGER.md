@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green product shell and stdlib refresh control integrated; run `35604264149` qualified the exact Windows ZIP |
+| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green shell, refresh authority, and first FTE/schedule contracts integrated; run `35608395829` is green |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell, doctor route, and stdlib refresh authority implemented; source-driven RTA work remains |
+| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell, doctor, refresh authority, and FTE/schedule facts implemented; source orchestration and RTA outputs remain |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -425,6 +425,12 @@ only through a recorded decision with evidence.
 - Synthetic parser, scope, provenance, and rollback coverage raised the suite
   to `50` passing tests. Ruff format/lint and strict Pyright pass from the
   integration worktree.
+- Commit `79c4f2a` was pushed to GitHub `main`. Run `35608395829` passed all
+  three jobs: Linux source/frozen checks, the target-compatible Windows hybrid
+  build/host doctor/five-probe browser smoke, and the full native portable
+  regression. The exact hybrid ZIP has 87 members, is 73,164,644 bytes, and
+  independently verified at SHA-256
+  `83e2e51323046181ced9fa072289e92510c61211abdcc65a3693b8d6095f1b01`.
 - This increment does not implement Activities, Agent Status, LILO,
   Call-by-Call, Verint requirement, the refresh command/API, or UI KPIs.
 
