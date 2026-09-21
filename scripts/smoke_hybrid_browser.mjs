@@ -52,6 +52,21 @@ async function evaluate(expression) {
 }
 
 await command('Runtime.enable')
+const doctorDeadline = Date.now() + 30_000
+let openedDoctor = false
+while (Date.now() < doctorDeadline && !openedDoctor) {
+  openedDoctor = await evaluate(`(() => {
+    if (location.pathname === '/compatibility') return true;
+    const link = [...document.querySelectorAll('a')]
+      .find((candidate) => candidate.getAttribute('href') === '/compatibility');
+    if (!link || location.hash.includes('wfmhub_token')) return false;
+    link.click();
+    return true;
+  })()`)
+  if (!openedDoctor) await new Promise((resolve) => setTimeout(resolve, 250))
+}
+if (!openedDoctor) throw new Error('Compatibility doctor link was not available')
+
 const readinessDeadline = Date.now() + 60_000
 let clicked = false
 while (Date.now() < readinessDeadline && !clicked) {

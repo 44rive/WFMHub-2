@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus product-wide UI design | CI, target browser, and target doctor passed; full-product design is proposed before UI implementation |
+| `origin/main` | Accepted hybrid foundation plus Phase 1 UI foundation | Target browser/doctor accepted; product shell is implemented locally and awaiting Windows release qualification |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and proposed full-product UI baseline | Target accepted; design documented before production UI work |
+| `integration/browser-wasm-hybrid-spike` (current) | Accepted Phase 0.4 foundation and first Phase 1 implementation | Product shell/doctor route implemented; source-driven RTA work remains |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
 | `WFMHub-Portable` | Proven earlier embedded-CPython product and business-contract source | Read-only reference; never copy user data |
@@ -64,6 +64,8 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-023 | Accept the hybrid architecture as the target portable foundation and begin the governed RTA slice. | The exact Phase 0.4 release passed all five probes under the real corporate policy. This proves execution feasibility, not forecast quality, optimization semantics, production-data scale, or WFM product parity. |
 | D-024 | Evolve the WFMHub-Portable navy/teal/gold visual system for WFMHub 2 instead of introducing an unrelated product theme. | The user requested continuity with the proven product; Phase 1 will improve readability and decision flow while preserving its operational identity. |
 | D-025 | Make the full product shell six workspaces: Command, Operate, Plan, Capacity, Review, Govern. Put scenarios/optimization inside Plan and the decision register in Command; show only functional pages. | The Phase 1 five-item RTA study did not cover tactical/strategic WFM. Decisions span horizons, while optimization is a method; six groups fit a desktop workbench without dead or duplicate navigation. This supersedes the earlier UI blueprint's top-level navigation, not its visual tokens or RTA screen concepts. |
+| D-026 | Replace bright-blue information accents with the old report workbook's green `#1F7A53` / pale green `#DDF3E8`; keep navy structural, teal action, gold rule, and credit the UI **by Anass ASSRI**. | The user approved the product design with these two corrections. The workbook and old design tokens confirm the exact colors and authorship convention. |
+| D-027 | Begin Phase 1 with an honest capability-gated shell and preserve the five-probe doctor under Govern. | Source-driven RTA APIs do not exist yet; a visible empty state is safer than fabricated KPIs or dead Plan/Capacity links. |
 
 ## Evidence already collected
 
@@ -344,6 +346,12 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
+- The Phase 1 product shell currently has no governed RTA read API, source
+  refresh, service/attendance facts, or requirement input. Its Command page is
+  deliberately empty; the doctor is the only live workflow. A true required-
+  FTE shortage also needs the separate Verint Staff Type requirement source.
+- The changed frontend and browser smoke passed locally, but the exact new
+  Windows release ZIP has not been built or retested on the managed workstation.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
@@ -365,23 +373,41 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Review the six-workspace product architecture and nine non-RTA/cross-horizon
-   screen concepts in `docs/FULL_PRODUCT_UI.md`, alongside the three RTA
-   concepts in `docs/UI_BLUEPRINT.md`; then implement shared design tokens,
-   the full shell with capability-gated navigation, typed synthetic contracts,
-   and the first working RTA Command Center.
-2. Inventory and selectively port the old product's governed source contracts,
-   mappings, formulas, SQLite migrations, upgrades, and synthetic tests; never
-   copy operational/user data.
-3. Deliver the first governed RTA vertical slice: read-only local source
+1. Integrate and qualify the pure-stdlib/SQLite refresh-generation foundation,
+   then port the old product's governed source contracts and synthetic tests;
+   never copy operational/user data.
+2. Deliver the first governed RTA vertical slice: read-only local source
    refresh -> canonical SQLite facts -> service/attendance -> staffing gap ->
    React command centre -> Excel export.
-4. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
+   shortage; the first four-source stage may show observed versus scheduled
+   coverage only.
+4. Rebuild the exact Windows ZIP and rerun DOCTOR plus five Edge probes on the
+   target after the UI/runtime integration.
+5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
-5. Reach old-portable business parity before declaring WFMHub 2 the operational
+6. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — Phase 1 product shell and palette correction
+
+- Implemented workbook-green shared tokens and the **by Anass ASSRI** credit,
+  retaining navy/teal/gold semantics. Revised the cross-horizon and RTA
+  Command visual anchors; older raster concepts remain design studies.
+- Added six-workspace route/capability metadata. Only Command foundation and
+  Govern's working Compatibility Doctor appear; absent RTA data is stated as
+  unconnected, not invented. Keyboard skip/focus and semantic status were
+  reviewed, and unsupported evidence claims were removed.
+- The doctor now lives at `/compatibility`; the Windows browser smoke opens it
+  from the product home. Local Biome, TypeScript, 14 Vitest tests, production
+  build, and a real loopback-host/Chrome run passed all five browser probes.
+  This is local integration evidence, not an exact Windows ZIP/target gate.
+- Read-only old-product audit identified exact Call-by-Call, FTE, schedule,
+  Agent Status/LILO, and Verint requirement contracts. The requirement source
+  is mandatory before a true required-FTE shortage is shown.
+
 
 ### 2026-09-21 — Full WFM product UI architecture and visual pack
 

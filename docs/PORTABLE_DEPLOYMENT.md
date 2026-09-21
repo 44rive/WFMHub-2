@@ -6,9 +6,11 @@
 download GitHub Release ZIP -> Extract All -> DOCTOR.cmd -> WFMHub.cmd
 ```
 
-Normal use requires no administrator rights, installed Python, Node, Rust,
-database server, installer, upload, or runtime internet. WFMHub reads configured
-local source folders directly.
+The target operating model requires no administrator rights, installed Python,
+Node, Rust, database server, installer, upload, or runtime internet. The current
+Phase 0.4 release is a compatibility gate; the Phase 1 shell on `main` is not
+yet a replacement WFM product. Its future source refresh will read configured
+local folders directly.
 
 ## Why the Phase 0.4 profile exists
 
@@ -73,7 +75,8 @@ Runs before the UI and checks:
 
 ### `WFMHub.cmd` — browser boundary
 
-Select **Run all probes**. The browser reports independently:
+Open **Govern > Compatibility Doctor**, then select **Run all probes**.
+The browser reports independently:
 
 - standard WebAssembly inside a Worker;
 - DuckDB-Wasm SQL plus OPFS checkpoint/terminate/reopen;

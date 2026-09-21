@@ -8,6 +8,12 @@ six-workspace shell in [FULL_PRODUCT_UI.md](../FULL_PRODUCT_UI.md). All names
 and values are synthetic. None of these are executable product screens or
 business-calculation authority.
 
+The approved palette revision replaces bright-blue information accents with
+the reference workbook's green `#1F7A53` / pale green `#DDF3E8` and adds
+**by Anass ASSRI**. The two green files below are the current shell/RTA visual
+anchors. Other original images remain concept studies; production tokens and
+credit are defined in the UI blueprints, not inferred from old raster colors.
+
 ## Saved outputs
 
 ### Phase 1 RTA studies
@@ -18,6 +24,8 @@ business-calculation authority.
   `5ea0f47f9d199d7c0659d45cfdc0214ab129686f4268c845969c792fbc69f52a`
 - `wfmhub2-risk-decision.png` — 1586 x 992, SHA-256
   `500553f2d2dc415dfc982a49180efee0f4f754e6279be218bac95fe64261ed49`
+- `wfmhub2-command-center-green.png` — approved palette/credit revision,
+  SHA-256 `9981413238c853b6d80b83c4a4316d53eef58f9cc3995c4aac21d2720d0a502a`
 
 ### Full-product pack
 
@@ -32,6 +40,7 @@ business-calculation authority.
 | `wfmhub2-capacity-hiring.png` | `a9bf46f47d2e08711bc937ef17e4f31f2165e86dd8727834860376bfe550f1fc` |
 | `wfmhub2-realisations-outcomes.png` | `a6c209aa2dd25adcc7fb3740ae9356cbdcb0c61f8b7979ac85792079a218f423` |
 | `wfmhub2-governance-delivery.png` | `a35c2acb81606d9209c83158e69d037f965c97b8d05e9651fd3ff6702c826c5c` |
+| `wfmhub2-full-command-green.png` (approved shell revision) | `79d242cde5396c5ce8c0e81bae544ff6e055fd406c286971843ad1db16405015` |
 
 The normalized final prompt set for the full-product pack is in
 [FULL_PRODUCT_PROMPTS.md](FULL_PRODUCT_PROMPTS.md). Each generation used the

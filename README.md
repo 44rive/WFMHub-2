@@ -61,6 +61,11 @@ The product-wide workspace structure and nine additional tactical, strategic,
 review, and governance concepts are in
 [docs/FULL_PRODUCT_UI.md](docs/FULL_PRODUCT_UI.md).
 
+The first implemented Phase 1 UI increment now has the workbook-green product
+shell, **by Anass ASSRI** credit, a truthful unconnected-RTA state, and the
+working compatibility doctor under **Govern**. It does not yet display live
+service, attendance, staffing, or decision results.
+
 ### Tactical WFM intelligence
 
 The tactical layer explains repeated performance patterns and improves planning through:

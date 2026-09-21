@@ -189,6 +189,7 @@ export function createEngineClient(connection: EngineConnection) {
 
   return {
     getHealth: () => request<Health>('/health'),
+    getCompatibilityHealth: () => request<Health>('/compat/health'),
     getStackProbe: () => request<StackProbe>('/stack/probe'),
     saveCompatibilityReport: (report: unknown) =>
       post<SavedCompatibilityReport>('/compat/report', report),

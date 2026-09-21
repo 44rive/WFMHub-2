@@ -17,6 +17,9 @@ Image 1 is a visual style reference only; create a new screen, not an edit.
 Faithfully preserve WFMHub-Portable's compact navy #0B1F33 header, white WFM,
 gold #D6A84B HUB, light-teal 2, teal #007C83 active controls, cool-gray canvas,
 white panels, thin gray rules, tabular numerals, and Aptos/Segoe-like type.
+Use workbook green #1F7A53 and pale green #DDF3E8 instead of bright-blue
+informational accents. Keep the navy header and teal primary actions. Add
+discreet exact credit "by Anass ASSRI" in a footer margin.
 Use the six-item nav COMMAND, OPERATE, PLAN, CAPACITY, REVIEW, GOVERN and mark
 the active workspace with a gold underline. Include page kicker/title, scoped
 filters and actions, an evidence/freshness strip, dense tables, charts, and
@@ -146,3 +149,10 @@ reports are replaceable outputs rather than authoritative data.
 These prompts define visual intent only. The image outputs may contain
 illustrative rounding or typography artifacts; the effective domain catalogs,
 source contracts, and tests—not raster labels—govern implementation.
+
+The approved palette/credit revision used built-in image edits of the
+cross-horizon Command and Phase 1 RTA Command references. Their edit prompt
+kept business values and layout fixed, changed bright-blue information accents
+to workbook green, corrected the six-workspace navigation, and added the exact
+credit. The remaining original raster concepts are pre-revision studies;
+production code follows the updated token contract above.

@@ -1,0 +1,18 @@
+:root {
+  --wfm-navy: #0b1f33;
+  --wfm-navy-secondary: #173750;
+  --wfm-teal: #007c83;
+  --wfm-gold: #d6a84b;
+  --wfm-green: #1f7a53;
+  --wfm-green-light: #ddf3e8;
+  --wfm-canvas: #f4f7f9;
+  --wfm-surface: #fff;
+  --wfm-ink: #1f2933;
+  --wfm-muted: #536474;
+  --wfm-line: #d8e0e6;
+  --wfm-amber: #a65f00;
+  --wfm-amber-light: #fff1cc;
+  --wfm-focus: #d6a84b;
+  --wfm-font: Aptos, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --wfm-display-font: "Aptos Display", Aptos, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+}

@@ -9,7 +9,7 @@ and shared visual tokens remain valid.
 
 WFMHub 2 will evolve the proven WFMHub-Portable interface rather than replace
 it with an unrelated dashboard aesthetic. It keeps the old product's compact
-navy, teal, gold, white, and cool-gray operational language while improving
+navy, teal, gold, green, white, and cool-gray operational language while improving
 readability and centring the workflow on:
 
 ```text
@@ -91,7 +91,7 @@ Purpose: produce one reliable operating picture and a ranked next-action list.
 4. Service and staffing matrix: separate governed scopes with raw components.
 5. Data-trust panel: source coverage, unknown records, and quality backlog.
 
-![RTA Command Center](design/wfmhub2-command-center.png)
+![RTA Command Center with the approved green accent and credit](design/wfmhub2-command-center-green.png)
 
 ## Priority screen 2 — Attendance & Coverage
 
@@ -139,16 +139,19 @@ Purpose: make WFMHub 2 a decision tool rather than another passive dashboard.
 | Ink | `#1F2933` | body text |
 | Muted | `#536474` | secondary evidence text |
 | Line | `#D8E0E6` | panel, table, and control borders |
-| Green | `#1F7A53` / `#DDF3E8` | healthy or proven-ready state |
+| Green | `#1F7A53` / `#DDF3E8` | workbook information accent and healthy or proven-ready state |
 | Amber | `#A65F00` / `#FFF1CC` | incomplete evidence or review required |
 | Red | `#B42318` / `#FDE7E5` | verified risk or breach |
-| Blue | `#0563C1` / `#E3F0FA` | neutral information |
 | Purple | `#6E56CF` / `#EEEAFE` | planned leave or governed activity |
 | Future | `#9AA6B2` / `#EEF1F4` | future or not-yet-observed interval |
 
 Titles use Aptos Display when available; body and tabular data use Aptos with
 Segoe UI and system sans-serif fallbacks. Operational numbers use tabular
 figures.
+
+The green accent supersedes the earlier bright-blue information treatment;
+navy remains the structural header and teal remains the primary action color.
+Credit the workbench as **by Anass ASSRI** without competing with decision data.
 
 Readability deliberately improves on the old browser UI:
 

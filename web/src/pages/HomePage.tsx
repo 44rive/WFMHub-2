@@ -80,18 +80,20 @@ export function HomePage() {
   const overall = report?.overallStatus ?? (running ? 'running' : 'not run')
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
+    <main id="main-content" className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl px-5 py-7 sm:px-8 lg:px-10">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-6">
           <div className="flex items-center gap-4">
-            <div className="grid size-12 place-items-center rounded-2xl bg-cyan-300 font-black text-slate-950">
+            <div className="grid size-12 place-items-center rounded-2xl bg-[#DDF3E8] font-black text-[#0B1F33]">
               W2
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#9AD9B4]">
                 Phase 0.4
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight">Hybrid compatibility gate</h1>
+              <h1 tabIndex={-1} className="text-2xl font-semibold tracking-tight">
+                Hybrid compatibility gate
+              </h1>
             </div>
           </div>
           <StatusBadge status={overall} />
@@ -120,9 +122,15 @@ export function HomePage() {
           />
           <SummaryCard
             label="Third-party host native files"
-            value="Zero"
-            detail="Only the official CPython runtime is native"
-            good
+            value={
+              results.get('host_sqlite')?.status === 'pass'
+                ? 'Zero'
+                : results.get('host_sqlite')?.status === 'fail'
+                  ? 'Check failed'
+                  : 'Not tested'
+            }
+            detail="Confirmed by the host probe after it runs"
+            good={results.get('host_sqlite')?.status === 'pass'}
           />
           <SummaryCard
             label="Runtime network"
@@ -154,7 +162,7 @@ export function HomePage() {
               type="button"
               disabled={!connectionReady || running}
               onClick={() => void runAll()}
-              className="rounded-xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-xl bg-[#DDF3E8] px-5 py-3 font-bold text-[#0B1F33] transition hover:bg-[#B8E3CA] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {running ? 'Testing…' : 'Run all probes'}
             </button>
@@ -209,7 +217,7 @@ export function HomePage() {
             </h2>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               {report.overallStatus === 'pass'
-                ? 'This authorizes the next RTA vertical-slice build. It does not yet prove production-scale performance.'
+                ? 'The browser runtime is compatible on this machine. This does not prove production-scale WFM performance or operational data quality.'
                 : 'This is useful evidence, not a dead end. The failed component will be removed or kept optional while Python and SQLite remain the core.'}
             </p>
             {saveMessage ? <p className="mt-3 text-sm text-slate-400">{saveMessage}</p> : null}
@@ -270,7 +278,7 @@ function StatusBadge({ status, compact = false }: { status: string; compact?: bo
       : status === 'fail'
         ? 'border-rose-300/30 bg-rose-300/10 text-rose-200'
         : status === 'running'
-          ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-200'
+          ? 'border-[#1F7A53] bg-[#1F7A53]/20 text-[#DDF3E8]'
           : 'border-slate-700 bg-slate-900 text-slate-400'
   return (
     <span

@@ -1,6 +1,6 @@
 # WFMHub 2 full-product UI architecture
 
-Status: proposed product-wide design baseline. This document extends the
+Status: approved product-wide design baseline; business capabilities remain staged. This document extends the
 Phase 1 [RTA blueprint](UI_BLUEPRINT.md) to tactical and strategic WFM. The
 mockups are design references, not evidence that their business engines exist.
 
@@ -14,7 +14,9 @@ Evidence -> Explain -> Plan/compare -> Human decision -> Measure outcome
   sources   RTA/review    forecast/scenario   register         learning
 ```
 
-The old WFMHub-Portable navy/teal/gold identity is retained. The full shell
+The old WFMHub-Portable navy/teal/gold identity is retained, with the report
+workbook's green `#1F7A53` and pale green `#DDF3E8` replacing bright-blue
+information accents. The product shell credits **by Anass ASSRI**. The full shell
 has six workspaces, the maximum we will expose in the primary navigation at
 the 1280 px minimum working width:
 
@@ -54,7 +56,8 @@ disabled filters irrelevant to the current question.
 ```
 
 The shell keeps the old compact navy header, gold active rule, teal primary
-action, cool-gray canvas, white panels, dense tables, and tabular numerals.
+action, green information accents, cool-gray canvas, white panels, dense
+tables, and tabular numerals.
 The shared token and accessibility contract remains in
 [UI_BLUEPRINT.md](UI_BLUEPRINT.md#visual-system-inherited-from-wfmhub-portable).
 
@@ -72,7 +75,7 @@ days, next twelve weeks, and next eighteen months—without adding unlike
 measures. A horizon risk map, prioritized work queue, exact-measure register,
 and data-trust panel lead to the relevant working page.
 
-![Full WFM Command Center](design/wfmhub2-full-command.png)
+![Full WFM Command Center with the approved green accent and credit](design/wfmhub2-full-command-green.png)
 
 ### 2. Forecast & Demand Intelligence
 

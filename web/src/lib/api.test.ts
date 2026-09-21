@@ -66,6 +66,32 @@ describe('browser engine discovery', () => {
 })
 
 describe('engine API client', () => {
+  it('reads the Phase 0.4 host health endpoint from the product shell', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            status: 'ok',
+            version: '0.2.0-phase0.4',
+            architecture: 'stdlib-sqlite-browser-wasm-spike',
+            thirdPartyHostNativeFiles: 0,
+          }),
+          { status: 200 },
+        ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createEngineClient(readyConnection).getCompatibilityHealth(),
+    ).resolves.toMatchObject({
+      status: 'ok',
+      thirdPartyHostNativeFiles: 0,
+    })
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:43127/api/compat/health', {
+      headers: { 'X-WFMHub-Token': 'launch-secret' },
+    })
+  })
+
   it('uses the dynamic port and authenticates the health request', async () => {
     const fetchMock = vi.fn(
       async () =>
