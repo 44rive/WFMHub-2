@@ -82,6 +82,147 @@ CREATE TABLE IF NOT EXISTS wfm_quality_issue (
 
 CREATE INDEX IF NOT EXISTS ix_wfm_quality_generation
 ON wfm_quality_issue(generation_id, severity);
+
+-- Generation-keyed Bronze evidence.  These tables preserve source location
+-- and validation state; only a successful generation can become active.
+CREATE TABLE IF NOT EXISTS wfm_raw_fte_agent (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_sheet TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    client_id TEXT,
+    employment_status TEXT,
+    agent_name TEXT,
+    team_leader TEXT,
+    ops_manager TEXT,
+    lob TEXT,
+    market TEXT,
+    language TEXT,
+    location TEXT,
+    city TEXT,
+    fte REAL,
+    end_date TEXT,
+    valid INTEGER NOT NULL CHECK(valid IN (0, 1)),
+    validation_codes TEXT NOT NULL,
+    PRIMARY KEY (generation_id, source_key, source_sheet, source_row)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_raw_fte_time_off (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_sheet TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    source_kind TEXT NOT NULL CHECK(source_kind IN ('PTO', 'AWAY')),
+    client_id TEXT,
+    agent_name TEXT,
+    start_date TEXT,
+    end_date TEXT,
+    day_coverage TEXT,
+    start_time TEXT,
+    end_time TEXT,
+    absence_type TEXT,
+    record_status TEXT,
+    comment TEXT,
+    valid INTEGER NOT NULL CHECK(valid IN (0, 1)),
+    validation_codes TEXT NOT NULL,
+    PRIMARY KEY (generation_id, source_key, source_sheet, source_row)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_raw_schedule_shift (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    source_column INTEGER NOT NULL CHECK(source_column > 0),
+    business_date TEXT NOT NULL,
+    source_agent_id TEXT,
+    roster_client_id TEXT,
+    agent_name TEXT,
+    raw_assignment TEXT NOT NULL,
+    assignment TEXT,
+    assignment_type TEXT,
+    scheduled_start TEXT,
+    scheduled_end TEXT,
+    schedule_state TEXT NOT NULL CHECK(schedule_state IN ('SHIFT', 'OFF', 'INVALID')),
+    is_overnight INTEGER NOT NULL CHECK(is_overnight IN (0, 1)),
+    in_roster_scope INTEGER NOT NULL CHECK(in_roster_scope IN (0, 1)),
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name', 'none')),
+    valid INTEGER NOT NULL CHECK(valid IN (0, 1)),
+    validation_codes TEXT NOT NULL,
+    PRIMARY KEY (generation_id, source_key, source_row, source_column)
+);
+
+-- Generation-keyed Silver facts.  Consumers join these tables to the single
+-- active-generation pointer rather than selecting the newest timestamp.
+CREATE TABLE IF NOT EXISTS wfm_agent_roster (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    client_id TEXT NOT NULL,
+    employment_status TEXT NOT NULL CHECK(employment_status IN ('Active', 'Leaver')),
+    agent_name TEXT NOT NULL,
+    team_leader TEXT,
+    ops_manager TEXT,
+    lob TEXT,
+    market TEXT,
+    language TEXT,
+    location TEXT,
+    city TEXT,
+    fte REAL CHECK(fte IS NULL OR fte >= 0),
+    eligible_through TEXT,
+    source_key TEXT NOT NULL,
+    source_sheet TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    PRIMARY KEY (generation_id, client_id)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_time_off (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_kind TEXT NOT NULL CHECK(source_kind IN ('PTO', 'AWAY')),
+    client_id TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    day_coverage TEXT NOT NULL CHECK(day_coverage IN ('FULL_DAY', 'PARTIAL_DAY')),
+    start_time TEXT,
+    end_time TEXT,
+    absence_type TEXT NOT NULL,
+    record_status TEXT NOT NULL,
+    overlay_eligible INTEGER NOT NULL CHECK(overlay_eligible IN (0, 1)),
+    comment TEXT,
+    source_key TEXT NOT NULL,
+    source_sheet TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    PRIMARY KEY (generation_id, source_key, source_sheet, source_row),
+    FOREIGN KEY (generation_id, client_id)
+        REFERENCES wfm_agent_roster(generation_id, client_id)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_schedule_shift (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    business_date TEXT NOT NULL,
+    roster_client_id TEXT NOT NULL,
+    source_agent_id TEXT,
+    agent_name TEXT,
+    assignment TEXT NOT NULL,
+    assignment_type TEXT NOT NULL,
+    scheduled_start TEXT,
+    scheduled_end TEXT,
+    schedule_state TEXT NOT NULL CHECK(schedule_state IN ('SHIFT', 'OFF')),
+    is_overnight INTEGER NOT NULL CHECK(is_overnight IN (0, 1)),
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name')),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    source_column INTEGER NOT NULL CHECK(source_column > 0),
+    PRIMARY KEY (generation_id, source_key, source_row, source_column),
+    FOREIGN KEY (generation_id, roster_client_id)
+        REFERENCES wfm_agent_roster(generation_id, client_id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_roster_active_lookup
+ON wfm_agent_roster(generation_id, client_id, eligible_through);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_schedule_active_date
+ON wfm_schedule_shift(generation_id, business_date, roster_client_id);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_time_off_active_date
+ON wfm_time_off(generation_id, start_date, end_date, client_id);
 """
 
 

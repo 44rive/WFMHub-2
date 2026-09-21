@@ -23,7 +23,7 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green product shell and stdlib refresh control integrated; exact new Windows ZIP still awaits qualification |
+| `origin/main` | Accepted hybrid foundation plus initial Phase 1 implementation | Green product shell and stdlib refresh control integrated; run `35604264149` qualified the exact Windows ZIP |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -68,6 +68,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-026 | Replace bright-blue information accents with the old report workbook's green `#1F7A53` / pale green `#DDF3E8`; keep navy structural, teal action, gold rule, and credit the UI **by Anass ASSRI**. | The user approved the product design with these two corrections. The workbook and old design tokens confirm the exact colors and authorship convention. |
 | D-027 | Begin Phase 1 with an honest capability-gated shell and preserve the five-probe doctor under Govern. | Source-driven RTA APIs do not exist yet; a visible empty state is safer than fabricated KPIs or dead Plan/Capacity links. |
 | D-028 | Stage source versions and quality findings in namespaced SQLite refresh generations; publish facts and switch the active pointer in one transaction. | A failed rebuild must leave the previous validated state active. The compatibility report schema remains additive and the target host remains standard-library-only. |
+| D-029 | Treat FTE Count and published wide StartEndTimes as the first governed Phase 1 contracts, with source provenance and generation-keyed Bronze/Silver tables. | They establish effective roster, PTO/Away, and scheduled coverage without inventing live attendance, service, or required-FTE evidence. Numeric Excel IDs are rejected because lost leading zeroes cannot be recovered safely. |
 
 ## Evidence already collected
 
@@ -348,16 +349,18 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
-- The Phase 1 product shell currently has no governed RTA read API, source
-  refresh, service/attendance facts, or requirement input. Its Command page is
+- The Phase 1 product shell still has no governed RTA read API, live status,
+  LILO, call-service facts, or requirement input. Its Command page is
   deliberately empty; the doctor is the only live workflow. A true required-
   FTE shortage also needs the separate Verint Staff Type requirement source.
-- SQLite generation/manifest/quality control is now implemented, but no source
-  files are parsed and no canonical facts are published yet. An activation
-  callback must validate and write its generation-keyed facts transactionally;
-  the existence of a generation is not evidence of business-data readiness.
-- The changed frontend and browser smoke passed locally, but the exact new
-  Windows release ZIP has not been built or retested on the managed workstation.
+- FTE Count and published StartEndTimes now parse into byte-bound,
+  generation-keyed roster, time-off, and scheduled-shift facts, but no source
+  discovery or refresh command invokes them yet. Failed generations retain
+  manifest and quality evidence while attempted fact publication is rolled
+  back.
+- The exact post-shell Windows ZIP passed ordinary Windows CI. That exact ZIP
+  has not yet been rerun on the managed workstation; the earlier accepted
+  Phase 0.4 target report remains the policy-compatibility evidence.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
@@ -379,23 +382,62 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Port the reviewed FTE roster and published-schedule source contracts into
-   the pure-stdlib host with synthetic fixtures, exact scope rules, and read-
-   only local file access; never copy operational/user data.
-2. Deliver the first governed RTA vertical slice: read-only local source
-   refresh -> canonical SQLite facts -> service/attendance -> staffing gap ->
-   React command centre -> Excel export.
+1. Add the read-only refresh coordinator and source-health/read APIs around the
+   implemented FTE Count and published StartEndTimes contracts.
+2. Port Agent Status and LILO, then Call-by-Call, to create governed actual-
+   attendance and service facts before exposing operational Command KPIs.
 3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
    shortage; the first four-source stage may show observed versus scheduled
    coverage only.
-4. Rebuild the exact Windows ZIP and rerun DOCTOR plus five Edge probes on the
-   target after the UI/runtime integration.
-5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+4. Connect the canonical read model to the React Command centre and bounded
+   Excel export, preserving explicit freshness and source-quality states.
+5. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
+   after source refresh and UI/runtime integration.
+6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
-6. Reach old-portable business parity before declaring WFMHub 2 the operational
+7. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-21 — First governed Phase 1 source contracts
+
+- Added a lazy-OpenPyXL FTE Count adapter for roster, PTO, and Away sheets and
+  a standard-library parser for published wide StartEndTimes extracts. Both
+  read sources without modifying them and retain source row/column provenance.
+- Client IDs remain text; blank, numeric, or duplicate identities are blocking
+  findings. Roster eligibility is Active or Leaver through the inclusive end
+  date. Schedule business dates come from the wide headers; explicit next-day
+  overnight shifts are accepted, while inferred rollover and malformed
+  intervals are rejected.
+- Parsed snapshots carry the source size, modification time, and SHA-256 and
+  reject a file that changes during parsing. Activation requires the exact
+  matching source evidence in the same generation, preventing facts from one
+  file version being published under another file's manifest.
+- Verint IDs that do not equal roster Client IDs retain the original source ID
+  and may use an exact unique-name scope crosswalk, matching the old product's
+  behavior. The match method and warning are persisted, so this is no longer a
+  silent reassignment. Time-off register rows also carry an explicit overlay-
+  eligibility flag: Approved PTO and Active/Planned/Closed Away only.
+- Added generation-keyed raw and canonical SQLite tables for roster, time off,
+  and scheduled shifts. Valid facts and the active-generation pointer publish
+  in one transaction, so a broken refresh leaves the prior state active.
+- Synthetic parser, scope, provenance, and rollback coverage raised the suite
+  to `50` passing tests. Ruff format/lint and strict Pyright pass from the
+  integration worktree.
+- This increment does not implement Activities, Agent Status, LILO,
+  Call-by-Call, Verint requirement, the refresh command/API, or UI KPIs.
+
+### 2026-09-21 — Post-shell exact Windows artifact qualified
+
+- GitHub Actions run `35604264149` passed Linux source/frozen-lock checks, the
+  exact Windows x64 hybrid spike, and the legacy embedded-CPython regression.
+- The downloaded hybrid archive contains 86 members, is 73,153,088 bytes, and
+  has SHA-256
+  `6cb6f9f33c805cc1340dd94ccbca69db5f65493e9bfba2486aa0f92a28611fe4`.
+  Its host doctor and all five browser probes passed in CI. This is ordinary-
+  Windows evidence; the exact archive has not yet been rerun on the managed
+  workstation.
 
 ### 2026-09-21 — Additive stdlib refresh authority
 
