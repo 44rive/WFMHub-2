@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS wfm_source_manifest (
     adapter_version TEXT NOT NULL,
     policy_fingerprint TEXT NOT NULL,
     row_count INTEGER CHECK(row_count IS NULL OR row_count >= 0),
+    bronze_generation_id INTEGER REFERENCES wfm_refresh_generation(id),
     recorded_at TEXT NOT NULL,
     UNIQUE(generation_id, source_type, source_key)
 );
@@ -496,6 +497,21 @@ def initialize_database(path: Path) -> None:
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA busy_timeout=30000")
         connection.executescript(SCHEMA)
+        manifest_columns = {
+            row[1] for row in connection.execute("PRAGMA table_info(wfm_source_manifest)")
+        }
+        if "bronze_generation_id" not in manifest_columns:
+            connection.execute(
+                "ALTER TABLE wfm_source_manifest ADD COLUMN bronze_generation_id INTEGER "
+                "REFERENCES wfm_refresh_generation(id)"
+            )
+        connection.execute(
+            """
+            UPDATE wfm_source_manifest
+            SET bronze_generation_id = generation_id
+            WHERE state = 'present' AND bronze_generation_id IS NULL
+            """
+        )
         result = connection.execute("PRAGMA quick_check").fetchone()
         if result != ("ok",):
             raise RuntimeError(f"SQLite quick_check failed: {result!r}")

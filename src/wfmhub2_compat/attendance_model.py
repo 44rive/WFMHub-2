@@ -228,11 +228,16 @@ def _status_segments(
 ) -> tuple[list[_StatusSegment], tuple[str, ...]]:
     rows = connection.execute(
         """
-        SELECT source_key, source_row, status, actual_category, status_start, status_end
-        FROM wfm_raw_agent_status
-        WHERE generation_id = ? AND roster_client_id = ?
-          AND status_start < ? AND status_end > ?
-        ORDER BY status_start, source_key, source_row
+        SELECT raw.source_key, raw.source_row, raw.status, raw.actual_category,
+               raw.status_start, raw.status_end
+        FROM wfm_source_manifest AS manifest
+        JOIN wfm_raw_agent_status AS raw
+          ON raw.generation_id = manifest.bronze_generation_id
+         AND raw.source_key = manifest.source_key
+        WHERE manifest.generation_id = ? AND manifest.source_type = 'agent_status'
+          AND manifest.state = 'present' AND raw.roster_client_id = ?
+          AND raw.status_start < ? AND raw.status_end > ?
+        ORDER BY raw.status_start, raw.source_key, raw.source_row
         """,
         (generation_id, client_id, end.isoformat(), start.isoformat()),
     ).fetchall()
@@ -285,11 +290,15 @@ def _lilo_evidence(
     placeholders = ",".join("?" for _ in required)
     rows = connection.execute(
         f"""
-        SELECT first_login, last_logout, source_key
-        FROM wfm_raw_lilo
-        WHERE generation_id = ? AND roster_client_id = ?
-          AND extract_date IN ({placeholders})
-        ORDER BY source_key, source_row
+        SELECT raw.first_login, raw.last_logout, raw.source_key
+        FROM wfm_source_manifest AS manifest
+        JOIN wfm_raw_lilo AS raw
+          ON raw.generation_id = manifest.bronze_generation_id
+         AND raw.source_key = manifest.source_key
+        WHERE manifest.generation_id = ? AND manifest.source_type = 'lilo'
+          AND manifest.state = 'present' AND raw.roster_client_id = ?
+          AND raw.extract_date IN ({placeholders})
+        ORDER BY raw.source_key, raw.source_row
         """,
         (generation_id, client_id, *(value.isoformat() for value in sorted(required))),
     ).fetchall()
@@ -312,13 +321,24 @@ def _lilo_evidence(
 
 
 def _loaded_dates(connection: sqlite3.Connection, generation_id: int, table: str) -> set[date]:
-    if table not in {"wfm_raw_agent_status", "wfm_raw_lilo"}:
+    source_type = {
+        "wfm_raw_agent_status": "agent_status",
+        "wfm_raw_lilo": "lilo",
+    }.get(table)
+    if source_type is None:
         raise ValueError("unsupported evidence table")
     return {
         parsed
         for (value,) in connection.execute(
-            f"SELECT DISTINCT extract_date FROM {table} WHERE generation_id = ?",
-            (generation_id,),
+            f"""
+            SELECT DISTINCT raw.extract_date FROM wfm_source_manifest AS manifest
+            JOIN {table} AS raw
+              ON raw.generation_id = manifest.bronze_generation_id
+             AND raw.source_key = manifest.source_key
+            WHERE manifest.generation_id = ? AND manifest.source_type = ?
+              AND manifest.state = 'present'
+            """,
+            (generation_id, source_type),
         )
         if (parsed := _day(value)) is not None
     }

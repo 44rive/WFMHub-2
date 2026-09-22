@@ -10,7 +10,7 @@ import pytest
 
 from wfmhub2_compat.catalog import load_queue_mapping_snapshot
 from wfmhub2_compat.refresh_store import RefreshStore, SourceVersion
-from wfmhub2_compat.storage import initialize_database
+from wfmhub2_compat.storage import SCHEMA, initialize_database
 
 EMPTY_CATALOG = hashlib.sha256(b"").hexdigest()
 
@@ -100,6 +100,63 @@ def test_migrates_existing_compatibility_database_without_losing_report(tmp_path
     assert old_report == ("pass", "synthetic-report.json")
     assert control_rows == [(1, None)]
     assert store.active_generation_id() is None
+
+
+def test_existing_preview_manifest_gains_physical_bronze_owner(tmp_path: Path) -> None:
+    path = tmp_path / "data/control.sqlite"
+    path.parent.mkdir(parents=True)
+    old_schema = SCHEMA.replace(
+        "    bronze_generation_id INTEGER REFERENCES wfm_refresh_generation(id),\n", ""
+    )
+    with sqlite3.connect(path) as connection:
+        connection.executescript(old_schema)
+        connection.execute(
+            """
+            INSERT INTO wfm_refresh_generation
+            (id, started_at, status, catalog_sha256, model_version)
+            VALUES (1, 'synthetic-time', 'succeeded', ?, 'test-v1')
+            """,
+            (EMPTY_CATALOG,),
+        )
+        connection.execute(
+            """
+            INSERT INTO wfm_source_manifest
+            (generation_id, source_type, source_key, file_size, mtime_ns,
+             content_sha256, adapter_version, policy_fingerprint, row_count, recorded_at)
+            VALUES (1, 'call_by_call', 'synthetic/calls.csv', 28, 123456789,
+                    ?, 'test-v1', 'synthetic-map-v1', 2, 'synthetic-time')
+            """,
+            ("a" * 64,),
+        )
+    initialize_database(path)
+
+    with sqlite3.connect(path) as connection:
+        assert connection.execute(
+            """
+            SELECT bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = 1 AND source_type = 'call_by_call'
+            """
+        ).fetchone() == (1,)
+
+
+def test_reused_bronze_owner_must_be_successful_matching_evidence(tmp_path: Path) -> None:
+    store = RefreshStore(tmp_path / "control.sqlite")
+    first = start(store)
+    store.stage_source(first, source())
+    store.activate_generation(first)
+    second = start(store)
+
+    store.stage_source(second, source(), bronze_generation_id=first)
+    with sqlite3.connect(store.path) as connection:
+        assert connection.execute(
+            """
+            SELECT bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type = 'call_by_call'
+            """,
+            (second,),
+        ).fetchone() == (first,)
+    with pytest.raises(ValueError, match="matching successful evidence"):
+        store.stage_source(second, source(digest="b" * 64), bronze_generation_id=first)
 
 
 def test_source_manifest_is_idempotent_and_inherited_until_changed(tmp_path: Path) -> None:

@@ -152,7 +152,13 @@ class RefreshStore:
             )
             return _inserted_id(cursor)
 
-    def stage_source(self, generation_id: int, source: SourceVersion) -> int:
+    def stage_source(
+        self,
+        generation_id: int,
+        source: SourceVersion,
+        *,
+        bronze_generation_id: int | None = None,
+    ) -> int:
         for name in ("source_type", "source_key", "adapter_version", "policy_fingerprint"):
             _required_text(getattr(source, name), name)
         _sha256(source.content_sha256, "content_sha256")
@@ -160,12 +166,41 @@ class RefreshStore:
             raise ValueError("file_size and mtime_ns must be nonnegative")
         if source.row_count is not None and source.row_count < 0:
             raise ValueError("row_count must be nonnegative")
+        bronze_owner = generation_id if bronze_generation_id is None else bronze_generation_id
         with _write_transaction(self.path) as connection:
             _running(connection, generation_id)
+            if bronze_owner != generation_id:
+                owner = connection.execute(
+                    """
+                    SELECT generation.status, manifest.state, manifest.content_sha256,
+                           manifest.adapter_version, manifest.policy_fingerprint,
+                           manifest.row_count, manifest.bronze_generation_id
+                    FROM wfm_refresh_generation AS generation
+                    JOIN wfm_source_manifest AS manifest
+                      ON manifest.generation_id = generation.id
+                    WHERE generation.id = ? AND manifest.source_type = ?
+                      AND manifest.source_key = ?
+                    """,
+                    (bronze_owner, source.source_type, source.source_key),
+                ).fetchone()
+                if (
+                    owner is None
+                    or owner[0] != "succeeded"
+                    or owner[1] != "present"
+                    or tuple(owner[2:6])
+                    != (
+                        source.content_sha256,
+                        source.adapter_version,
+                        source.policy_fingerprint,
+                        source.row_count,
+                    )
+                    or owner[6] != bronze_owner
+                ):
+                    raise ValueError("reused Bronze owner is not matching successful evidence")
             existing = connection.execute(
                 """
                 SELECT id, state, file_size, mtime_ns, content_sha256, adapter_version,
-                       policy_fingerprint, row_count
+                       policy_fingerprint, row_count, bronze_generation_id
                 FROM wfm_source_manifest
                 WHERE generation_id = ? AND source_type = ? AND source_key = ?
                 """,
@@ -178,6 +213,7 @@ class RefreshStore:
                 source.adapter_version,
                 source.policy_fingerprint,
                 source.row_count,
+                bronze_owner,
             )
             if existing is not None:
                 if existing["state"] != "present" or tuple(existing[2:]) != fingerprint:
@@ -187,8 +223,9 @@ class RefreshStore:
                 """
                 INSERT INTO wfm_source_manifest (
                     generation_id, source_type, source_key, file_size, mtime_ns,
-                    content_sha256, adapter_version, policy_fingerprint, row_count, recorded_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    content_sha256, adapter_version, policy_fingerprint, row_count,
+                    bronze_generation_id, recorded_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     generation_id,

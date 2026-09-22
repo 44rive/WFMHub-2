@@ -6,6 +6,7 @@ import argparse
 import csv
 import hashlib
 import json
+import sqlite3
 import tempfile
 from pathlib import Path
 
@@ -185,8 +186,65 @@ def main() -> int:
             writer.writerow(
                 ["Name", "Data Source IDs", *(f"07/{day:02d}/2026" for day in range(1, 32)), ""]
             )
+            writer.writerow(
+                [
+                    "Ada Agent",
+                    "00123",
+                    ".ORG | Work 07/01/2026 9:00 AM-07/01/2026 5:00 PM",
+                    *(["Off"] * 30),
+                    "",
+                ]
+            )
+        reused_cut = coordinator.refresh()
+        reused_id = reused_cut["generationId"]
+        if reused_id == result["generationId"]:
+            raise RuntimeError("changed schedule did not create a new generation")
+        reused_health = reused_cut["sourceHealth"]
+        if reused_health["sources"]["attendance"]["agentDayCount"] != 31:
+            raise RuntimeError("reused actuals did not rebuild attendance")
+        if reused_health["sources"]["callByCall"]["canonicalLegCount"] != 1:
+            raise RuntimeError("reused call rows did not rebuild canonical service")
+        if reused_health["sources"]["callByCall"]["serviceIntervalCount"] != 1:
+            raise RuntimeError("reused call rows did not rebuild service intervals")
+        with sqlite3.connect(coordinator.store.path) as connection:
+            owners = connection.execute(
+                """
+                SELECT source_type, bronze_generation_id FROM wfm_source_manifest
+                WHERE generation_id = ?
+                  AND source_type IN ('agent_status', 'lilo', 'call_by_call')
+                ORDER BY source_type
+                """,
+                (reused_id,),
+            ).fetchall()
+            if owners != [
+                ("agent_status", result["generationId"]),
+                ("call_by_call", result["generationId"]),
+                ("lilo", result["generationId"]),
+            ]:
+                raise RuntimeError("known event Bronze versions were not reused")
+            for table in ("wfm_raw_agent_status", "wfm_raw_lilo", "wfm_raw_call_leg"):
+                if connection.execute(
+                    f"SELECT count(*) FROM {table} WHERE generation_id = ?", (reused_id,)
+                ).fetchone() != (0,):
+                    raise RuntimeError(f"reused {table} rows were duplicated")
+            attendance = connection.execute(
+                """
+                SELECT status_source_loaded, lilo_source_loaded, lilo_row_present
+                FROM wfm_attendance_agent_day
+                WHERE generation_id = ? AND business_date = '2026-07-01'
+                """,
+                (reused_id,),
+            ).fetchone()
+            if attendance != (1, 1, 1):
+                raise RuntimeError("reused Status/LILO evidence did not reach attendance")
+
+        with schedule.open("w", encoding="cp1252", newline="") as stream:
+            writer = csv.writer(stream, delimiter="\t")
+            writer.writerow(
+                ["Name", "Data Source IDs", *(f"07/{day:02d}/2026" for day in range(1, 32)), ""]
+            )
             writer.writerow(["Ada Agent", "00123", "not an interval", *(["Off"] * 30), ""])
-        active_id = health["activeGenerationId"]
+        active_id = reused_id
         try:
             coordinator.refresh()
         except RefreshFailedError as exc:

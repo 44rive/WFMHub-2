@@ -109,13 +109,26 @@ host then returns a no-op success and reuses that generation without hashing,
 parsing, or duplicating facts. Added, removed, moved, policy-drifted, or
 ambiguous sources force a governed rebuild.
 
-Changed large files now receive one SHA-256 pass and one streaming parse into
+Changed large files receive one SHA-256 pass and one streaming parse into
 generation-keyed Bronze staging. Atomic activation verifies the bound manifest
 and file metadata, then builds canonical facts from those staged rows; it does
-not reopen the CSV. This replaces the four hash plus two parse passes in
-Preview `.5`. Per-file known-version reactivation and dependency-scoped rebuild
-are still not implemented, so adding one new daily file still causes the other
-configured event files to be parsed once.
+not reopen the CSV. This replaced the four hash plus two parse passes in
+Preview `.5` and shipped in Preview `.6`.
+
+The next source-version change retains a reference to the successful generation
+that owns each Status, LILO, or Call by Call Bronze file. An unchanged file with
+matching metadata is reused without hashing; changed metadata gets one hash,
+then an exact known version can be reactivated after A→B→A without parsing or
+copying its rows. Reuse requires the same selected source root, source key,
+content SHA-256, adapter, policy, and FTE roster version. A new version uses the
+precomputed hash for its one streaming parse. The complete source manifest and
+active pointer still publish atomically.
+
+Derived attendance, canonical call legs, and service intervals still rebuild
+for the whole cut when any source changes. The source-version change therefore
+reduces event-file I/O and Bronze duplication, but it does not yet meet the
+full affected-scope cost contract above. Preview `.6` does not contain this
+next change.
 
 During a rebuild, `/api/rta/source-health` exposes bounded in-memory stage,
 relative source key, elapsed time, and file progress. Unexpected failures keep

@@ -146,6 +146,7 @@ class CallSourcePlan:
     degraded_rows: int
     date_from: date | None
     date_to: date | None
+    bronze_generation_id: int | None = None
 
 
 @dataclass
@@ -473,10 +474,17 @@ def preflight_call_source(
     policy: CallPolicy,
     stage_database: Path | None = None,
     generation_id: int | None = None,
+    initial_fingerprint: tuple[int, int, str] | None = None,
 ) -> CallSourcePlan:
     if (stage_database is None) != (generation_id is None):
         raise ValueError("stage_database and generation_id must be provided together")
-    before = _fingerprint(path)
+    before = (
+        _Fingerprint(*initial_fingerprint)
+        if initial_fingerprint is not None
+        else _fingerprint(path)
+    )
+    if not _metadata_matches(path, before):
+        raise SourceContractError(f"source changed before parsing: {path.name}")
     accepted = service_rows = scoped_out = rejected = unmapped = degraded = 0
     date_from: date | None = None
     date_to: date | None = None
@@ -592,7 +600,9 @@ def stage_call_plans(
     plans: Sequence[CallSourcePlan],
 ) -> None:
     for plan in plans:
-        store.stage_source(generation_id, plan.version)
+        store.stage_source(
+            generation_id, plan.version, bronze_generation_id=plan.bronze_generation_id
+        )
         store.record_quality_issues(generation_id, plan.findings)
 
 
@@ -707,7 +717,7 @@ def _publish_raw_plan(
 
 def _publish_canonical(connection: sqlite3.Connection, generation_id: int) -> None:
     columns = ", ".join(_RAW_COLUMNS)
-    selected = ", ".join(f"ranked.{name}" for name in _RAW_COLUMNS)
+    selected = ", ".join(("? AS generation_id", *(f"ranked.{name}" for name in _RAW_COLUMNS[1:])))
     connection.execute(
         f"""
         INSERT INTO wfm_call_leg ({columns})
@@ -718,16 +728,17 @@ def _publish_canonical(connection: sqlite3.Connection, generation_id: int) -> No
                        PARTITION BY raw.call_key
                        ORDER BY manifest.mtime_ns DESC, raw.source_key DESC, raw.source_row DESC
                    ) AS row_rank
-            FROM wfm_raw_call_leg AS raw
-            JOIN wfm_source_manifest AS manifest
-              ON manifest.generation_id = raw.generation_id
-             AND manifest.source_type = 'call_by_call'
-             AND manifest.source_key = raw.source_key
-            WHERE raw.generation_id = ? AND manifest.state = 'present'
+            FROM wfm_source_manifest AS manifest
+            JOIN wfm_raw_call_leg AS raw
+              ON raw.generation_id = manifest.bronze_generation_id
+             AND raw.source_key = manifest.source_key
+            WHERE manifest.generation_id = ?
+              AND manifest.source_type = 'call_by_call'
+              AND manifest.state = 'present'
         ) AS ranked
         WHERE ranked.row_rank = 1
         """,
-        (generation_id,),
+        (generation_id, generation_id),
     )
 
 
@@ -882,12 +893,17 @@ def publish_call_plans(
             if rows_staged
             else _publish_raw_plan(connection, generation_id, plan, scope, policy)
         )
-        if rows_staged:
+        if rows_staged and plan.bronze_generation_id is None:
             staged_counts = connection.execute(
                 """
                 SELECT count(*), COALESCE(sum(service_eligible), 0)
-                FROM wfm_raw_call_leg
-                WHERE generation_id = ? AND source_key = ?
+                FROM wfm_source_manifest AS manifest
+                JOIN wfm_raw_call_leg AS raw
+                  ON raw.generation_id = manifest.bronze_generation_id
+                 AND raw.source_key = manifest.source_key
+                WHERE manifest.generation_id = ?
+                  AND manifest.source_type = 'call_by_call'
+                  AND manifest.source_key = ? AND manifest.state = 'present'
                 """,
                 (generation_id, plan.source_key),
             ).fetchone()
