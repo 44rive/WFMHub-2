@@ -440,6 +440,12 @@ only through a recorded decision with evidence.
   still searched for a `.6` filename. The workflow now matches the unique
   versioned preview ZIP and uses a version-neutral CI artifact name; exact
   packaged doctor/source/browser smoke must pass on the corrected run.
+- PR #3 run `35784764746` passed Linux, extracted the exact `.7` Windows ZIP,
+  passed its embedded host doctor, and printed source-smoke PASS. The smoke
+  process then failed on Windows temporary-folder cleanup because its new
+  SQLite inspection used a transaction context manager that did not close the
+  file handle. The smoke now closes that read connection explicitly; the
+  browser probe was not reached in that run.
 
 ### 2026-09-22 — Preview `.5` refresh regression audited and correction started
 

@@ -8,6 +8,7 @@ import hashlib
 import json
 import sqlite3
 import tempfile
+from contextlib import closing
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -206,7 +207,7 @@ def main() -> int:
             raise RuntimeError("reused call rows did not rebuild canonical service")
         if reused_health["sources"]["callByCall"]["serviceIntervalCount"] != 1:
             raise RuntimeError("reused call rows did not rebuild service intervals")
-        with sqlite3.connect(coordinator.store.path) as connection:
+        with closing(sqlite3.connect(coordinator.store.path)) as connection:
             owners = connection.execute(
                 """
                 SELECT source_type, bronze_generation_id FROM wfm_source_manifest
