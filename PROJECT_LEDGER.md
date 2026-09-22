@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview `.4` | Call-by-Call/service components are published; target validation is next |
+| `origin/main` | Phase 1 attendance preview `.5` | Governed attendance evidence is published; exact managed-target validation is next |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.5` attendance read model is implemented locally; exact Windows qualification remains |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.5` is qualified, promoted to `main`, and published from the exact CI artifact |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -367,9 +367,10 @@ only through a recorded decision with evidence.
   and quality evidence while attempted fact publication is rolled back. Large
   event files are streamed in bounded batches, but incremental planning remains
   unimplemented and every refresh re-reads configured files.
-- Exact preview `.2` launch and source refresh now pass on the managed
-  workstation. Its doctor and five Edge probes pass Windows CI; the last full
-  on-device capability report remains the accepted Phase 0.4 report.
+- Exact preview `.2` launch and source refresh pass on the managed workstation.
+  Preview `.5` passes ordinary-Windows CI and is published, but its attendance
+  refresh and doctor/five-probe run on the managed target remain pending. The
+  last full on-device capability report remains the accepted Phase 0.4 report.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
@@ -391,8 +392,9 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Qualify and publish the `.5` attendance-read-model Windows ZIP, then rerun
-   refresh plus DOCTOR/five Edge probes on the managed target.
+1. Extract the exact `.5` release into a new managed-target folder, rerun
+   refresh plus DOCTOR/five Edge probes, and retain the attendance readiness
+   counts or bounded refresh error as evidence.
 2. Port the effective-dated service profiles and metric catalog over the raw
    Call-by-Call components, then expose ratio-of-sums service KPIs without
    averaging percentages.
@@ -401,8 +403,8 @@ only through a recorded decision with evidence.
    coverage only.
 4. Add governed operational read models to Command and bounded Excel export,
    preserving explicit freshness and source-quality states.
-5. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
-   after source refresh and UI/runtime integration.
+5. Add Verint Activities only as post-day attendance reconciliation evidence;
+   it must not silently become live attendance proof or mutate source files.
 6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
 7. Reach old-portable business parity before declaring WFMHub 2 the operational
@@ -425,9 +427,23 @@ only through a recorded decision with evidence.
   aggregate readiness/counts; no employee-level actions or rows are exposed.
 - Focused semantic tests cover primary/fallback precedence, a return after an
   internal gap, blank-LILO proof versus missing-row unknown, five-minute
-  tolerances, and partial PTO. Local Ruff, strict Pyright, 73 pytest tests,
-  Biome, TypeScript, and 17 Vitest tests pass. Exact Windows ZIP qualification
-  and managed-target refresh remain pending.
+  tolerances, and partial/full-day PTO including overnight shifts. Local Ruff,
+  strict Pyright, 73 pytest tests, the native stack probe, Biome, TypeScript,
+  17 Vitest tests, the React production build, and packaged source smoke pass.
+- Feature run `35711156753` passed all three jobs after rerunning a Linux asset
+  download that had ended with a transient TLS EOF. Main run `35735177964`
+  attempt 2 is green on Linux source/frozen checks, the target-compatible
+  Windows embedded doctor/source refresh/five offline browser probes, and the
+  separate full-native Windows regression. Attempt 1's native runner was
+  force-cancelled only after it made no progress in dependency installation;
+  the fresh runner completed the same job successfully.
+- The exact main-run hybrid ZIP has 98 unique members, no CRC or duplicate-name
+  errors, is 73,201,392 bytes, and has SHA-256
+  `f38cabebfaf8d632db6bef6739e0f7a813e4833d60d00f6d17278967b7705265`.
+  GitHub reports the same asset digest. It is published as prerelease
+  `v0.2.0-phase1-source-preview.5` from feature commit `6f81e8053728b2db62b2d4cbebd40afcfec00431`:
+  <https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.5>.
+  Managed-target refresh and compatibility validation remain pending.
 
 ### 2026-09-22 — Streaming Call-by-Call and service components integrated
 
