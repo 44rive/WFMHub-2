@@ -22,7 +22,7 @@ retaining atomic whole-cut rollback.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` at `db35881` | Phase 1 refresh-parity preview `.6` | Qualified and published; managed-target real-data refresh is the next gate |
+| `origin/main` | Phase 1 refresh-parity preview `.6` | Release source `db35881` is qualified and published; managed-target real-data refresh is next |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
