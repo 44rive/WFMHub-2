@@ -22,7 +22,7 @@ retaining atomic whole-cut rollback.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-version reuse Preview `.7` | PR #3 merged as `895fd08`; all three main CI jobs passed; prerelease `.7` published; managed-target real-data refresh is next |
+| `origin/main` | Phase 1 source-version reuse Preview `.7` | PR #3 merged as `895fd08`; CI passed and prerelease `.7` published; user reports first managed refresh green and immediate unchanged refresh reused the active cut; metrics/parity pending |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -398,22 +398,34 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Extract Preview `.7` into a new managed-target folder, run `SETUP.cmd`, then
-   run one real source refresh and retain its elapsed time/readiness counts. If
-   it fails, retain the displayed stage/code and local
-   `data/diagnostics/refresh-failure.txt`; the previous cut remains safe.
+1. Capture the first Preview `.7` refresh duration and active-generation
+   counts/date ranges/quality if available; the user report supplied no values.
 2. Compare Preview `.7` counts, date ranges, quality outcomes, and attendance /
    service evidence with old portable `v0.36.0` on the same governed sources;
    resolve material differences before resuming feature work.
-3. Add date-scoped ownership and rebuild for derived attendance and service
-   facts after measuring the real Preview `.7` refresh; preserve whole-cut
+3. At the next normal source export/update, observe one changed-source refresh:
+   elapsed time, readiness, counts, and any stage/code or local diagnostic if
+   it fails. Do not modify operational extracts to create this test.
+4. Add date-scoped ownership and rebuild for derived attendance and service
+   facts after measuring the changed-source refresh; preserve whole-cut
    activation and expand overnight/cross-file dependencies conservatively.
-4. Only after that gate, resume service profiles/metric catalog, Verint Staff
+5. Only after that gate, resume service profiles/metric catalog, Verint Staff
    Type requirement, command-centre read models, and bounded Excel delivery.
-5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
+
+### 2026-09-22 — Managed Preview `.7` first and unchanged refresh report
+
+- The user reports that the first real refresh on the managed workstation was
+  "all green". No elapsed time, counts, date ranges, or quality totals were
+  supplied, so production-scale performance and old-portable parity remain
+  unverified.
+- The user reports that an immediate second refresh returned "sources are
+  unchanged, the validated generation was reused". This supports the target
+  no-op path; it is user-reported evidence, separate from independently verified
+  CI/package smoke. A changed-source target refresh remains unobserved.
 
 ### 2026-09-22 — Source-version reuse qualified and Preview `.7` released
 
@@ -451,10 +463,7 @@ only through a recorded decision with evidence.
   `a2a4da7a547c6909a439922e8644e15ff1298e1c34c646b73c9da9de711566ae`.
 - Published [prerelease `v0.2.0-phase1-source-preview.7`](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.7)
   from merge commit `895fd08` with the exact tested Windows ZIP and checksum
-  file. Its target
-  managed-workstation refresh, elapsed time, and old-portable data parity are
-  still unproven; the user must run the real local sources before feature work
-  resumes.
+  file. The managed-workstation run and remaining evidence are recorded above.
 
 ### 2026-09-22 — Preview `.5` refresh regression audited and correction started
 
