@@ -115,7 +115,7 @@ and file metadata, then builds canonical facts from those staged rows; it does
 not reopen the CSV. This replaced the four hash plus two parse passes in
 Preview `.5` and shipped in Preview `.6`.
 
-The next source-version change retains a reference to the successful generation
+Preview `.7` retains a reference to the successful generation
 that owns each Status, LILO, or Call by Call Bronze file. An unchanged file with
 matching metadata is reused without hashing; changed metadata gets one hash,
 then an exact known version can be reactivated after A→B→A without parsing or
@@ -128,7 +128,7 @@ Derived attendance, canonical call legs, and service intervals still rebuild
 for the whole cut when any source changes. The source-version change therefore
 reduces event-file I/O and Bronze duplication, but it does not yet meet the
 full affected-scope cost contract above. Preview `.6` does not contain this
-next change.
+change.
 
 During a rebuild, `/api/rta/source-health` exposes bounded in-memory stage,
 relative source key, elapsed time, and file progress. Unexpected failures keep

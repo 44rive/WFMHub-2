@@ -22,12 +22,12 @@ retaining atomic whole-cut rollback.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 refresh-parity preview `.6` | Tip `637c81e` is documentation; release source `db35881` is qualified and published; managed-target real-data refresh is next |
+| `origin/main` | Phase 1 source-version reuse Preview `.7` | PR #3 merged as `895fd08`; all three main CI jobs passed; prerelease `.7` published; managed-target real-data refresh is next |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `fix/refresh-parity` (current) | Emergency refresh correction | Merged by PR #2; retained locally as the ledger-writer worktree |
-| `feat/refresh-incremental-parity` (current worktree) | Preview `.7` event source-version reuse candidate | Local implementation and tests; not merged or released |
+| `fix/refresh-parity` | Emergency refresh correction | Merged by PR #2 |
+| `feat/refresh-incremental-parity` | Preview `.7` event source-version reuse | Merged by PR #3 as `895fd08` |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -368,8 +368,8 @@ only through a recorded decision with evidence.
   byte-bound, generation-keyed evidence. The correction branch reuses an exact
   unchanged active generation without parsing or duplicating it, and cuts
   changed large files from four hash plus two parse passes to one hash plus one
-  parse into inactive Bronze staging. The local next branch adds known-version
-  Bronze reuse; affected-scope derived rebuild remains required for the stated
+  parse into inactive Bronze staging. Preview `.7` adds known-version Bronze
+  reuse; affected-scope derived rebuild remains required for the stated
   incremental cost contract.
 - Preview `.5` passed synthetic CI but failed the real operational gate: the
   managed refresh took too long and ended with only `REFRESH_FAILED`. The
@@ -398,43 +398,40 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Extract Preview `.6` into a new managed-target folder, run `SETUP.cmd`, then
+1. Extract Preview `.7` into a new managed-target folder, run `SETUP.cmd`, then
    run one real source refresh and retain its elapsed time/readiness counts. If
    it fails, retain the displayed stage/code and local
    `data/diagnostics/refresh-failure.txt`; the previous cut remains safe.
-2. Qualify the local source-version reuse branch with exact Windows package
-   smoke. The old portable proves A→B→A source reactivation and dependency
-   fingerprints, but does not provide automatic affected-date rebuild.
-3. Add date-scoped ownership and rebuild for derived attendance and service
-   facts after measuring the real Preview `.6` refresh; preserve whole-cut
-   activation and expand overnight/cross-file dependencies conservatively.
-4. Compare Preview `.6` counts, date ranges, quality outcomes, and attendance /
+2. Compare Preview `.7` counts, date ranges, quality outcomes, and attendance /
    service evidence with old portable `v0.36.0` on the same governed sources;
    resolve material differences before resuming feature work.
-5. Only after that gate, resume service profiles/metric catalog, Verint Staff
+3. Add date-scoped ownership and rebuild for derived attendance and service
+   facts after measuring the real Preview `.7` refresh; preserve whole-cut
+   activation and expand overnight/cross-file dependencies conservatively.
+4. Only after that gate, resume service profiles/metric catalog, Verint Staff
    Type requirement, command-centre read models, and bounded Excel delivery.
-6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
 
-### 2026-09-22 — Source-version reuse in progress
+### 2026-09-22 — Source-version reuse qualified and Preview `.7` released
 
 - Rechecked released old portable `v0.36.0`: it caches versions by file bytes,
   parser/policy, and roster scope, including A→B→A reactivation. Its model
   builders mostly rebuild an explicit/configured period, not automatically
   affected dates; the earlier next-step wording overstated that behavior.
-- On `feat/refresh-incremental-parity`, started Preview `.7` with an additive migration of Bronze
-  ownership references and exact successful-version reuse for Status, LILO,
-  and Call by Call. A new event file retains one hash plus one parse; a known
-  version avoids parsing and row copying. Roster/policy drift invalidates reuse.
-  Canonical call/service and attendance facts still rebuild completely.
+- On `feat/refresh-incremental-parity`, implemented Preview `.7` with an
+  additive migration of Bronze ownership references and exact
+  successful-version reuse for Status, LILO, and Call by Call. A new event file
+  retains one hash plus one parse; a known version avoids parsing and row
+  copying. Roster/policy drift invalidates reuse. Canonical call/service and
+  attendance facts still rebuild completely.
 - Local Ruff format/lint, strict Pyright, and 86 Python tests pass, including
   migration, schedule-only reuse, A→B→A, roster/policy invalidation, source
-  removal, missing-owner-row recovery, and rollback. Exact Windows ZIP and
-  managed-target qualification remain pending for this branch. Final
-  documentation-only main run `35776913430`
-  passed all three CI jobs for the already published Preview `.6` source.
+  removal, missing-owner-row recovery, and rollback. Final documentation-only
+  main run `35776913430` passed all three CI jobs for the already published
+  Preview `.6` source.
 - PR #3 run `35784402198` passed Linux and built the Preview `.7` hybrid ZIP,
   then the Windows hybrid job stopped before extraction because the workflow
   still searched for a `.6` filename. The workflow now matches the unique
@@ -446,6 +443,18 @@ only through a recorded decision with evidence.
   SQLite inspection used a transaction context manager that did not close the
   file handle. The smoke now closes that read connection explicitly; the
   browser probe was not reached in that run.
+- PR #3 run `35785128931` passed all three jobs, including exact Windows
+  packaged doctor, source smoke, five offline Edge/WASM probes, and the
+  separate full-native regression. PR #3 merged as `895fd08`. Main run
+  `35786052360` then passed all three jobs. The main hybrid ZIP is byte-for-byte
+  identical to the PR-qualified ZIP; SHA-256
+  `a2a4da7a547c6909a439922e8644e15ff1298e1c34c646b73c9da9de711566ae`.
+- Published [prerelease `v0.2.0-phase1-source-preview.7`](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.7)
+  from merge commit `895fd08` with the exact tested Windows ZIP and checksum
+  file. Its target
+  managed-workstation refresh, elapsed time, and old-portable data parity are
+  still unproven; the user must run the real local sources before feature work
+  resumes.
 
 ### 2026-09-22 — Preview `.5` refresh regression audited and correction started
 
