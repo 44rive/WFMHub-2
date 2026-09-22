@@ -52,6 +52,7 @@ const readyHealth: RtaSourceHealth = {
     qualityCounts: { error: 0, warning: 1, info: 0 },
   },
   latestRefresh: null,
+  refreshProgress: null,
   quality: { error: 0, warning: 1, info: 0 },
   sources: {
     roster: { ready: true, agentCount: 12, timeOffCount: 2, fileCount: 1 },
@@ -148,5 +149,45 @@ describe('RTA source readiness', () => {
     expect(screen.getAllByText('Not validated')).toHaveLength(2)
     expect(screen.queryByText('12 agents')).toBeNull()
     expect(screen.getByText(/previous validated cut remains stored/)).toBeTruthy()
+  })
+
+  it('shows live refresh progress and confirms unchanged reuse', () => {
+    const running: RtaSourceHealth = {
+      ...readyHealth,
+      refreshProgress: {
+        status: 'running',
+        stage: 'calls',
+        message: 'Validating Call by Call: Storm/Call by Call/day.csv',
+        completedFiles: 2,
+        totalFiles: 4,
+        startedAt: '2026-09-22T10:00:00Z',
+        elapsedSeconds: 18,
+      },
+    }
+    const { rerender } = render(
+      <RtaSourcePanel
+        health={running}
+        loading={false}
+        error={null}
+        refreshing
+        canRefresh
+        onRefresh={() => {}}
+      />,
+    )
+
+    expect(screen.getByText(/Validating Call by Call/).textContent).toContain('18s · 2/4 files')
+
+    rerender(
+      <RtaSourcePanel
+        health={{ ...readyHealth, latestRefresh: readyHealth.activeGeneration }}
+        loading={false}
+        error={null}
+        refreshing={false}
+        refreshUnchanged
+        canRefresh
+        onRefresh={() => {}}
+      />,
+    )
+    expect(screen.getByText(/validated generation was reused/)).toBeTruthy()
   })
 })

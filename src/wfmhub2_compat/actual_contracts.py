@@ -1,9 +1,9 @@
 """Streaming Agent Status and LILO evidence contracts.
 
-The source exports can contain millions of rows.  Preflight therefore keeps
-only bounded counters and findings in memory.  Publication replays the exact
-byte-bound source inside the generation activation transaction and inserts in
-bounded batches; a changed source aborts and rolls back the whole generation.
+The source exports can contain millions of rows. Validation therefore keeps
+only bounded counters and findings in memory and can stage generation-keyed
+Bronze rows in bounded batches during the same single parse. Atomic activation
+then verifies that staged evidence; a changed source aborts the generation.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import hashlib
 import re
 import sqlite3
 import tomllib
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -169,6 +169,12 @@ def _fingerprint(path: Path) -> _Fingerprint:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return _Fingerprint(stat.st_size, stat.st_mtime_ns, digest.hexdigest())
+
+
+def _metadata_matches(path: Path, expected: _Fingerprint) -> bool:
+    """Detect movement without rereading a large file solely to hash it again."""
+    stat = path.stat()
+    return (stat.st_size, stat.st_mtime_ns) == (expected.file_size, expected.mtime_ns)
 
 
 def _version_fingerprint(version: SourceVersion) -> _Fingerprint:
@@ -405,7 +411,11 @@ def preflight_actual_source(
     kind: ActualKind,
     roster: FteSnapshot,
     status_policy: StatusPolicy | None = None,
+    stage_database: Path | None = None,
+    generation_id: int | None = None,
 ) -> ActualSourcePlan:
+    if (stage_database is None) != (generation_id is None):
+        raise ValueError("stage_database and generation_id must be provided together")
     before = _fingerprint(path)
     scope = AgentScope.from_snapshot(roster)
     date_field: str | None = None
@@ -425,27 +435,63 @@ def preflight_actual_source(
         adapter_version = STATUS_ADAPTER_VERSION
         policy_fingerprint = status_policy.fingerprint
 
+    connection: sqlite3.Connection | None = None
+    batch: list[tuple[object, ...]] = []
     accepted = scoped_out = rejected = unmapped_status_rows = 0
     date_from: date | None = None
     date_to: date | None = None
-    for row, reason in records:
-        if reason == "outside":
-            scoped_out += 1
-        elif reason == "invalid":
-            rejected += 1
-        elif row is not None:
-            accepted += 1
-            if (
-                kind == "agent_status"
-                and isinstance(row, AgentStatusRow)
-                and status_policy is not None
-                and _normalized_status(row.status) not in status_policy.categories
-            ):
-                unmapped_status_rows += 1
-            date_from = row.extract_date if date_from is None else min(date_from, row.extract_date)
-            date_to = row.extract_date if date_to is None else max(date_to, row.extract_date)
-    if _fingerprint(path) != before:
-        raise SourceContractError(f"source changed while it was being parsed: {path.name}")
+    try:
+        if stage_database is not None:
+            connection = sqlite3.connect(stage_database, timeout=30)
+            connection.execute("PRAGMA busy_timeout=30000")
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+        for row, reason in records:
+            if reason == "outside":
+                scoped_out += 1
+            elif reason == "invalid":
+                rejected += 1
+            elif row is not None:
+                accepted += 1
+                if (
+                    kind == "agent_status"
+                    and isinstance(row, AgentStatusRow)
+                    and status_policy is not None
+                    and _normalized_status(row.status) not in status_policy.categories
+                ):
+                    unmapped_status_rows += 1
+                date_from = (
+                    row.extract_date if date_from is None else min(date_from, row.extract_date)
+                )
+                date_to = row.extract_date if date_to is None else max(date_to, row.extract_date)
+                if connection is not None and generation_id is not None:
+                    batch.append(
+                        _lilo_values(generation_id, source_key, row)
+                        if isinstance(row, LiloRow)
+                        else _status_values(generation_id, source_key, row)
+                    )
+                    if len(batch) >= _BATCH_SIZE:
+                        connection.executemany(
+                            _INSERT_LILO if kind == "lilo" else _INSERT_STATUS,
+                            batch,
+                        )
+                        batch.clear()
+        if connection is not None and batch:
+            connection.executemany(
+                _INSERT_LILO if kind == "lilo" else _INSERT_STATUS,
+                batch,
+            )
+        if not _metadata_matches(path, before):
+            raise SourceContractError(f"source changed while it was being parsed: {path.name}")
+        if connection is not None:
+            connection.commit()
+    except BaseException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    finally:
+        if connection is not None:
+            connection.close()
 
     findings: list[QualityIssue] = []
     prefix = "AGENT_STATUS" if kind == "agent_status" else "LILO"
@@ -530,6 +576,43 @@ def _iso(value: date | datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
 
+def _lilo_values(generation_id: int, source_key: str, row: LiloRow) -> tuple[object, ...]:
+    return (
+        generation_id,
+        source_key,
+        row.source_row,
+        _iso(row.extract_date),
+        row.source_agent_id,
+        row.roster_client_id,
+        row.agent_name,
+        _iso(row.first_login),
+        _iso(row.raw_last_logout),
+        _iso(row.last_logout),
+        int(row.overnight_adjusted),
+        row.scope_match,
+    )
+
+
+def _status_values(generation_id: int, source_key: str, row: AgentStatusRow) -> tuple[object, ...]:
+    return (
+        generation_id,
+        source_key,
+        row.source_row,
+        row.serial_number,
+        _iso(row.extract_date),
+        row.source_agent_id,
+        row.roster_client_id,
+        row.agent_name,
+        row.status,
+        row.actual_category,
+        _iso(row.status_start),
+        _iso(row.status_end),
+        row.duration_seconds,
+        row.queue,
+        row.scope_match,
+    )
+
+
 def _publish_lilo(
     connection: sqlite3.Connection,
     generation_id: int,
@@ -547,22 +630,7 @@ def _publish_lilo(
             rejected += 1
         elif row is not None:
             accepted += 1
-            batch.append(
-                (
-                    generation_id,
-                    plan.source_key,
-                    row.source_row,
-                    _iso(row.extract_date),
-                    row.source_agent_id,
-                    row.roster_client_id,
-                    row.agent_name,
-                    _iso(row.first_login),
-                    _iso(row.raw_last_logout),
-                    _iso(row.last_logout),
-                    int(row.overnight_adjusted),
-                    row.scope_match,
-                )
-            )
+            batch.append(_lilo_values(generation_id, plan.source_key, row))
             if len(batch) >= _BATCH_SIZE:
                 connection.executemany(_INSERT_LILO, batch)
                 batch.clear()
@@ -587,25 +655,7 @@ def _publish_status(
             rejected += 1
         elif row is not None:
             accepted += 1
-            batch.append(
-                (
-                    generation_id,
-                    plan.source_key,
-                    row.source_row,
-                    row.serial_number,
-                    _iso(row.extract_date),
-                    row.source_agent_id,
-                    row.roster_client_id,
-                    row.agent_name,
-                    row.status,
-                    row.actual_category,
-                    _iso(row.status_start),
-                    _iso(row.status_end),
-                    row.duration_seconds,
-                    row.queue,
-                    row.scope_match,
-                )
-            )
+            batch.append(_status_values(generation_id, plan.source_key, row))
             if len(batch) >= _BATCH_SIZE:
                 connection.executemany(_INSERT_STATUS, batch)
                 batch.clear()
@@ -621,22 +671,42 @@ def publish_actual_plans(
     *,
     roster: FteSnapshot,
     status_policy: StatusPolicy | None,
+    progress: Callable[[str, str, int, int], None] | None = None,
+    rows_staged: bool = False,
 ) -> None:
     scope = AgentScope.from_snapshot(roster)
-    for plan in plans:
+    for index, plan in enumerate(plans, 1):
+        if progress is not None:
+            progress("publishing_actuals", plan.source_key, index - 1, len(plans))
         _require_evidence(connection, generation_id, plan)
         expected_fingerprint = _version_fingerprint(plan.version)
-        if _fingerprint(plan.path) != expected_fingerprint:
+        if not _metadata_matches(plan.path, expected_fingerprint):
             raise SourceContractError(f"actual source changed before publication: {plan.path.name}")
         if plan.kind == "lilo":
-            counts = _publish_lilo(connection, generation_id, plan, scope)
+            counts = (
+                (plan.accepted_rows, plan.scoped_out_rows, plan.rejected_rows)
+                if rows_staged
+                else _publish_lilo(connection, generation_id, plan, scope)
+            )
         else:
             if (
                 status_policy is None
                 or status_policy.fingerprint != plan.version.policy_fingerprint
             ):
                 raise SourceContractError("Agent Status policy changed before publication")
-            counts = _publish_status(connection, generation_id, plan, scope, status_policy)
+            counts = (
+                (plan.accepted_rows, plan.scoped_out_rows, plan.rejected_rows)
+                if rows_staged
+                else _publish_status(connection, generation_id, plan, scope, status_policy)
+            )
+        if rows_staged:
+            table = "wfm_raw_lilo" if plan.kind == "lilo" else "wfm_raw_agent_status"
+            staged_count = connection.execute(
+                f"SELECT count(*) FROM {table} WHERE generation_id = ? AND source_key = ?",
+                (generation_id, plan.source_key),
+            ).fetchone()
+            if staged_count is None or int(staged_count[0]) != plan.accepted_rows:
+                raise ValueError(f"staged actual row count mismatch: {plan.source_key}")
         expected_counts = (plan.accepted_rows, plan.scoped_out_rows, plan.rejected_rows)
-        if counts != expected_counts or _fingerprint(plan.path) != expected_fingerprint:
+        if counts != expected_counts or not _metadata_matches(plan.path, expected_fingerprint):
             raise SourceContractError(f"actual source changed during publication: {plan.path.name}")

@@ -7,12 +7,18 @@ import os
 import sqlite3
 import threading
 from pathlib import Path
+from unittest.mock import Mock
 
+import pytest
 from openpyxl import Workbook
 
+import wfmhub2_compat.actual_contracts as actual_contracts
+import wfmhub2_compat.call_contracts as call_contracts
+import wfmhub2_compat.rta_refresh as refresh_module
 from wfmhub2_compat.rta_refresh import RtaRefreshCoordinator, resolve_source_root
 from wfmhub2_compat.server import CompatibilityServer
 from wfmhub2_compat.setup import configure_source_root
+from wfmhub2_compat.source_contracts import SourceContractError
 
 
 def _sources(home: Path) -> tuple[Path, Path]:
@@ -132,7 +138,9 @@ def test_source_change_marks_previous_generation_stale(tmp_path: Path) -> None:
     assert str(alternate) not in json.dumps(health)
 
 
-def test_refresh_publishes_optional_storm_source_health(tmp_path: Path) -> None:
+def test_refresh_publishes_optional_storm_source_health(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     source, schedule_dir = _sources(tmp_path)
     _schedule(schedule_dir / "StartEndTimes.txt", "Off")
     status = source / "Storm/Agent Status/status.csv"
@@ -196,8 +204,18 @@ def test_refresh_publishes_optional_storm_source_health(tmp_path: Path) -> None:
             ]
         )
 
+    status_parser = Mock(
+        wraps=actual_contracts._iter_status  # pyright: ignore[reportPrivateUsage]
+    )
+    lilo_parser = Mock(wraps=actual_contracts._iter_lilo)  # pyright: ignore[reportPrivateUsage]
+    call_parser = Mock(wraps=call_contracts._iter_calls)  # pyright: ignore[reportPrivateUsage]
+    monkeypatch.setattr(actual_contracts, "_iter_status", status_parser)
+    monkeypatch.setattr(actual_contracts, "_iter_lilo", lilo_parser)
+    monkeypatch.setattr(call_contracts, "_iter_calls", call_parser)
     coordinator = RtaRefreshCoordinator(tmp_path)
     result = coordinator.refresh()
+
+    assert (status_parser.call_count, lilo_parser.call_count, call_parser.call_count) == (1, 1, 1)
     health = result["sourceHealth"]
 
     assert health["ready"] is True
@@ -235,6 +253,118 @@ def test_refresh_publishes_optional_storm_source_health(tmp_path: Path) -> None:
     }
     assert health["activeGeneration"]["counts"]["sourceFiles"] == 5
     assert str(source) not in json.dumps(health)
+
+
+def test_second_unchanged_refresh_reuses_active_generation_without_parsing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()
+
+    def unexpected_parse(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("unchanged refresh parsed the roster")
+
+    monkeypatch.setattr(refresh_module, "_discover_roster", unexpected_parse)
+    second = coordinator.refresh()
+
+    assert second["status"] == "succeeded"
+    assert second["unchanged"] is True
+    assert second["generationId"] == first["generationId"]
+    with sqlite3.connect(coordinator.store.path) as connection:
+        assert connection.execute("SELECT count(*) FROM wfm_refresh_generation").fetchone() == (1,)
+
+
+def test_changed_source_forces_a_new_generation(tmp_path: Path) -> None:
+    _, schedule_dir = _sources(tmp_path)
+    schedule = schedule_dir / "StartEndTimes.txt"
+    _schedule(schedule, "Off")
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()
+
+    _schedule(schedule, ".ORG | Work 08/01/2026 8:00 AM-08/01/2026 4:00 PM")
+    second = coordinator.refresh()
+
+    assert second["unchanged"] is False
+    assert second["generationId"] != first["generationId"]
+
+
+def test_unexpected_attendance_failure_is_actionable_and_preserves_active_cut(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _, schedule_dir = _sources(tmp_path)
+    schedule = schedule_dir / "StartEndTimes.txt"
+    _schedule(schedule, "Off")
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    active = coordinator.refresh()["generationId"]
+    _schedule(schedule, ".ORG | Work 08/01/2026 8:00 AM-08/01/2026 4:00 PM")
+
+    def fail_attendance(*_args: object, **_kwargs: object) -> None:
+        raise sqlite3.IntegrityError("synthetic attendance failure")
+
+    monkeypatch.setattr(refresh_module, "build_attendance_model", fail_attendance)
+    with pytest.raises(refresh_module.RefreshFailedError) as captured:
+        coordinator.refresh()
+
+    assert captured.value.code == "REFRESH_FAILED_ATTENDANCE_INTEGRITYERROR"
+    assert "during attendance" in captured.value.message
+    assert "data/diagnostics/refresh-failure.txt" in captured.value.message
+    assert coordinator.store.active_generation_id() == active
+    diagnostic = tmp_path / "data/diagnostics/refresh-failure.txt"
+    assert diagnostic.is_file()
+    diagnostic_text = diagnostic.read_text(encoding="utf-8")
+    assert "stage=attendance" in diagnostic_text
+    assert "exception_type=IntegrityError" in diagnostic_text
+    assert "synthetic attendance failure" in diagnostic_text
+    assert "IntegrityError" in capsys.readouterr().err
+
+
+def test_source_movement_gets_a_specific_retry_error_and_preserves_active_cut(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    active = coordinator.refresh()["generationId"]
+    status = source / "Storm/Agent Status/status.csv"
+    status.parent.mkdir(parents=True)
+    status.write_text("moving export", encoding="utf-8")
+
+    def moving_source(*_args: object, **_kwargs: object) -> None:
+        raise SourceContractError("source changed while it was being parsed")
+
+    monkeypatch.setattr(refresh_module, "preflight_actual_source", moving_source)
+    with pytest.raises(refresh_module.RefreshFailedError) as captured:
+        coordinator.refresh()
+
+    assert captured.value.code == "SOURCE_CHANGED_DURING_REFRESH"
+    assert "Wait for the export or copy to finish" in captured.value.message
+    assert coordinator.store.active_generation_id() == active
+    diagnostic = tmp_path / "data/diagnostics/refresh-failure.txt"
+    assert "SourceContractError" in diagnostic.read_text(encoding="utf-8")
+
+
+def test_refresh_progress_is_readable_while_refresh_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    original = refresh_module._discover_roster  # pyright: ignore[reportPrivateUsage]
+    observed: list[dict[str, object] | None] = []
+
+    def inspect_progress(source_root: Path, progress: object = None):  # type: ignore[no-untyped-def]
+        observed.append(coordinator.source_health()["refreshProgress"])
+        return original(source_root, progress)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(refresh_module, "_discover_roster", inspect_progress)
+    coordinator.refresh()
+
+    assert observed and observed[0] is not None
+    assert observed[0]["stage"] == "inventory"
+    assert observed[0]["status"] == "running"
+    assert coordinator.source_health()["refreshProgress"] is None
 
 
 def test_rta_http_requires_token_and_never_accepts_upload_payload(tmp_path: Path) -> None:

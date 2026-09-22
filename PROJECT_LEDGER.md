@@ -11,23 +11,22 @@ state instead of repeating discovery.
 Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
-**Active milestone: Phase 1 — governed RTA vertical slice.** Phase 0.4 is
-accepted. The exact hybrid release launched on the managed corporate
-workstation and all five browser probes passed: stdlib/SQLite host, Worker
-WebAssembly, DuckDB-Wasm/OPFS, Pyodide forecasting, and HiGHS-Wasm. The active
-work is now source refresh -> canonical SQLite evidence -> service/attendance
--> staffing gap -> React command centre -> Excel export, followed by parity
-with the useful workflows in WFMHub-Portable.
+**Active milestone: Phase 1 — refresh parity and reliability.** Phase 0.4 is
+accepted. Preview `.5` exposed an operational regression on the real managed
+dataset: refresh was slow, opaque, and collapsed an unexpected exception to
+`REFRESH_FAILED`. New WFM features are frozen until the new engine matches the
+released WFMHub-Portable ingestion behavior closely enough for daily use while
+retaining atomic whole-cut rollback.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 attendance preview `.5` | Governed attendance evidence is published; exact managed-target validation is next |
+| `origin/main` | Phase 1 attendance preview `.5` | Published but operationally rejected: real refresh was slow and failed without an actionable cause |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.5` is qualified, promoted to `main`, and published from the exact CI artifact |
+| `fix/refresh-parity` (current) | Emergency refresh correction | Unchanged fast path, diagnostics, progress, hash reduction, and attendance indexes implemented locally; full qualification pending |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -75,6 +74,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-033 | Add Agent Status and LILO as optional, streaming Bronze evidence in the same atomic refresh generation; Agent Status is primary attendance evidence and LILO remains fallback. | These CSVs can be large and missing evidence must remain unknown. Preflight is bounded-memory and byte-bound; activation replays 5,000-row batches inside the SQLite transaction and rolls back on source mutation. Missing Storm folders do not block roster/schedule readiness, while present malformed files do. Attendance derivation remains a separate governed slice. |
 | D-034 | Admit Call-by-Call through two explicit lanes—effective roster identity or exact reviewed queue mapping—then deduplicate stable legs and publish additive 15-minute service components only. | Mapped abandoned/out-of-roster queue demand must survive without widening employee scope. Ratio KPIs and Flash allowlists require separate metric/profile governance and must not be hard-coded in the adapter or React UI. |
 | D-035 | Build attendance as a generation-keyed derived read model with Agent Status primary at 80% elapsed-work coverage, LILO boundary fallback, explicit unknown states, PTO/Away clipping, and exact gap fragments; do not expose employee actions yet. | Missing rows are not proof of absence. A no-show requires an agent-specific blank LILO row or sufficiently covered Logged Off status, while late/early/internal gaps must retain their physical intervals for later read-only reconciliation. |
+| D-036 | Freeze feature work and treat released WFMHub-Portable `v0.36.0` as the executable ingestion/parity specification while retaining WFMHub 2's policy-compatible shell and atomic generation pointer. | Preview `.5` rereads each large Storm file four times for hashing and twice for parsing, rebuilds unchanged generations, shows no progress, and destroys the original unexpected exception. The correction adds an exact unchanged fast path, one-hash/one-parse Bronze staging, live progress, actionable local diagnostics, and attendance indexes. Per-file known-version reuse and affected-scope rebuild remain blocking parity follow-ups before replacement claims. |
 
 ## Evidence already collected
 
@@ -363,14 +363,17 @@ only through a recorded decision with evidence.
   headline SLA or staffing position. A true required-FTE shortage also needs
   the separate Verint Staff Type requirement source.
 - FTE Count, published StartEndTimes, and optional Storm sources refresh into
-  byte-bound, generation-keyed evidence. Failed generations retain manifest
-  and quality evidence while attempted fact publication is rolled back. Large
-  event files are streamed in bounded batches, but incremental planning remains
-  unimplemented and every refresh re-reads configured files.
-- Exact preview `.2` launch and source refresh pass on the managed workstation.
-  Preview `.5` passes ordinary-Windows CI and is published, but its attendance
-  refresh and doctor/five-probe run on the managed target remain pending. The
-  last full on-device capability report remains the accepted Phase 0.4 report.
+  byte-bound, generation-keyed evidence. The correction branch reuses an exact
+  unchanged active generation without parsing or duplicating it, and cuts
+  changed large files from four hash plus two parse passes to one hash plus one
+  parse into inactive Bronze staging. Known-version reactivation and
+  dependency-scoped rebuild remain required for full old-portable parity.
+- Preview `.5` passed synthetic CI but failed the real operational gate: the
+  managed refresh took too long and ended with only `REFRESH_FAILED`. The
+  original exception was irretrievably discarded, so naming its exact cause
+  now would be speculation. The correction persists stage/type codes and a
+  local traceback for the next real run while retaining the previous active
+  cut.
 - OPFS is origin/profile-private and can be cleared or evicted. DuckDB-Wasm is
   only a rebuildable cache; SQLite and source evidence remain authoritative.
 - The target probe was fast enough for the spike, but memory use and behavior
@@ -392,25 +395,47 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Extract the exact `.5` release into a new managed-target folder, rerun
-   refresh plus DOCTOR/five Edge probes, and retain the attendance readiness
-   counts or bounded refresh error as evidence.
-2. Port the effective-dated service profiles and metric catalog over the raw
-   Call-by-Call components, then expose ratio-of-sums service KPIs without
-   averaging percentages.
-3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
-   shortage; the current source stage may show observed versus scheduled
-   coverage only.
-4. Add governed operational read models to Command and bounded Excel export,
-   preserving explicit freshness and source-quality states.
-5. Add Verint Activities only as post-day attendance reconciliation evidence;
-   it must not silently become live attendance proof or mutate source files.
-6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
-   a measured RTA workflow; deterministic host logic remains the fallback.
-7. Reach old-portable business parity before declaring WFMHub 2 the operational
-   replacement; qualify forecasting and optimization separately afterward.
+1. Complete and qualify the emergency refresh correction: unchanged no-op,
+   progress, stage-specific failure diagnostics, source-mutation handling, and
+   attendance indexes.
+2. Port known-version reactivation, dependency fingerprints, and
+   affected-scope rebuild from old portable `v0.36.0`; do not copy its partial
+   mixed-generation publication behavior.
+3. Benchmark the exact Windows ZIP against the real managed dataset. A refresh
+   must either succeed within an operationally acceptable duration or return an
+   actionable local diagnostic while preserving the active cut.
+4. Only after that gate, resume service profiles/metric catalog, Verint Staff
+   Type requirement, command-centre read models, and bounded Excel delivery.
+5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+   a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
+
+### 2026-09-22 — Preview `.5` refresh regression audited and correction started
+
+- Reproduced the architectural cause by comparing current code with released
+  WFMHub-Portable `v0.36.0`: each configured Status/LILO/Call file was read
+  about six times (four hashes, two parses), unchanged histories were fully
+  duplicated, attendance lookups lacked agent-first indexes, and the UI had no
+  stage/file progress.
+- Proved that unexpected exceptions were discarded by the generic coordinator
+  catch and only literal `REFRESH_FAILED` survived in SQLite/API state. The
+  user's exact `.5` failure therefore cannot be recovered retrospectively.
+- Implemented locally on `fix/refresh-parity`: conservative exact-metadata and
+  policy no-op reuse; one-hash/one-parse inactive Bronze staging for large
+  sources; concurrent source-health progress; stage/type failure codes; atomic
+  local traceback diagnostics; explicit source-mutation guidance; and additive
+  attendance query indexes.
+- Regression tests prove unchanged refresh does not invoke parsing, each large
+  source parser runs only once during a rebuild, changed input creates a new
+  generation, an injected attendance integrity failure preserves the active
+  cut and diagnostic cause, progress is readable during refresh, and existing
+  databases receive the new indexes. Local Ruff/strict Pyright, 78 pytest
+  tests, Biome, TypeScript, 18 Vitest tests, and the production React build
+  pass. A locally assembled 98-member Preview `.6` ZIP passed checksum/member
+  verification and an exact extracted-package source refresh, unchanged no-op,
+  and rollback smoke; the Windows runtime/browser pipeline and managed-target
+  production-data benchmark remain pending.
 
 ### 2026-09-22 — Governed attendance read model implemented locally
 

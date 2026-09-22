@@ -82,6 +82,7 @@ describe('engine API client', () => {
       activeGenerationId: null,
       activeGeneration: null,
       latestRefresh: null,
+      refreshProgress: null,
       quality: { error: 0, warning: 0, info: 0 },
       sources: {
         roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
@@ -127,6 +128,7 @@ describe('engine API client', () => {
       activeGenerationId: null,
       activeGeneration: null,
       latestRefresh: null,
+      refreshProgress: null,
       quality: { error: 0, warning: 0, info: 0 },
       sources: {
         roster: { ready: false, agentCount: 0, timeOffCount: 0, fileCount: 0 },
@@ -156,7 +158,13 @@ describe('engine API client', () => {
     const fetchMock = vi.fn(
       async () =>
         new Response(
-          JSON.stringify({ status: 'succeeded', generationId: 1, sourceHealth: health }),
+          JSON.stringify({
+            status: 'succeeded',
+            generationId: 1,
+            unchanged: false,
+            durationMs: 12,
+            sourceHealth: health,
+          }),
           { status: 200 },
         ),
     )

@@ -19,15 +19,6 @@ export function FoundationPage() {
     retry: false,
   })
 
-  const sourceHealth = useQuery({
-    queryKey: ['rta-source-health', connection.data?.baseUrl],
-    queryFn: () => {
-      if (!connection.data) throw new Error('Local host connection is unavailable')
-      return createEngineClient(connection.data).getRtaSourceHealth()
-    },
-    enabled: host.data?.status === 'ok' && connection.data?.phase === 'ready',
-    retry: false,
-  })
   const refresh = useMutation({
     mutationFn: () => {
       if (!connection.data) throw new Error('Local host connection is unavailable')
@@ -39,6 +30,16 @@ export function FoundationPage() {
     onError: () => {
       void queryClient.invalidateQueries({ queryKey: ['rta-source-health'] })
     },
+  })
+  const sourceHealth = useQuery({
+    queryKey: ['rta-source-health', connection.data?.baseUrl],
+    queryFn: () => {
+      if (!connection.data) throw new Error('Local host connection is unavailable')
+      return createEngineClient(connection.data).getRtaSourceHealth()
+    },
+    enabled: host.data?.status === 'ok' && connection.data?.phase === 'ready',
+    retry: false,
+    refetchInterval: refresh.isPending ? 750 : false,
   })
 
   const hostReady = host.data?.status === 'ok'
@@ -98,6 +99,7 @@ export function FoundationPage() {
             loading={hostReady && sourceHealth.isPending}
             error={refresh.error ?? sourceHealth.error}
             refreshing={refresh.isPending}
+            refreshUnchanged={refresh.data?.unchanged ?? false}
             canRefresh={hostReady && connection.data?.phase === 'ready'}
             onRefresh={() => refresh.mutate()}
           />
@@ -167,6 +169,7 @@ type RtaSourcePanelProps = {
   loading: boolean
   error: Error | null
   refreshing: boolean
+  refreshUnchanged?: boolean
   canRefresh: boolean
   onRefresh: () => void
 }
@@ -176,10 +179,11 @@ export function RtaSourcePanel({
   loading,
   error,
   refreshing,
+  refreshUnchanged = false,
   canRefresh,
   onRefresh,
 }: RtaSourcePanelProps) {
-  const latestFailed = health?.latestRefresh?.status === 'failed'
+  const latestFailed = health?.latestRefresh?.status === 'failed' && !refreshUnchanged
   const activeId = health?.activeGenerationId
   const rootLabel =
     health?.sourceRoot.mode === 'configured'
@@ -221,6 +225,19 @@ export function RtaSourcePanel({
                 : 'Sources not ready'}
         </span>
       </div>
+      {refreshing && health?.refreshProgress && (
+        <p className="source-progress" role="status" aria-live="polite">
+          {health.refreshProgress.message} · {health.refreshProgress.elapsedSeconds}s
+          {health.refreshProgress.totalFiles > 0
+            ? ` · ${health.refreshProgress.completedFiles}/${health.refreshProgress.totalFiles} files`
+            : ''}
+        </p>
+      )}
+      {!refreshing && refreshUnchanged && (
+        <p className="source-progress" role="status">
+          Sources are unchanged; the validated generation was reused.
+        </p>
+      )}
       {error && (
         <p className="source-error" role="alert">
           {error.message}
