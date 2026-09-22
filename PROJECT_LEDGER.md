@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview `.3` | Optional streaming Agent Status/LILO evidence is published |
+| `origin/main` | Phase 1 source-readiness preview `.4` | Call-by-Call/service components are published; target validation is next |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.4` Call-by-Call/service-evidence candidate is locally green; Windows CI/release is pending |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.4` Call-by-Call/service-evidence release is published; attendance and metric read models remain |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -434,7 +434,13 @@ only through a recorded decision with evidence.
   passes ZIP CRC/inventory validation and packaged synthetic source smoke, and
   has SHA-256
   `ba899bbed6ccb89469ea1b412a2b40ae2cf533ecee79e117d5e4fd1959324d22`.
-  Exact Windows CI/release evidence remains pending.
+- Feature run `35706474082` and promoted-main run `35707225111` each passed all
+  three jobs: Linux source/frozen checks, target-compatible Windows embedded
+  doctor/five-source refresh/five browser probes, and the separate full-native
+  Windows regression. The exact main-run hybrid ZIP has 96 unique members,
+  passes CRC validation, is 73,193,286 bytes, and has SHA-256
+  `85ae73abb83281cff73d8e2cc89eb4d80b9875b48855184893b8e42c1e192a95`.
+  It is published as prerelease `v0.2.0-phase1-source-preview.4`.
 - The project-orchestrator's external Claude review could not authenticate due
   to expired OAuth. A separate native read-only legacy audit completed and its
   exact contract findings informed the implementation.
