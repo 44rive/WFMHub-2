@@ -452,11 +452,20 @@ ON wfm_schedule_shift(generation_id, business_date, roster_client_id);
 CREATE INDEX IF NOT EXISTS ix_wfm_time_off_active_date
 ON wfm_time_off(generation_id, start_date, end_date, client_id);
 
+CREATE INDEX IF NOT EXISTS ix_wfm_time_off_agent_range
+ON wfm_time_off(generation_id, client_id, start_date, end_date);
+
 CREATE INDEX IF NOT EXISTS ix_wfm_lilo_active_date
 ON wfm_raw_lilo(generation_id, extract_date, roster_client_id);
 
+CREATE INDEX IF NOT EXISTS ix_wfm_lilo_agent_date
+ON wfm_raw_lilo(generation_id, roster_client_id, extract_date);
+
 CREATE INDEX IF NOT EXISTS ix_wfm_status_active_interval
 ON wfm_raw_agent_status(generation_id, extract_date, roster_client_id, status_start);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_status_agent_interval
+ON wfm_raw_agent_status(generation_id, roster_client_id, status_start, status_end);
 
 CREATE INDEX IF NOT EXISTS ix_wfm_raw_call_key
 ON wfm_raw_call_leg(generation_id, call_key);

@@ -1,10 +1,10 @@
 """Streaming Call-by-Call evidence and additive service-demand facts.
 
-The legacy Storm export can be very large, so preflight retains only bounded
-counts and publication replays the exact byte-bound file in batches.  Calls
-enter through either of two explicit lanes: an effective roster identity or a
-reviewed queue mapping.  This preserves abandoned/unassigned queue demand
-without widening employee scope.
+The legacy Storm export can be very large, so validation retains only bounded
+counts while optionally staging generation-keyed Bronze rows in the same
+single parse. Calls enter through either of two explicit lanes: an effective
+roster identity or a reviewed queue mapping. This preserves
+abandoned/unassigned queue demand without widening employee scope.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import json
 import re
 import sqlite3
 import tomllib
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -232,6 +232,12 @@ def _fingerprint(path: Path) -> _Fingerprint:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return _Fingerprint(stat.st_size, stat.st_mtime_ns, digest.hexdigest())
+
+
+def _metadata_matches(path: Path, expected: _Fingerprint) -> bool:
+    """Detect movement without rereading a large file solely to hash it again."""
+    stat = path.stat()
+    return (stat.st_size, stat.st_mtime_ns) == (expected.file_size, expected.mtime_ns)
 
 
 def _clean(value: object) -> str | None:
@@ -465,28 +471,56 @@ def preflight_call_source(
     source_key: str,
     roster: FteSnapshot,
     policy: CallPolicy,
+    stage_database: Path | None = None,
+    generation_id: int | None = None,
 ) -> CallSourcePlan:
+    if (stage_database is None) != (generation_id is None):
+        raise ValueError("stage_database and generation_id must be provided together")
     before = _fingerprint(path)
     accepted = service_rows = scoped_out = rejected = unmapped = degraded = 0
     date_from: date | None = None
     date_to: date | None = None
     scope = AgentScope.from_snapshot(roster)
-    for row, reason in _iter_calls(path, scope, policy):
-        if reason == "outside":
-            scoped_out += 1
-        elif reason == "invalid":
-            rejected += 1
-        elif row is not None:
-            accepted += 1
-            service_rows += int(row.service_eligible)
-            unmapped += int(row.mapping_status != "MAPPED")
-            degraded += int(row.validation_codes != "[]")
-            date_from = (
-                row.business_date if date_from is None else min(date_from, row.business_date)
-            )
-            date_to = row.business_date if date_to is None else max(date_to, row.business_date)
-    if _fingerprint(path) != before:
-        raise SourceContractError(f"source changed while it was being parsed: {path.name}")
+    connection: sqlite3.Connection | None = None
+    batch: list[tuple[object, ...]] = []
+    try:
+        if stage_database is not None:
+            connection = sqlite3.connect(stage_database, timeout=30)
+            connection.execute("PRAGMA busy_timeout=30000")
+            connection.execute("PRAGMA foreign_keys=ON")
+            connection.execute("BEGIN IMMEDIATE")
+        for row, reason in _iter_calls(path, scope, policy):
+            if reason == "outside":
+                scoped_out += 1
+            elif reason == "invalid":
+                rejected += 1
+            elif row is not None:
+                accepted += 1
+                service_rows += int(row.service_eligible)
+                unmapped += int(row.mapping_status != "MAPPED")
+                degraded += int(row.validation_codes != "[]")
+                date_from = (
+                    row.business_date if date_from is None else min(date_from, row.business_date)
+                )
+                date_to = row.business_date if date_to is None else max(date_to, row.business_date)
+                if connection is not None and generation_id is not None:
+                    batch.append(_raw_values(generation_id, source_key, row))
+                    if len(batch) >= _BATCH_SIZE:
+                        connection.executemany(_INSERT_RAW, batch)
+                        batch.clear()
+        if connection is not None and batch:
+            connection.executemany(_INSERT_RAW, batch)
+        if not _metadata_matches(path, before):
+            raise SourceContractError(f"source changed while it was being parsed: {path.name}")
+        if connection is not None:
+            connection.commit()
+    except BaseException:
+        if connection is not None:
+            connection.rollback()
+        raise
+    finally:
+        if connection is not None:
+            connection.close()
 
     findings: list[QualityIssue] = []
     if rejected:
@@ -815,13 +849,17 @@ def publish_call_plans(
     *,
     roster: FteSnapshot,
     policy: CallPolicy | None,
+    progress: Callable[[str, str, int, int], None] | None = None,
+    rows_staged: bool = False,
 ) -> None:
     if not plans:
         return
     if policy is None:
         raise SourceContractError("Call by Call policy is required")
     scope = AgentScope.from_snapshot(roster)
-    for plan in plans:
+    for index, plan in enumerate(plans, 1):
+        if progress is not None:
+            progress("publishing_calls", plan.source_key, index - 1, len(plans))
         _require_evidence(connection, generation_id, plan)
         if plan.version.policy_fingerprint != policy.fingerprint:
             raise SourceContractError("Call by Call policy changed before publication")
@@ -830,18 +868,41 @@ def publish_call_plans(
             plan.version.mtime_ns,
             plan.version.content_sha256,
         )
-        if _fingerprint(plan.path) != expected:
+        if not _metadata_matches(plan.path, expected):
             raise SourceContractError(
                 f"Call by Call source changed before publication: {plan.path.name}"
             )
-        counts = _publish_raw_plan(connection, generation_id, plan, scope, policy)
+        counts = (
+            (
+                plan.accepted_rows,
+                plan.service_rows,
+                plan.scoped_out_rows,
+                plan.rejected_rows,
+            )
+            if rows_staged
+            else _publish_raw_plan(connection, generation_id, plan, scope, policy)
+        )
+        if rows_staged:
+            staged_counts = connection.execute(
+                """
+                SELECT count(*), COALESCE(sum(service_eligible), 0)
+                FROM wfm_raw_call_leg
+                WHERE generation_id = ? AND source_key = ?
+                """,
+                (generation_id, plan.source_key),
+            ).fetchone()
+            if staged_counts is None or tuple(map(int, staged_counts)) != (
+                plan.accepted_rows,
+                plan.service_rows,
+            ):
+                raise ValueError(f"staged Call by Call row count mismatch: {plan.source_key}")
         expected_counts = (
             plan.accepted_rows,
             plan.service_rows,
             plan.scoped_out_rows,
             plan.rejected_rows,
         )
-        if counts != expected_counts or _fingerprint(plan.path) != expected:
+        if counts != expected_counts or not _metadata_matches(plan.path, expected):
             raise SourceContractError(
                 f"Call by Call source changed during publication: {plan.path.name}"
             )

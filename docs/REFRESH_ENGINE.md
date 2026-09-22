@@ -98,11 +98,31 @@ High-frequency events such as call-by-call/status history should be written in r
 
 The current Phase 1 compatibility host streams Agent Status, LILO, and
 Call-by-Call into generation-keyed SQLite batches and atomically rebuilds their
-canonical facts. The same activation transaction now rebuilds the attendance
+canonical facts. The same activation transaction rebuilds the attendance
 agent-day read model and exact gap fragments from published schedule, approved
-PTO/Away, Agent Status, and LILO evidence. Metadata-based changed-file planning
-and affected-partition rebuilds in the target topology remain roadmap work;
-current refreshes replay all configured files to preserve correctness.
+PTO/Away, Agent Status, and LILO evidence.
+
+An exact unchanged candidate set now takes the conservative metadata fast path:
+source type/key, size, precise mtime, adapter, policy, model, source root, and
+attendance policy must still agree with the active successful generation. The
+host then returns a no-op success and reuses that generation without hashing,
+parsing, or duplicating facts. Added, removed, moved, policy-drifted, or
+ambiguous sources force a governed rebuild.
+
+Changed large files now receive one SHA-256 pass and one streaming parse into
+generation-keyed Bronze staging. Atomic activation verifies the bound manifest
+and file metadata, then builds canonical facts from those staged rows; it does
+not reopen the CSV. This replaces the four hash plus two parse passes in
+Preview `.5`. Per-file known-version reactivation and dependency-scoped rebuild
+are still not implemented, so adding one new daily file still causes the other
+configured event files to be parsed once.
+
+During a rebuild, `/api/rta/source-health` exposes bounded in-memory stage,
+relative source key, elapsed time, and file progress. Unexpected failures keep
+their stage and exception class in the safe failure code, print the traceback
+to the local console, and atomically write the latest detailed diagnostic to
+`data/diagnostics/refresh-failure.txt`. The HTTP response remains path- and
+row-scrubbed, and the previous active generation remains authoritative.
 
 Clearing or losing the browser cache must trigger a bounded rebuild from
 authoritative SQLite/source evidence, never data loss.

@@ -388,10 +388,16 @@ a {
 }
 
 .panel .source-error,
-.panel .source-warning {
+.panel .source-warning,
+.panel .source-progress {
   margin: 0 0 14px;
   padding: 10px 12px;
   border-radius: 4px;
+}
+
+.panel .source-progress {
+  color: var(--wfm-green);
+  background: var(--wfm-green-light);
 }
 
 .panel .source-error {

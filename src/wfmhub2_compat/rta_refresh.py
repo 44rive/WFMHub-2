@@ -9,15 +9,22 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import os
 import sqlite3
 import threading
+import time
+import traceback
+from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
 from wfmhub2_compat.actual_contracts import (
+    LILO_ADAPTER_VERSION,
+    LILO_POLICY_FINGERPRINT,
+    STATUS_ADAPTER_VERSION,
     ActualKind,
     ActualSourcePlan,
     StatusPolicy,
@@ -32,6 +39,7 @@ from wfmhub2_compat.attendance_model import (
     load_attendance_policy,
 )
 from wfmhub2_compat.call_contracts import (
+    CALL_ADAPTER_VERSION,
     CallPolicy,
     CallSourcePlan,
     load_call_policy,
@@ -41,6 +49,10 @@ from wfmhub2_compat.call_contracts import (
 )
 from wfmhub2_compat.refresh_store import RefreshStore
 from wfmhub2_compat.source_contracts import (
+    FTE_ADAPTER_VERSION,
+    FTE_POLICY_FINGERPRINT,
+    SCHEDULE_ADAPTER_VERSION,
+    SCHEDULE_POLICY_FINGERPRINT,
     FteSnapshot,
     ScheduleSnapshot,
     SourceContractError,
@@ -66,6 +78,62 @@ REFRESH_CATALOG_SHA256 = hashlib.sha256(
     b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|Storm/Call by Call/*.csv|"
     b"attendance-read-model-v1|v6"
 ).hexdigest()
+DIAGNOSTIC_PATH = Path("data/diagnostics/refresh-failure.txt")
+
+ProgressCallback = Callable[[str, str, int, int], None]
+
+
+@dataclass(frozen=True)
+class SourceInventoryEntry:
+    source_type: str
+    source_key: str
+    file_size: int
+    mtime_ns: int
+
+
+def _candidate_paths(source_root: Path, directory: Path, suffix: str) -> list[Path]:
+    candidate_directory = source_root / directory
+    if not candidate_directory.is_dir():
+        return []
+    return sorted(
+        (path for path in candidate_directory.iterdir() if _is_candidate_file(path, suffix)),
+        key=lambda path: path.name.casefold(),
+    )
+
+
+def _source_inventory(source_root: Path) -> tuple[SourceInventoryEntry, ...]:
+    """Read only cheap metadata for the exact governed candidate set."""
+    typed_paths: list[tuple[str, Path]] = []
+    typed_paths.extend(
+        ("fte_roster", path) for path in _candidate_paths(source_root, FTE_DIRECTORY, ".xlsx")
+    )
+    typed_paths.extend(
+        ("published_schedule", path)
+        for path in _candidate_paths(source_root, SCHEDULE_DIRECTORY, ".txt")
+        if _schedule_header_matches(path)
+    )
+    typed_paths.extend(
+        ("agent_status", path)
+        for path in _candidate_paths(source_root, AGENT_STATUS_DIRECTORY, ".csv")
+    )
+    typed_paths.extend(
+        ("lilo", path) for path in _candidate_paths(source_root, LILO_DIRECTORY, ".csv")
+    )
+    typed_paths.extend(
+        ("call_by_call", path) for path in _candidate_paths(source_root, CALL_DIRECTORY, ".csv")
+    )
+    inventory: list[SourceInventoryEntry] = []
+    for source_type, path in typed_paths:
+        stat = path.stat()
+        inventory.append(
+            SourceInventoryEntry(
+                source_type,
+                _source_key(source_root, path),
+                stat.st_size,
+                stat.st_mtime_ns,
+            )
+        )
+    return tuple(sorted(inventory, key=lambda item: (item.source_type, item.source_key)))
 
 
 def _catalog_fingerprint(root: Path) -> str:
@@ -103,6 +171,14 @@ class ResolvedSourceRoot:
 
 def _configuration_problem(code: str, message: str) -> RefreshFailedError:
     return RefreshFailedError(code, message)
+
+
+def _source_changed_problem() -> RefreshFailedError:
+    return RefreshFailedError(
+        "SOURCE_CHANGED_DURING_REFRESH",
+        "A source file changed while refresh was reading it. Wait for the export or copy "
+        "to finish, then retry. The previous active generation was preserved.",
+    )
 
 
 def resolve_source_root(home: Path) -> ResolvedSourceRoot:
@@ -156,7 +232,7 @@ def _source_key(source_root: Path, path: Path) -> str:
     return path.relative_to(source_root).as_posix()
 
 
-def _discover_roster(source_root: Path) -> FteSnapshot:
+def _discover_roster(source_root: Path, progress: ProgressCallback | None = None) -> FteSnapshot:
     directory = source_root / FTE_DIRECTORY
     candidates = (
         sorted(
@@ -167,10 +243,14 @@ def _discover_roster(source_root: Path) -> FteSnapshot:
         else []
     )
     matches: list[FteSnapshot] = []
-    for path in candidates:
+    for index, path in enumerate(candidates, 1):
+        if progress is not None:
+            progress("roster", _source_key(source_root, path), index - 1, len(candidates))
         try:
             matches.append(parse_fte_workbook(path, source_key=_source_key(source_root, path)))
-        except SourceContractError:
+        except SourceContractError as exc:
+            if "changed" in str(exc).lower():
+                raise _source_changed_problem() from exc
             continue
     if not matches:
         if candidates:
@@ -223,7 +303,11 @@ def _is_date(value: str, pattern: str) -> bool:
     return True
 
 
-def _discover_schedules(source_root: Path, roster: FteSnapshot) -> tuple[ScheduleSnapshot, ...]:
+def _discover_schedules(
+    source_root: Path,
+    roster: FteSnapshot,
+    progress: ProgressCallback | None = None,
+) -> tuple[ScheduleSnapshot, ...]:
     directory = source_root / SCHEDULE_DIRECTORY
     candidates = (
         sorted(
@@ -244,7 +328,9 @@ def _discover_schedules(source_root: Path, roster: FteSnapshot) -> tuple[Schedul
             "Verint/Schedules & Activities and run refresh again.",
         )
     schedules: list[ScheduleSnapshot] = []
-    for path in candidates:
+    for index, path in enumerate(candidates, 1):
+        if progress is not None:
+            progress("schedules", _source_key(source_root, path), index - 1, len(candidates))
         try:
             schedules.append(
                 parse_start_end_times(
@@ -254,6 +340,8 @@ def _discover_schedules(source_root: Path, roster: FteSnapshot) -> tuple[Schedul
                 )
             )
         except SourceContractError as exc:
+            if "changed" in str(exc).lower():
+                raise _source_changed_problem() from exc
             detail = str(exc).replace(str(source_root), "<source-root>")[:240]
             raise RefreshFailedError(
                 "INVALID_PUBLISHED_SCHEDULE",
@@ -287,6 +375,9 @@ def _actual_candidates(source_root: Path, directory: Path) -> list[Path]:
 def _discover_actuals(
     source_root: Path,
     roster: FteSnapshot,
+    progress: ProgressCallback | None = None,
+    stage_database: Path | None = None,
+    generation_id: int | None = None,
 ) -> tuple[tuple[ActualSourcePlan, ...], StatusPolicy | None]:
     status_paths = _actual_candidates(source_root, AGENT_STATUS_DIRECTORY)
     lilo_paths = _actual_candidates(source_root, LILO_DIRECTORY)
@@ -296,9 +387,13 @@ def _discover_actuals(
         ("agent_status", status_paths),
         ("lilo", lilo_paths),
     )
+    total = len(status_paths) + len(lilo_paths)
+    completed = 0
     for kind, paths in source_sets:
         for path in paths:
             source_key = _source_key(source_root, path)
+            if progress is not None:
+                progress("actuals", source_key, completed, total)
             try:
                 plans.append(
                     preflight_actual_source(
@@ -307,21 +402,29 @@ def _discover_actuals(
                         kind=kind,
                         roster=roster,
                         status_policy=status_policy,
+                        stage_database=stage_database,
+                        generation_id=generation_id,
                     )
                 )
             except SourceContractError as exc:
+                if "changed" in str(exc).lower():
+                    raise _source_changed_problem() from exc
                 label = "Agent Status" if kind == "agent_status" else "LILO"
                 detail = str(exc).replace(str(source_root), "<source-root>")[:240]
                 raise RefreshFailedError(
                     f"INVALID_{kind.upper()}_SOURCE",
                     f"{label} source {source_key} failed: {detail}",
                 ) from exc
+            completed += 1
     return tuple(plans), status_policy
 
 
 def _discover_calls(
     source_root: Path,
     roster: FteSnapshot,
+    progress: ProgressCallback | None = None,
+    stage_database: Path | None = None,
+    generation_id: int | None = None,
 ) -> tuple[tuple[CallSourcePlan, ...], CallPolicy | None]:
     paths = _actual_candidates(source_root, CALL_DIRECTORY)
     if not paths:
@@ -334,8 +437,10 @@ def _discover_calls(
             "The packaged queue mapping or service rules are invalid.",
         ) from exc
     plans: list[CallSourcePlan] = []
-    for path in paths:
+    for index, path in enumerate(paths, 1):
         source_key = _source_key(source_root, path)
+        if progress is not None:
+            progress("calls", source_key, index - 1, len(paths))
         try:
             plans.append(
                 preflight_call_source(
@@ -343,9 +448,13 @@ def _discover_calls(
                     source_key=source_key,
                     roster=roster,
                     policy=policy,
+                    stage_database=stage_database,
+                    generation_id=generation_id,
                 )
             )
         except SourceContractError as exc:
+            if "changed" in str(exc).lower():
+                raise _source_changed_problem() from exc
             detail = str(exc).replace(str(source_root), "<source-root>")[:240]
             raise RefreshFailedError(
                 "INVALID_CALL_BY_CALL_SOURCE",
@@ -494,6 +603,191 @@ class RtaRefreshCoordinator:
         self.home = home
         self.store = RefreshStore(home / "data/control.sqlite")
         self._refresh_lock = threading.Lock()
+        self._progress_lock = threading.Lock()
+        self._progress: dict[str, Any] | None = None
+        self._progress_started = 0.0
+
+    def _set_progress(
+        self,
+        stage: str,
+        message: str,
+        completed_files: int = 0,
+        total_files: int = 0,
+    ) -> None:
+        now = datetime.now(UTC).isoformat(timespec="seconds")
+        with self._progress_lock:
+            if self._progress is None:
+                self._progress_started = time.monotonic()
+                started_at = now
+            else:
+                started_at = str(self._progress["startedAt"])
+            self._progress = {
+                "status": "running",
+                "stage": stage,
+                "message": message,
+                "completedFiles": completed_files,
+                "totalFiles": total_files,
+                "startedAt": started_at,
+            }
+
+    def _progress_callback(self, stage: str, source_key: str, completed: int, total: int) -> None:
+        label = {
+            "roster": "Validating roster",
+            "schedules": "Validating schedules",
+            "actuals": "Validating Status and LILO",
+            "calls": "Validating Call by Call",
+            "publishing_actuals": "Publishing Status and LILO",
+            "publishing_calls": "Publishing Call by Call",
+        }.get(stage, "Refreshing sources")
+        self._set_progress(stage, f"{label}: {source_key}", completed, total)
+
+    def _progress_value(self) -> dict[str, Any] | None:
+        with self._progress_lock:
+            if self._progress is None:
+                return None
+            result = dict(self._progress)
+            result["elapsedSeconds"] = max(0, int(time.monotonic() - self._progress_started))
+            return result
+
+    def _clear_progress(self) -> None:
+        with self._progress_lock:
+            self._progress = None
+            self._progress_started = 0.0
+
+    def _reusable_generation_id(
+        self,
+        source_root: Path,
+        inventory: tuple[SourceInventoryEntry, ...],
+    ) -> int | None:
+        """Return the active cut only when cheap evidence and contracts match exactly."""
+        expected_contracts: dict[str, tuple[str, str]] = {
+            "fte_roster": (FTE_ADAPTER_VERSION, FTE_POLICY_FINGERPRINT),
+            "published_schedule": (
+                SCHEDULE_ADAPTER_VERSION,
+                SCHEDULE_POLICY_FINGERPRINT,
+            ),
+            "lilo": (LILO_ADAPTER_VERSION, LILO_POLICY_FINGERPRINT),
+        }
+        try:
+            if any(item.source_type == "agent_status" for item in inventory):
+                status_policy = load_status_policy()
+                expected_contracts["agent_status"] = (
+                    STATUS_ADAPTER_VERSION,
+                    status_policy.fingerprint,
+                )
+            if any(item.source_type == "call_by_call" for item in inventory):
+                call_policy = load_call_policy()
+                expected_contracts["call_by_call"] = (
+                    CALL_ADAPTER_VERSION,
+                    call_policy.fingerprint,
+                )
+            attendance_policy = load_attendance_policy()
+        except (OSError, UnicodeError, ValueError, SourceContractError):
+            return None
+
+        with closing(sqlite3.connect(self.store.path)) as connection:
+            connection.row_factory = sqlite3.Row
+            generation = connection.execute(
+                """
+                SELECT generation.id, generation.status, generation.catalog_sha256,
+                       generation.model_version
+                FROM wfm_active_generation AS active
+                JOIN wfm_refresh_generation AS generation
+                  ON generation.id = active.generation_id
+                WHERE active.singleton = 1
+                """
+            ).fetchone()
+            if (
+                generation is None
+                or generation["status"] != "succeeded"
+                or generation["catalog_sha256"] != _catalog_fingerprint(source_root)
+                or generation["model_version"] != REFRESH_MODEL_VERSION
+            ):
+                return None
+            manifest_rows = connection.execute(
+                """
+                SELECT source_type, source_key, state, file_size, mtime_ns,
+                       adapter_version, policy_fingerprint
+                FROM wfm_source_manifest WHERE generation_id = ?
+                """,
+                (int(generation["id"]),),
+            ).fetchall()
+            attendance_fingerprints = {
+                str(row[0])
+                for row in connection.execute(
+                    """
+                    SELECT DISTINCT policy_fingerprint
+                    FROM wfm_attendance_agent_day WHERE generation_id = ?
+                    """,
+                    (int(generation["id"]),),
+                )
+            }
+
+        active = {
+            (str(row["source_type"]), str(row["source_key"])): (
+                str(row["state"]),
+                int(row["file_size"]),
+                int(row["mtime_ns"]),
+                str(row["adapter_version"]),
+                str(row["policy_fingerprint"]),
+            )
+            for row in manifest_rows
+        }
+        current = {
+            (item.source_type, item.source_key): (item.file_size, item.mtime_ns)
+            for item in inventory
+        }
+        if set(active) != set(current):
+            return None
+        for key, metadata in current.items():
+            state, file_size, mtime_ns, adapter, policy = active[key]
+            contract = expected_contracts.get(key[0])
+            if (
+                state != "present"
+                or (file_size, mtime_ns) != metadata
+                or contract is None
+                or (adapter, policy) != contract
+            ):
+                return None
+        if attendance_fingerprints and attendance_fingerprints != {attendance_policy.fingerprint}:
+            return None
+        return int(generation["id"])
+
+    def _write_failure_diagnostic(
+        self,
+        *,
+        stage: str,
+        code: str,
+        generation_id: int | None,
+        exc: BaseException,
+        print_traceback: bool = True,
+    ) -> bool:
+        saved = False
+        try:
+            destination = self.home / DIAGNOSTIC_PATH
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            temporary = destination.with_suffix(".tmp")
+            body = "\n".join(
+                (
+                    "WFMHub 2 refresh failure diagnostic",
+                    f"recorded_at={datetime.now(UTC).isoformat(timespec='seconds')}",
+                    f"stage={stage}",
+                    f"code={code}",
+                    f"generation_id={generation_id if generation_id is not None else 'none'}",
+                    f"exception_type={type(exc).__name__}",
+                    "",
+                    "".join(traceback.format_exception(exc)),
+                )
+            )
+            temporary.write_text(body, encoding="utf-8")
+            os.replace(temporary, destination)
+            saved = True
+        except OSError:
+            # Diagnostics are best-effort; never replace the original refresh failure.
+            pass
+        if print_traceback:
+            traceback.print_exception(exc)
+        return saved
 
     def source_health(self) -> dict[str, Any]:
         selected_fingerprint: str | None = None
@@ -547,6 +841,7 @@ class RtaRefreshCoordinator:
                 else "not_ready"
             ),
             "ready": source_ready,
+            "refreshProgress": self._progress_value(),
             "sourceRoot": root_value,
             "configuredSources": {
                 "fte": FTE_DIRECTORY.as_posix(),
@@ -651,75 +946,169 @@ class RtaRefreshCoordinator:
         if not self._refresh_lock.acquire(blocking=False):
             raise RefreshBusyError("A source refresh is already running.")
         generation_id: int | None = None
+        stage = "resolving_sources"
+        started = time.monotonic()
         try:
+            self._set_progress(stage, "Resolving the configured source folder")
             root = resolve_source_root(self.home)
+            stage = "inventory"
+            self._set_progress(stage, "Checking source metadata")
+            inventory = _source_inventory(root.path)
+            reusable = self._reusable_generation_id(root.path, inventory)
+            if reusable is not None:
+                self._set_progress(
+                    "complete", "Sources are unchanged", len(inventory), len(inventory)
+                )
+                result = {
+                    "status": "succeeded",
+                    "generationId": reusable,
+                    "unchanged": True,
+                    "durationMs": int((time.monotonic() - started) * 1000),
+                    "sourceHealth": self.source_health(),
+                }
+                return result
             generation_id = self.store.start_generation(
                 catalog_sha256=_catalog_fingerprint(root.path),
                 model_version=REFRESH_MODEL_VERSION,
             )
-            roster = _discover_roster(root.path)
-            schedules = _discover_schedules(root.path, roster)
-            actuals, status_policy = _discover_actuals(root.path, roster)
-            calls, call_policy = _discover_calls(root.path, roster)
-            attendance_policy: AttendancePolicy = load_attendance_policy()
+            stage = "roster"
+            roster = _discover_roster(root.path, self._progress_callback)
+            stage = "schedules"
+            schedules = _discover_schedules(root.path, roster, self._progress_callback)
             snapshot = SourceSnapshot(roster, schedules)
-            stage_sources(self.store, generation_id, snapshot)
-            stage_findings(self.store, generation_id, snapshot)
-            stage_actual_plans(self.store, generation_id, actuals)
-            stage_call_plans(self.store, generation_id, calls)
             if any(finding.severity == "error" for finding in snapshot.findings):
+                stage = "staging_evidence"
+                self._set_progress(stage, "Recording blocking source findings")
+                stage_sources(self.store, generation_id, snapshot)
+                stage_findings(self.store, generation_id, snapshot)
                 raise RefreshFailedError(
                     "BLOCKING_SOURCE_QUALITY",
                     "Source validation found blocking errors. Correct the source rows and retry.",
                 )
+            stage = "actuals"
+            actuals, status_policy = _discover_actuals(
+                root.path,
+                roster,
+                self._progress_callback,
+                self.store.path,
+                generation_id,
+            )
+            stage = "calls"
+            calls, call_policy = _discover_calls(
+                root.path,
+                roster,
+                self._progress_callback,
+                self.store.path,
+                generation_id,
+            )
+            stage = "attendance_policy"
+            self._set_progress(stage, "Loading attendance policy")
+            attendance_policy: AttendancePolicy = load_attendance_policy()
+            stage = "staging_evidence"
+            self._set_progress(stage, "Recording validated source evidence")
+            stage_sources(self.store, generation_id, snapshot)
+            stage_findings(self.store, generation_id, snapshot)
+            stage_actual_plans(self.store, generation_id, actuals)
+            stage_call_plans(self.store, generation_id, calls)
             source_publish = make_source_publish(snapshot)
 
             def publish(connection: sqlite3.Connection, active_generation_id: int) -> None:
+                nonlocal stage
+                stage = "publishing_roster_schedules"
+                self._set_progress(stage, "Publishing roster and schedules")
                 source_publish(connection, active_generation_id)
+                stage = "publishing_actuals"
                 publish_actual_plans(
                     connection,
                     active_generation_id,
                     actuals,
                     roster=roster,
                     status_policy=status_policy,
+                    progress=self._progress_callback,
+                    rows_staged=True,
                 )
+                stage = "attendance"
+                self._set_progress(stage, "Building attendance evidence")
                 build_attendance_model(
                     connection,
                     active_generation_id,
                     policy=attendance_policy,
                 )
+                stage = "publishing_calls"
                 publish_call_plans(
                     connection,
                     active_generation_id,
                     calls,
                     roster=roster,
                     policy=call_policy,
+                    progress=self._progress_callback,
+                    rows_staged=True,
                 )
 
+            stage = "commit"
+            self._set_progress(stage, "Publishing the validated generation")
             self.store.activate_generation(generation_id, publish=publish)
+            self._set_progress("complete", "Refresh complete")
             return {
                 "status": "succeeded",
                 "generationId": generation_id,
+                "unchanged": False,
+                "durationMs": int((time.monotonic() - started) * 1000),
                 "sourceHealth": self.source_health(),
             }
         except RefreshFailedError as exc:
             if generation_id is not None:
                 self.store.fail_generation(generation_id, reason=exc.code)
+            self._write_failure_diagnostic(
+                stage=stage,
+                code=exc.code,
+                generation_id=generation_id,
+                exc=exc,
+                print_traceback=False,
+            )
             raise RefreshFailedError(
                 exc.code,
                 exc.message,
                 generation_id=generation_id,
             ) from exc
         except Exception as exc:
-            code = "REFRESH_FAILED"
+            stage_code = "".join(character if character.isalnum() else "_" for character in stage)
+            type_code = "".join(
+                character if character.isalnum() else "_" for character in type(exc).__name__
+            )
+            source_changed = isinstance(exc, SourceContractError) and "changed" in str(exc).lower()
+            code = (
+                "SOURCE_CHANGED_DURING_REFRESH"
+                if source_changed
+                else f"REFRESH_FAILED_{stage_code}_{type_code}".upper()
+            )
             if generation_id is not None:
                 self.store.fail_generation(generation_id, reason=code)
+            diagnostic_saved = self._write_failure_diagnostic(
+                stage=stage,
+                code=code,
+                generation_id=generation_id,
+                exc=exc,
+            )
+            message = (
+                "A source file changed while refresh was reading it. Wait for the export or copy "
+                "to finish, then retry. The previous active generation was preserved."
+                if source_changed
+                else f"Refresh failed safely during {stage.replace('_', ' ')} "
+                f"({type(exc).__name__}). The previous active generation was preserved. "
+                + (
+                    f"Details were saved locally to {DIAGNOSTIC_PATH.as_posix()}."
+                    if diagnostic_saved
+                    else "The diagnostic file could not be written; see the launcher console."
+                )
+            )
             raise RefreshFailedError(
                 code,
-                "Refresh failed safely; the previous active generation was preserved.",
+                message,
                 generation_id=generation_id,
             ) from exc
         finally:
+            self._clear_progress()
             self._refresh_lock.release()
 
 

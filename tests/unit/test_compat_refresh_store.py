@@ -42,6 +42,10 @@ def test_new_control_database_has_generation_authority(tmp_path: Path) -> None:
             row[0]
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
+        indexes = {
+            row[0]
+            for row in connection.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        }
         journal = connection.execute("PRAGMA journal_mode").fetchone()[0]
         integrity = connection.execute("PRAGMA quick_check").fetchone()[0]
     assert {
@@ -53,6 +57,11 @@ def test_new_control_database_has_generation_authority(tmp_path: Path) -> None:
     } <= tables
     assert journal == "wal"
     assert integrity == "ok"
+    assert {
+        "ix_wfm_time_off_agent_range",
+        "ix_wfm_lilo_agent_date",
+        "ix_wfm_status_agent_interval",
+    } <= indexes
     assert store.active_generation_id() is None
 
 

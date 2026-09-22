@@ -174,6 +174,12 @@ def main() -> int:
         ):
             raise RuntimeError("source refresh modified the input files")
 
+        repeated = coordinator.refresh()
+        if repeated.get("unchanged") is not True:
+            raise RuntimeError("unchanged packaged refresh did not take the no-op path")
+        if repeated["generationId"] != result["generationId"]:
+            raise RuntimeError("unchanged packaged refresh created another generation")
+
         with schedule.open("w", encoding="cp1252", newline="") as stream:
             writer = csv.writer(stream, delimiter="\t")
             writer.writerow(

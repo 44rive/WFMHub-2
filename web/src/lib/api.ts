@@ -51,6 +51,16 @@ export type SourceRoot = {
 
 export type SourceQuality = { error: number; warning: number; info: number }
 
+export type RefreshProgress = {
+  status: 'running'
+  stage: string
+  message: string
+  completedFiles: number
+  totalFiles: number
+  startedAt: string
+  elapsedSeconds: number
+}
+
 export type SourceRefreshSummary = {
   generationId: number
   status: 'running' | 'succeeded' | 'failed'
@@ -92,6 +102,7 @@ export type RtaSourceHealth = {
   activeGenerationId: number | null
   activeGeneration: SourceRefreshSummary | null
   latestRefresh: SourceRefreshSummary | null
+  refreshProgress: RefreshProgress | null
   configuredSources: {
     fte: string
     publishedSchedules: string
@@ -148,6 +159,8 @@ export type RtaSourceHealth = {
 export type RtaRefreshResult = {
   status: 'succeeded'
   generationId: number
+  unchanged: boolean
+  durationMs: number
   sourceHealth: RtaSourceHealth
 }
 
@@ -423,6 +436,19 @@ function isSummary(value: unknown): value is SourceRefreshSummary {
   )
 }
 
+function isRefreshProgress(value: unknown): value is RefreshProgress {
+  return (
+    isRecord(value) &&
+    value.status === 'running' &&
+    typeof value.stage === 'string' &&
+    typeof value.message === 'string' &&
+    typeof value.completedFiles === 'number' &&
+    typeof value.totalFiles === 'number' &&
+    typeof value.startedAt === 'string' &&
+    typeof value.elapsedSeconds === 'number'
+  )
+}
+
 export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
   if (
     !isRecord(value) ||
@@ -432,6 +458,7 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
     !(value.activeGenerationId === null || typeof value.activeGenerationId === 'number') ||
     !(value.activeGeneration === null || isSummary(value.activeGeneration)) ||
     !(value.latestRefresh === null || isSummary(value.latestRefresh)) ||
+    !(value.refreshProgress === null || isRefreshProgress(value.refreshProgress)) ||
     !isRecord(value.configuredSources) ||
     typeof value.configuredSources.fte !== 'string' ||
     typeof value.configuredSources.publishedSchedules !== 'string' ||
@@ -480,12 +507,20 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
 }
 
 export function decodeRtaRefreshResult(value: unknown): RtaRefreshResult {
-  if (!isRecord(value) || value.status !== 'succeeded' || typeof value.generationId !== 'number') {
+  if (
+    !isRecord(value) ||
+    value.status !== 'succeeded' ||
+    typeof value.generationId !== 'number' ||
+    typeof value.unchanged !== 'boolean' ||
+    typeof value.durationMs !== 'number'
+  ) {
     throw new Error('Local refresh response did not match the supported contract')
   }
   return {
     status: 'succeeded',
     generationId: value.generationId,
+    unchanged: value.unchanged,
+    durationMs: value.durationMs,
     sourceHealth: decodeRtaSourceHealth(value.sourceHealth),
   }
 }
