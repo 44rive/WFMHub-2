@@ -126,6 +126,7 @@ class ActualSourcePlan:
     date_to: date | None
     date_field: str | None = None
     fallback_date: date | None = None
+    bronze_generation_id: int | None = None
 
 
 def default_status_policy_path() -> Path:
@@ -413,10 +414,17 @@ def preflight_actual_source(
     status_policy: StatusPolicy | None = None,
     stage_database: Path | None = None,
     generation_id: int | None = None,
+    initial_fingerprint: tuple[int, int, str] | None = None,
 ) -> ActualSourcePlan:
     if (stage_database is None) != (generation_id is None):
         raise ValueError("stage_database and generation_id must be provided together")
-    before = _fingerprint(path)
+    before = (
+        _Fingerprint(*initial_fingerprint)
+        if initial_fingerprint is not None
+        else _fingerprint(path)
+    )
+    if not _metadata_matches(path, before):
+        raise SourceContractError(f"source changed before parsing: {path.name}")
     scope = AgentScope.from_snapshot(roster)
     date_field: str | None = None
     fallback_date: date | None = None
@@ -552,7 +560,9 @@ def stage_actual_plans(
     store: RefreshStore, generation_id: int, plans: Sequence[ActualSourcePlan]
 ) -> None:
     for plan in plans:
-        store.stage_source(generation_id, plan.version)
+        store.stage_source(
+            generation_id, plan.version, bronze_generation_id=plan.bronze_generation_id
+        )
         store.record_quality_issues(generation_id, plan.findings)
 
 
@@ -699,11 +709,18 @@ def publish_actual_plans(
                 if rows_staged
                 else _publish_status(connection, generation_id, plan, scope, status_policy)
             )
-        if rows_staged:
+        if rows_staged and plan.bronze_generation_id is None:
             table = "wfm_raw_lilo" if plan.kind == "lilo" else "wfm_raw_agent_status"
             staged_count = connection.execute(
-                f"SELECT count(*) FROM {table} WHERE generation_id = ? AND source_key = ?",
-                (generation_id, plan.source_key),
+                f"""
+                SELECT count(*) FROM {table} AS raw
+                JOIN wfm_source_manifest AS manifest
+                  ON manifest.generation_id = ? AND manifest.source_key = raw.source_key
+                 AND manifest.source_type = ? AND manifest.state = 'present'
+                 AND manifest.bronze_generation_id = raw.generation_id
+                WHERE raw.source_key = ?
+                """,
+                (generation_id, plan.kind, plan.source_key),
             ).fetchone()
             if staged_count is None or int(staged_count[0]) != plan.accepted_rows:
                 raise ValueError(f"staged actual row count mismatch: {plan.source_key}")

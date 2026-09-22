@@ -63,6 +63,7 @@ from wfmhub2_compat.source_contracts import (
     stage_findings,
     stage_sources,
 )
+from wfmhub2_compat.source_reuse import ReusedSource, SourceMovedError, SourceReuseCatalog
 
 SOURCE_POINTER = Path("data/source-root.txt")
 DEFAULT_SOURCE_ROOT = Path("extracts")
@@ -372,12 +373,74 @@ def _actual_candidates(source_root: Path, directory: Path) -> list[Path]:
     )
 
 
+def _reused_actual_plan(
+    path: Path,
+    kind: ActualKind,
+    reused: ReusedSource,
+    database: Path,
+) -> ActualSourcePlan | None:
+    table = "wfm_raw_agent_status" if kind == "agent_status" else "wfm_raw_lilo"
+    with closing(sqlite3.connect(database)) as connection:
+        count = connection.execute(
+            f"SELECT count(*) FROM {table} WHERE generation_id = ? AND source_key = ?",
+            (reused.bronze_generation_id, reused.version.source_key),
+        ).fetchone()
+    if count is None or count[0] != reused.version.row_count:
+        return None
+    return ActualSourcePlan(
+        path,
+        reused.version.source_key,
+        kind,
+        reused.version,
+        reused.findings,
+        reused.version.row_count or 0,
+        0,
+        0,
+        None,
+        None,
+        bronze_generation_id=reused.bronze_generation_id,
+    )
+
+
+def _reused_call_plan(
+    path: Path,
+    reused: ReusedSource,
+    database: Path,
+) -> CallSourcePlan | None:
+    with closing(sqlite3.connect(database)) as connection:
+        counts = connection.execute(
+            """
+            SELECT count(*), COALESCE(sum(service_eligible), 0)
+            FROM wfm_raw_call_leg WHERE generation_id = ? AND source_key = ?
+            """,
+            (reused.bronze_generation_id, reused.version.source_key),
+        ).fetchone()
+    if counts is None or counts[0] != reused.version.row_count:
+        return None
+    return CallSourcePlan(
+        path,
+        reused.version.source_key,
+        reused.version,
+        reused.findings,
+        reused.version.row_count or 0,
+        int(counts[1]),
+        0,
+        0,
+        0,
+        0,
+        None,
+        None,
+        bronze_generation_id=reused.bronze_generation_id,
+    )
+
+
 def _discover_actuals(
     source_root: Path,
     roster: FteSnapshot,
     progress: ProgressCallback | None = None,
     stage_database: Path | None = None,
     generation_id: int | None = None,
+    reuse: SourceReuseCatalog | None = None,
 ) -> tuple[tuple[ActualSourcePlan, ...], StatusPolicy | None]:
     status_paths = _actual_candidates(source_root, AGENT_STATUS_DIRECTORY)
     lilo_paths = _actual_candidates(source_root, LILO_DIRECTORY)
@@ -395,6 +458,29 @@ def _discover_actuals(
             if progress is not None:
                 progress("actuals", source_key, completed, total)
             try:
+                fingerprint = None
+                if reuse is not None:
+                    reused, fingerprint = reuse.match(
+                        path,
+                        source_type=kind,
+                        source_key=source_key,
+                        adapter_version=(
+                            STATUS_ADAPTER_VERSION
+                            if kind == "agent_status"
+                            else LILO_ADAPTER_VERSION
+                        ),
+                        policy_fingerprint=(
+                            status_policy.fingerprint
+                            if kind == "agent_status" and status_policy is not None
+                            else LILO_POLICY_FINGERPRINT
+                        ),
+                    )
+                    if reused is not None:
+                        plan = _reused_actual_plan(path, kind, reused, reuse.database)
+                        if plan is not None:
+                            plans.append(plan)
+                            completed += 1
+                            continue
                 plans.append(
                     preflight_actual_source(
                         path,
@@ -404,8 +490,11 @@ def _discover_actuals(
                         status_policy=status_policy,
                         stage_database=stage_database,
                         generation_id=generation_id,
+                        initial_fingerprint=fingerprint,
                     )
                 )
+            except SourceMovedError as exc:
+                raise _source_changed_problem() from exc
             except SourceContractError as exc:
                 if "changed" in str(exc).lower():
                     raise _source_changed_problem() from exc
@@ -425,6 +514,7 @@ def _discover_calls(
     progress: ProgressCallback | None = None,
     stage_database: Path | None = None,
     generation_id: int | None = None,
+    reuse: SourceReuseCatalog | None = None,
 ) -> tuple[tuple[CallSourcePlan, ...], CallPolicy | None]:
     paths = _actual_candidates(source_root, CALL_DIRECTORY)
     if not paths:
@@ -442,6 +532,20 @@ def _discover_calls(
         if progress is not None:
             progress("calls", source_key, index - 1, len(paths))
         try:
+            fingerprint = None
+            if reuse is not None:
+                reused, fingerprint = reuse.match(
+                    path,
+                    source_type="call_by_call",
+                    source_key=source_key,
+                    adapter_version=CALL_ADAPTER_VERSION,
+                    policy_fingerprint=policy.fingerprint,
+                )
+                if reused is not None:
+                    plan = _reused_call_plan(path, reused, reuse.database)
+                    if plan is not None:
+                        plans.append(plan)
+                        continue
             plans.append(
                 preflight_call_source(
                     path,
@@ -450,8 +554,11 @@ def _discover_calls(
                     policy=policy,
                     stage_database=stage_database,
                     generation_id=generation_id,
+                    initial_fingerprint=fingerprint,
                 )
             )
+        except SourceMovedError as exc:
+            raise _source_changed_problem() from exc
         except SourceContractError as exc:
             if "changed" in str(exc).lower():
                 raise _source_changed_problem() from exc
@@ -480,9 +587,15 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
           (SELECT count(*) FROM wfm_agent_roster WHERE generation_id = ?) AS roster_agents,
           (SELECT count(*) FROM wfm_time_off WHERE generation_id = ?) AS time_off_records,
           (SELECT count(*) FROM wfm_schedule_shift WHERE generation_id = ?) AS schedule_assignments,
-          (SELECT count(*) FROM wfm_raw_agent_status WHERE generation_id = ?) AS agent_status_rows,
-          (SELECT count(*) FROM wfm_raw_lilo WHERE generation_id = ?) AS lilo_rows,
-          (SELECT count(*) FROM wfm_raw_call_leg WHERE generation_id = ?) AS raw_call_legs,
+          (SELECT COALESCE(sum(row_count), 0) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'agent_status') AS agent_status_rows,
+          (SELECT COALESCE(sum(row_count), 0) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'lilo') AS lilo_rows,
+          (SELECT COALESCE(sum(row_count), 0) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'call_by_call') AS raw_call_legs,
           (SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?) AS canonical_call_legs,
           (SELECT count(*) FROM wfm_service_interval WHERE generation_id = ?) AS service_intervals,
           (SELECT count(*) FROM wfm_attendance_agent_day
@@ -520,14 +633,24 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
     status_range = connection.execute(
         """
         SELECT min(extract_date), max(extract_date)
-        FROM wfm_raw_agent_status WHERE generation_id = ?
+        FROM wfm_source_manifest AS manifest
+        JOIN wfm_raw_agent_status AS raw
+          ON raw.generation_id = manifest.bronze_generation_id
+         AND raw.source_key = manifest.source_key
+        WHERE manifest.generation_id = ? AND manifest.source_type = 'agent_status'
+          AND manifest.state = 'present'
         """,
         (generation_id,),
     ).fetchone()
     lilo_range = connection.execute(
         """
         SELECT min(extract_date), max(extract_date)
-        FROM wfm_raw_lilo WHERE generation_id = ?
+        FROM wfm_source_manifest AS manifest
+        JOIN wfm_raw_lilo AS raw
+          ON raw.generation_id = manifest.bronze_generation_id
+         AND raw.source_key = manifest.source_key
+        WHERE manifest.generation_id = ? AND manifest.source_type = 'lilo'
+          AND manifest.state = 'present'
         """,
         (generation_id,),
     ).fetchone()
@@ -973,6 +1096,12 @@ class RtaRefreshCoordinator:
             )
             stage = "roster"
             roster = _discover_roster(root.path, self._progress_callback)
+            reuse = SourceReuseCatalog(
+                self.store.path,
+                catalog_sha256=_catalog_fingerprint(root.path),
+                model_version=REFRESH_MODEL_VERSION,
+                roster=roster.version,
+            )
             stage = "schedules"
             schedules = _discover_schedules(root.path, roster, self._progress_callback)
             snapshot = SourceSnapshot(roster, schedules)
@@ -992,6 +1121,7 @@ class RtaRefreshCoordinator:
                 self._progress_callback,
                 self.store.path,
                 generation_id,
+                reuse,
             )
             stage = "calls"
             calls, call_policy = _discover_calls(
@@ -1000,6 +1130,7 @@ class RtaRefreshCoordinator:
                 self._progress_callback,
                 self.store.path,
                 generation_id,
+                reuse,
             )
             stage = "attendance_policy"
             self._set_progress(stage, "Loading attendance policy")

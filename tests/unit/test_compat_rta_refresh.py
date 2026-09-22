@@ -6,11 +6,12 @@ import json
 import os
 import sqlite3
 import threading
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 import wfmhub2_compat.actual_contracts as actual_contracts
 import wfmhub2_compat.call_contracts as call_contracts
@@ -43,6 +44,64 @@ def _schedule(path: Path, assignment: str) -> None:
         writer = csv.writer(stream, delimiter="\t")
         writer.writerow(["Name", "Data Source IDs", "08/01/2026"])
         writer.writerow(["Ada Agent", "00123", assignment])
+
+
+def _event_sources(root: Path) -> tuple[Path, Path]:
+    status = root / "Storm/Agent Status/status.csv"
+    status.parent.mkdir(parents=True)
+    with status.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(
+            [
+                "[Serial Number]",
+                "[Status]",
+                "[Status Start Date and Time]",
+                "[Agent]",
+                "[Agent ID]",
+                "[Status Duration]",
+                "[Queue]",
+            ]
+        )
+        writer.writerow(
+            ["1", "Available", "08/01/2026 08:00", "Ada Agent", "00123", "00:30:00", "Q1"]
+        )
+    calls = root / "Storm/Call by Call/calls.csv"
+    calls.parent.mkdir(parents=True)
+    with calls.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(
+            [
+                "[Call Date/Time]",
+                "[Call End Date/Time]",
+                "[Call ID]",
+                "[Call Reference Number]",
+                "[Agent ID]",
+                "[Agent]",
+                "[Talk Time]",
+                "[Hold Time]",
+                "[Total Wrap Time]",
+                "[Call Direction]",
+                "[Total Queue Wait Time]",
+                "[Queue]",
+            ]
+        )
+        writer.writerow(
+            [
+                "08/01/2026 08:07",
+                "08/01/2026 08:10",
+                "call-1",
+                "ref-1",
+                "00123",
+                "Ada Agent",
+                "00:02:00",
+                "00:00:10",
+                "00:00:20",
+                "I",
+                "00:00:15",
+                "APBN_BRU_RSA_INTERNAT_All_FR",
+            ]
+        )
+    return status, calls
 
 
 def test_missing_sources_fail_without_publishing_and_keep_safe_health(tmp_path: Path) -> None:
@@ -274,6 +333,204 @@ def test_second_unchanged_refresh_reuses_active_generation_without_parsing(
     assert second["generationId"] == first["generationId"]
     with sqlite3.connect(coordinator.store.path) as connection:
         assert connection.execute("SELECT count(*) FROM wfm_refresh_generation").fetchone() == (1,)
+
+
+def test_new_schedule_reuses_event_bronze_without_reopening_or_copying_csvs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _event_sources(root)
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()["generationId"]
+    _schedule(schedule_dir / "StartEndTimes-second.txt", "Off")
+
+    def unexpected_parse(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("unchanged event source was parsed")
+
+    monkeypatch.setattr(actual_contracts, "_iter_status", unexpected_parse)
+    monkeypatch.setattr(call_contracts, "_iter_calls", unexpected_parse)
+    second_result = coordinator.refresh()
+    second = second_result["generationId"]
+
+    assert second != first
+    assert second_result["sourceHealth"]["sources"]["agentStatus"]["rowCount"] == 1
+    assert second_result["sourceHealth"]["sources"]["callByCall"]["rawLegCount"] == 1
+    with sqlite3.connect(coordinator.store.path) as connection:
+        owners = connection.execute(
+            """
+            SELECT source_type, bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type IN ('agent_status', 'call_by_call')
+            ORDER BY source_type
+            """,
+            (second,),
+        ).fetchall()
+        assert owners == [("agent_status", first), ("call_by_call", first)]
+        assert connection.execute(
+            "SELECT count(*) FROM wfm_raw_agent_status WHERE generation_id = ?", (second,)
+        ).fetchone() == (0,)
+        assert connection.execute(
+            "SELECT count(*) FROM wfm_raw_call_leg WHERE generation_id = ?", (second,)
+        ).fetchone() == (0,)
+        assert connection.execute(
+            "SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?", (second,)
+        ).fetchone() == (1,)
+
+
+def test_known_call_version_reactivates_after_a_to_b_to_a(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _, calls = _event_sources(root)
+    original = calls.read_bytes()
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()["generationId"]
+
+    calls.write_bytes(original.replace(b"call-1", b"call-2").replace(b"ref-1", b"ref-2"))
+    changed_time = calls.stat().st_mtime_ns + 1_000_000_000
+    os.utime(calls, ns=(changed_time, changed_time))
+    second = coordinator.refresh()["generationId"]
+    assert second != first
+
+    calls.write_bytes(original)
+    restored_time = calls.stat().st_mtime_ns + 1_000_000_000
+    os.utime(calls, ns=(restored_time, restored_time))
+
+    def unexpected_parse(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("known call source version was parsed")
+
+    monkeypatch.setattr(call_contracts, "_iter_calls", unexpected_parse)
+    third = coordinator.refresh()["generationId"]
+    assert third not in {first, second}
+    with sqlite3.connect(coordinator.store.path) as connection:
+        owner = connection.execute(
+            """
+            SELECT bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type = 'call_by_call'
+            """,
+            (third,),
+        ).fetchone()
+        assert owner == (first,)
+        assert connection.execute(
+            "SELECT call_id FROM wfm_call_leg WHERE generation_id = ?", (third,)
+        ).fetchone() == ("call-1",)
+
+
+def test_roster_change_reparses_agent_scoped_event_sources(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _event_sources(root)
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    coordinator.refresh()
+    roster = root / "FTE/FTE Count.xlsx"
+    book = load_workbook(roster)
+    sheet = book["Agent"]
+    sheet.append(["00456", "Active", "Ben Agent", 1, None])
+    book.save(roster)
+    book.close()
+
+    status_parser = Mock(wraps=actual_contracts._iter_status)  # pyright: ignore[reportPrivateUsage]
+    call_parser = Mock(wraps=call_contracts._iter_calls)  # pyright: ignore[reportPrivateUsage]
+    monkeypatch.setattr(actual_contracts, "_iter_status", status_parser)
+    monkeypatch.setattr(call_contracts, "_iter_calls", call_parser)
+    second = coordinator.refresh()["generationId"]
+
+    assert status_parser.call_count == 1
+    assert call_parser.call_count == 1
+    with sqlite3.connect(coordinator.store.path) as connection:
+        assert connection.execute(
+            """
+            SELECT count(*) FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type IN ('agent_status', 'call_by_call')
+              AND bronze_generation_id = generation_id
+            """,
+            (second,),
+        ).fetchone() == (2,)
+
+
+def test_removed_call_source_disappears_from_new_cut_and_rollback_restores_it(
+    tmp_path: Path,
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _, calls = _event_sources(root)
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()["generationId"]
+
+    calls.unlink()
+    second = coordinator.refresh()["generationId"]
+    health = coordinator.source_health()
+    assert health["sources"]["callByCall"]["fileCount"] == 0
+    assert health["sources"]["callByCall"]["canonicalLegCount"] == 0
+    with sqlite3.connect(coordinator.store.path) as connection:
+        assert connection.execute(
+            "SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?", (second,)
+        ).fetchone() == (0,)
+    assert coordinator.store.restore_previous_generation(expected_active_id=second) == first
+    assert coordinator.source_health()["sources"]["callByCall"]["canonicalLegCount"] == 1
+
+
+def test_call_policy_change_invalidates_known_bronze_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _event_sources(root)
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    coordinator.refresh()
+    current_policy = refresh_module.load_call_policy()
+    monkeypatch.setattr(
+        refresh_module,
+        "load_call_policy",
+        lambda: replace(current_policy, fingerprint="f" * 64),
+    )
+    call_parser = Mock(wraps=call_contracts._iter_calls)  # pyright: ignore[reportPrivateUsage]
+    monkeypatch.setattr(call_contracts, "_iter_calls", call_parser)
+
+    second = coordinator.refresh()["generationId"]
+
+    assert call_parser.call_count == 1
+    with sqlite3.connect(coordinator.store.path) as connection:
+        assert connection.execute(
+            """
+            SELECT bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type = 'call_by_call'
+            """,
+            (second,),
+        ).fetchone() == (second,)
+
+
+def test_missing_old_bronze_rows_force_source_reparse(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, schedule_dir = _sources(tmp_path)
+    _schedule(schedule_dir / "StartEndTimes.txt", "Off")
+    _event_sources(root)
+    coordinator = RtaRefreshCoordinator(tmp_path)
+    first = coordinator.refresh()["generationId"]
+    with sqlite3.connect(coordinator.store.path) as connection:
+        connection.execute("DELETE FROM wfm_raw_call_leg WHERE generation_id = ?", (first,))
+    _schedule(schedule_dir / "StartEndTimes-second.txt", "Off")
+    call_parser = Mock(wraps=call_contracts._iter_calls)  # pyright: ignore[reportPrivateUsage]
+    monkeypatch.setattr(call_contracts, "_iter_calls", call_parser)
+
+    second = coordinator.refresh()["generationId"]
+
+    assert call_parser.call_count == 1
+    with sqlite3.connect(coordinator.store.path) as connection:
+        assert connection.execute(
+            """
+            SELECT bronze_generation_id FROM wfm_source_manifest
+            WHERE generation_id = ? AND source_type = 'call_by_call'
+            """,
+            (second,),
+        ).fetchone() == (second,)
+        assert connection.execute(
+            "SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?", (second,)
+        ).fetchone() == (1,)
 
 
 def test_changed_source_forces_a_new_generation(tmp_path: Path) -> None:

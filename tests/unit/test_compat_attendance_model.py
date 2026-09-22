@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from wfmhub2_compat.attendance_model import build_attendance_model, load_attendance_policy
-from wfmhub2_compat.refresh_store import RefreshStore
+from wfmhub2_compat.refresh_store import RefreshStore, SourceVersion
 from wfmhub2_compat.source_contracts import SourceContractError
 
 EMPTY_CATALOG = hashlib.sha256(b"").hexdigest()
@@ -179,6 +179,32 @@ def test_attendance_status_primary_lilo_fallback_and_unknown_are_explicit(
 ) -> None:
     store = RefreshStore(tmp_path / "control.sqlite")
     generation = store.start_generation(catalog_sha256=EMPTY_CATALOG, model_version="attendance-v1")
+    store.stage_source(
+        generation,
+        SourceVersion(
+            "agent_status",
+            "Storm/Agent Status/status.csv",
+            1,
+            1,
+            "a" * 64,
+            "synthetic-status-v1",
+            "synthetic-policy-v1",
+            6,
+        ),
+    )
+    store.stage_source(
+        generation,
+        SourceVersion(
+            "lilo",
+            "Storm/LILO/lilo.csv",
+            1,
+            1,
+            "b" * 64,
+            "synthetic-lilo-v1",
+            "synthetic-policy-v1",
+            5,
+        ),
+    )
     store.activate_generation(generation, publish=_publish_fixture)
 
     with sqlite3.connect(store.path) as connection:
