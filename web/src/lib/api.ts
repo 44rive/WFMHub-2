@@ -65,6 +65,10 @@ export type SourceRefreshSummary = {
     rawCallLegs: number
     canonicalCallLegs: number
     serviceIntervals: number
+    attendanceAgentDays: number
+    attendanceGapFragments: number
+    statusPrimaryDays: number
+    attendanceUnknownDays: number
     sourceFiles: number
     scheduleFiles: number
     agentStatusFiles: number
@@ -76,6 +80,7 @@ export type SourceRefreshSummary = {
     agentStatus: { from: string | null; to: string | null }
     lilo: { from: string | null; to: string | null }
     callByCall: { from: string | null; to: string | null }
+    attendance: { from: string | null; to: string | null }
   }
   qualityCounts: SourceQuality
   failureCode?: string
@@ -123,6 +128,15 @@ export type RtaSourceHealth = {
       canonicalLegCount: number
       serviceIntervalCount: number
       fileCount: number
+      minDate: string | null
+      maxDate: string | null
+    }
+    attendance: {
+      ready: boolean
+      agentDayCount: number
+      gapFragmentCount: number
+      statusPrimaryCount: number
+      unknownCount: number
       minDate: string | null
       maxDate: string | null
     }
@@ -361,6 +375,19 @@ function isActualSource(value: unknown): boolean {
   )
 }
 
+function isAttendanceSource(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.ready === 'boolean' &&
+    typeof value.agentDayCount === 'number' &&
+    typeof value.gapFragmentCount === 'number' &&
+    typeof value.statusPrimaryCount === 'number' &&
+    typeof value.unknownCount === 'number' &&
+    (value.minDate === null || typeof value.minDate === 'string') &&
+    (value.maxDate === null || typeof value.maxDate === 'string')
+  )
+}
+
 function isSummary(value: unknown): value is SourceRefreshSummary {
   return (
     isRecord(value) &&
@@ -377,6 +404,10 @@ function isSummary(value: unknown): value is SourceRefreshSummary {
     typeof value.counts.rawCallLegs === 'number' &&
     typeof value.counts.canonicalCallLegs === 'number' &&
     typeof value.counts.serviceIntervals === 'number' &&
+    typeof value.counts.attendanceAgentDays === 'number' &&
+    typeof value.counts.attendanceGapFragments === 'number' &&
+    typeof value.counts.statusPrimaryDays === 'number' &&
+    typeof value.counts.attendanceUnknownDays === 'number' &&
     typeof value.counts.sourceFiles === 'number' &&
     typeof value.counts.scheduleFiles === 'number' &&
     typeof value.counts.agentStatusFiles === 'number' &&
@@ -387,6 +418,7 @@ function isSummary(value: unknown): value is SourceRefreshSummary {
     isDateRange(value.actualDateRanges.agentStatus) &&
     isDateRange(value.actualDateRanges.lilo) &&
     isDateRange(value.actualDateRanges.callByCall) &&
+    isDateRange(value.actualDateRanges.attendance) &&
     isQuality(value.qualityCounts)
   )
 }
@@ -438,6 +470,7 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
       value.sources.callByCall.maxDate === null ||
       typeof value.sources.callByCall.maxDate === 'string'
     ) ||
+    !isAttendanceSource(value.sources.attendance) ||
     !isQuality(value.quality) ||
     typeof value.ready !== 'boolean'
   ) {

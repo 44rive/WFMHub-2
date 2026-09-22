@@ -98,9 +98,11 @@ High-frequency events such as call-by-call/status history should be written in r
 
 The current Phase 1 compatibility host streams Agent Status, LILO, and
 Call-by-Call into generation-keyed SQLite batches and atomically rebuilds their
-canonical facts. Metadata-based changed-file planning and affected-partition
-rebuilds in the target topology remain roadmap work; current refreshes replay
-all configured files to preserve correctness.
+canonical facts. The same activation transaction now rebuilds the attendance
+agent-day read model and exact gap fragments from published schedule, approved
+PTO/Away, Agent Status, and LILO evidence. Metadata-based changed-file planning
+and affected-partition rebuilds in the target topology remain roadmap work;
+current refreshes replay all configured files to preserve correctness.
 
 Clearing or losing the browser cache must trigger a bounded rebuild from
 authoritative SQLite/source evidence, never data loss.

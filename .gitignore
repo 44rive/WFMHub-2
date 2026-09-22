@@ -51,6 +51,7 @@ reports/
 
 # Local qualification evidence
 qualification-evidence/
+.codex/handoffs/
 
 # Secrets and local configuration
 .env

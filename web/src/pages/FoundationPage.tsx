@@ -195,8 +195,9 @@ export function RtaSourcePanel({
       </div>
       <p>
         Read your existing FTE, Verint schedule, Agent Status, LILO, and Call-by-Call exports in
-        place. Refresh does not upload, copy, or modify those files. Storm sources are optional;
-        attendance metrics, headline service rates, and action queues are not connected yet.
+        place. Refresh does not upload, copy, or modify those files. Storm sources are optional; the
+        governed attendance read model is connected, while headline service rates and action queues
+        are not connected yet.
       </p>
       <div className="source-actions">
         <button
@@ -274,6 +275,14 @@ export function RtaSourcePanel({
             {health?.ready && health.sources.callByCall.ready
               ? `${health.sources.callByCall.canonicalLegCount} governed legs · ${health.sources.callByCall.serviceIntervalCount} intervals`
               : 'Optional service source not loaded'}
+          </dd>
+        </div>
+        <div>
+          <dt>Attendance evidence</dt>
+          <dd>
+            {health?.ready && health.sources.attendance.ready
+              ? `${health.sources.attendance.agentDayCount} agent-days · ${health.sources.attendance.gapFragmentCount} exact gaps · ${health.sources.attendance.unknownCount} unknown`
+              : 'Needs Agent Status or LILO evidence'}
           </dd>
         </div>
         <div>

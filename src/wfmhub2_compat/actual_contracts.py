@@ -39,7 +39,7 @@ LILO_REQUIRED_HEADERS = {
     "[First Log-on Time]",
     "[Last Log-off Time]",
 }
-STATUS_ADAPTER_VERSION = "agent-status-v1"
+STATUS_ADAPTER_VERSION = "agent-status-v2"
 LILO_ADAPTER_VERSION = "lilo-v1"
 LILO_POLICY_FINGERPRINT = hashlib.sha256(
     b"lilo|row-date-login-logout-single-iso-filename|scope-v1"
@@ -425,7 +425,7 @@ def preflight_actual_source(
         adapter_version = STATUS_ADAPTER_VERSION
         policy_fingerprint = status_policy.fingerprint
 
-    accepted = scoped_out = rejected = 0
+    accepted = scoped_out = rejected = unmapped_status_rows = 0
     date_from: date | None = None
     date_to: date | None = None
     for row, reason in records:
@@ -435,6 +435,13 @@ def preflight_actual_source(
             rejected += 1
         elif row is not None:
             accepted += 1
+            if (
+                kind == "agent_status"
+                and isinstance(row, AgentStatusRow)
+                and status_policy is not None
+                and _normalized_status(row.status) not in status_policy.categories
+            ):
+                unmapped_status_rows += 1
             date_from = row.extract_date if date_from is None else min(date_from, row.extract_date)
             date_to = row.extract_date if date_to is None else max(date_to, row.extract_date)
     if _fingerprint(path) != before:
@@ -457,6 +464,15 @@ def preflight_actual_source(
                 f"{prefix}_OUTSIDE_ROSTER_ROWS",
                 "info",
                 f"{scoped_out} rows were outside the effective roster scope and were skipped.",
+                source_key,
+            )
+        )
+    if unmapped_status_rows:
+        findings.append(
+            QualityIssue(
+                "AGENT_STATUS_UNMAPPED_LABELS",
+                "warning",
+                f"{unmapped_status_rows} rows used the conservative fallback status classifier.",
                 source_key,
             )
         )

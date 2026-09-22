@@ -27,7 +27,7 @@ with the useful workflows in WFMHub-Portable.
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.4` Call-by-Call/service-evidence release is published; attendance and metric read models remain |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.5` attendance read model is implemented locally; exact Windows qualification remains |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -74,6 +74,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-032 | Normalize lossless integral Excel Client IDs to canonical text, allow blank roster IDs to scope through an exact unique-name match to a populated operational source ID, and quarantine invalid/ambiguous FTE rows as warnings instead of rejecting the complete refresh. | The exact old-portable FTE attachment uses numeric and blank IDs by design. The old product accepts those rows, resolves duplicate IDs deterministically, excludes unsupported statuses from effective scope, and skips malformed PTO/Away rows. The new policy reproduces that behavior while retaining every raw row and quality finding. |
 | D-033 | Add Agent Status and LILO as optional, streaming Bronze evidence in the same atomic refresh generation; Agent Status is primary attendance evidence and LILO remains fallback. | These CSVs can be large and missing evidence must remain unknown. Preflight is bounded-memory and byte-bound; activation replays 5,000-row batches inside the SQLite transaction and rolls back on source mutation. Missing Storm folders do not block roster/schedule readiness, while present malformed files do. Attendance derivation remains a separate governed slice. |
 | D-034 | Admit Call-by-Call through two explicit lanes—effective roster identity or exact reviewed queue mapping—then deduplicate stable legs and publish additive 15-minute service components only. | Mapped abandoned/out-of-roster queue demand must survive without widening employee scope. Ratio KPIs and Flash allowlists require separate metric/profile governance and must not be hard-coded in the adapter or React UI. |
+| D-035 | Build attendance as a generation-keyed derived read model with Agent Status primary at 80% elapsed-work coverage, LILO boundary fallback, explicit unknown states, PTO/Away clipping, and exact gap fragments; do not expose employee actions yet. | Missing rows are not proof of absence. A no-show requires an agent-specific blank LILO row or sufficiently covered Logged Off status, while late/early/internal gaps must retain their physical intervals for later read-only reconciliation. |
 
 ## Evidence already collected
 
@@ -354,9 +355,10 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
-- The Phase 1 shell has source-health and refresh APIs and now ingests Agent
+- The Phase 1 shell has source-health and refresh APIs, ingests Agent
   Status/LILO plus deduplicated Call-by-Call legs and 15-minute service
-  components. It still has no attendance read model, governed service ratio
+  components, and now derives governed attendance agent-days and exact gaps.
+  It still has no employee-level attendance workbench, governed service ratio
   view, or requirement input. Command shows evidence readiness only, not a
   headline SLA or staffing position. A true required-FTE shortage also needs
   the separate Verint Staff Type requirement source.
@@ -389,8 +391,8 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Add the status-primary/LILO-fallback attendance read model and retain exact
-   gap evidence before exposing attendance actions.
+1. Qualify and publish the `.5` attendance-read-model Windows ZIP, then rerun
+   refresh plus DOCTOR/five Edge probes on the managed target.
 2. Port the effective-dated service profiles and metric catalog over the raw
    Call-by-Call components, then expose ratio-of-sums service KPIs without
    averaging percentages.
@@ -407,6 +409,25 @@ only through a recorded decision with evidence.
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-22 — Governed attendance read model implemented locally
+
+- Audited the old portable's attendance precedence and thresholds without
+  copying operational data. Agent Status is primary only at 80% elapsed-work
+  coverage; sparse status combines with LILO boundaries, and LILO never
+  overwrites explicit Logged Off or Unavailable evidence.
+- Added immutable attendance policy, generation-keyed agent-day facts, and
+  exact late/logged-off/unavailable/early-leave/no-show fragments. Approved
+  PTO/Away is clipped before classification; missing agent rows remain unknown,
+  and no-show requires explicit agent-specific disconnected evidence.
+- Attendance publication runs inside the same activation transaction as its
+  roster, schedule, Agent Status, and LILO evidence. The local API exposes only
+  aggregate readiness/counts; no employee-level actions or rows are exposed.
+- Focused semantic tests cover primary/fallback precedence, a return after an
+  internal gap, blank-LILO proof versus missing-row unknown, five-minute
+  tolerances, and partial PTO. Local Ruff, strict Pyright, 73 pytest tests,
+  Biome, TypeScript, and 17 Vitest tests pass. Exact Windows ZIP qualification
+  and managed-target refresh remain pending.
 
 ### 2026-09-22 — Streaming Call-by-Call and service components integrated
 

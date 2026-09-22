@@ -32,6 +32,10 @@ const readyHealth: RtaSourceHealth = {
       rawCallLegs: 105,
       canonicalCallLegs: 100,
       serviceIntervals: 8,
+      attendanceAgentDays: 24,
+      attendanceGapFragments: 3,
+      statusPrimaryDays: 20,
+      attendanceUnknownDays: 1,
       sourceFiles: 6,
       scheduleFiles: 1,
       agentStatusFiles: 1,
@@ -43,6 +47,7 @@ const readyHealth: RtaSourceHealth = {
       agentStatus: { from: '2026-09-20', to: '2026-09-21' },
       lilo: { from: '2026-09-20', to: '2026-09-21' },
       callByCall: { from: '2026-09-20', to: '2026-09-21' },
+      attendance: { from: '2026-09-20', to: '2026-09-21' },
     },
     qualityCounts: { error: 0, warning: 1, info: 0 },
   },
@@ -80,6 +85,15 @@ const readyHealth: RtaSourceHealth = {
       minDate: '2026-09-20',
       maxDate: '2026-09-21',
     },
+    attendance: {
+      ready: true,
+      agentDayCount: 24,
+      gapFragmentCount: 3,
+      statusPrimaryCount: 20,
+      unknownCount: 1,
+      minDate: '2026-09-20',
+      maxDate: '2026-09-21',
+    },
   },
 }
 
@@ -102,6 +116,7 @@ describe('RTA source readiness', () => {
     expect(screen.getByText('80 intervals')).toBeTruthy()
     expect(screen.getByText('12 daily records')).toBeTruthy()
     expect(screen.getByText('100 governed legs · 8 intervals')).toBeTruthy()
+    expect(screen.getByText('24 agent-days · 3 exact gaps · 1 unknown')).toBeTruthy()
     expect(screen.getByText('Generation 7')).toBeTruthy()
     expect(screen.getByText('No operational metrics to display')).toBeTruthy()
     expect(screen.queryByText('Service level:')).toBeNull()

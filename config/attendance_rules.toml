@@ -1,0 +1,7 @@
+# Governed attendance read-model policy inherited from the proven portable
+# workflow. These values classify evidence; they do not authorize an action.
+
+[attendance]
+late_tolerance_minutes = 5
+status_gap_tolerance_minutes = 5
+minimum_status_coverage = 0.80

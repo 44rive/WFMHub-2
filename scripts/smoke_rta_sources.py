@@ -48,7 +48,15 @@ def main() -> int:
             writer.writerow(
                 ["Name", "Data Source IDs", *(f"07/{day:02d}/2026" for day in range(1, 32)), ""]
             )
-            writer.writerow(["Ada Agent", "00123", *(["Off"] * 31), ""])
+            writer.writerow(
+                [
+                    "Ada Agent",
+                    "00123",
+                    ".ORG | Work 07/01/2026 8:00 AM-07/01/2026 4:00 PM",
+                    *(["Off"] * 30),
+                    "",
+                ]
+            )
 
         status = sources / "Storm/Agent Status/status.csv"
         status.parent.mkdir(parents=True)
@@ -149,6 +157,12 @@ def main() -> int:
             raise RuntimeError("packaged Call-by-Call canonical count was incorrect")
         if health["sources"]["callByCall"]["serviceIntervalCount"] != 1:
             raise RuntimeError("packaged Call-by-Call interval count was incorrect")
+        if health["sources"]["attendance"]["agentDayCount"] != 31:
+            raise RuntimeError("packaged attendance agent-day count was incorrect")
+        if health["sources"]["attendance"]["gapFragmentCount"] != 0:
+            raise RuntimeError("packaged attendance gap count was incorrect")
+        if health["sources"]["attendance"]["unknownCount"] != 0:
+            raise RuntimeError("packaged attendance unexpectedly converted evidence to unknown")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
         if source_hashes != (

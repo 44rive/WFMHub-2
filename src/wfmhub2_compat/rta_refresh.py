@@ -26,6 +26,11 @@ from wfmhub2_compat.actual_contracts import (
     publish_actual_plans,
     stage_actual_plans,
 )
+from wfmhub2_compat.attendance_model import (
+    AttendancePolicy,
+    build_attendance_model,
+    load_attendance_policy,
+)
 from wfmhub2_compat.call_contracts import (
     CallPolicy,
     CallSourcePlan,
@@ -55,10 +60,11 @@ AGENT_STATUS_DIRECTORY = Path("Storm/Agent Status")
 LILO_DIRECTORY = Path("Storm/LILO")
 CALL_DIRECTORY = Path("Storm/Call by Call")
 MAX_SOURCE_POINTER_BYTES = 4096
-REFRESH_MODEL_VERSION = "rta-fte-schedule-actuals-calls-v5"
+REFRESH_MODEL_VERSION = "rta-fte-schedule-actuals-calls-attendance-v6"
 REFRESH_CATALOG_SHA256 = hashlib.sha256(
     b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|"
-    b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|Storm/Call by Call/*.csv|v5"
+    b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|Storm/Call by Call/*.csv|"
+    b"attendance-read-model-v1|v6"
 ).hexdigest()
 
 
@@ -370,6 +376,14 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
           (SELECT count(*) FROM wfm_raw_call_leg WHERE generation_id = ?) AS raw_call_legs,
           (SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?) AS canonical_call_legs,
           (SELECT count(*) FROM wfm_service_interval WHERE generation_id = ?) AS service_intervals,
+          (SELECT count(*) FROM wfm_attendance_agent_day
+             WHERE generation_id = ?) AS attendance_agent_days,
+          (SELECT count(*) FROM wfm_attendance_gap
+             WHERE generation_id = ?) AS attendance_gap_fragments,
+          (SELECT count(*) FROM wfm_attendance_agent_day
+             WHERE generation_id = ? AND status_is_primary = 1) AS status_primary_days,
+          (SELECT count(*) FROM wfm_attendance_agent_day
+             WHERE generation_id = ? AND evidence_state = 'UNKNOWN') AS attendance_unknown_days,
           (SELECT count(*) FROM wfm_source_manifest
              WHERE generation_id = ? AND state = 'present') AS source_files,
           (SELECT count(*) FROM wfm_source_manifest
@@ -385,7 +399,7 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
              WHERE generation_id = ? AND state = 'present'
                AND source_type = 'call_by_call') AS call_files
         """,
-        (generation_id,) * 13,
+        (generation_id,) * 17,
     ).fetchone()
     schedule_range = connection.execute(
         """
@@ -415,6 +429,13 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
         """,
         (generation_id,),
     ).fetchone()
+    attendance_range = connection.execute(
+        """
+        SELECT min(business_date), max(business_date)
+        FROM wfm_attendance_agent_day WHERE generation_id = ?
+        """,
+        (generation_id,),
+    ).fetchone()
     quality = {"info": 0, "warning": 0, "error": 0}
     for severity, count in connection.execute(
         """
@@ -438,6 +459,10 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
             "rawCallLegs": int(counts["raw_call_legs"]),
             "canonicalCallLegs": int(counts["canonical_call_legs"]),
             "serviceIntervals": int(counts["service_intervals"]),
+            "attendanceAgentDays": int(counts["attendance_agent_days"]),
+            "attendanceGapFragments": int(counts["attendance_gap_fragments"]),
+            "statusPrimaryDays": int(counts["status_primary_days"]),
+            "attendanceUnknownDays": int(counts["attendance_unknown_days"]),
             "sourceFiles": int(counts["source_files"]),
             "scheduleFiles": int(counts["schedule_files"]),
             "agentStatusFiles": int(counts["agent_status_files"]),
@@ -452,6 +477,7 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
             "agentStatus": {"from": status_range[0], "to": status_range[1]},
             "lilo": {"from": lilo_range[0], "to": lilo_range[1]},
             "callByCall": {"from": call_range[0], "to": call_range[1]},
+            "attendance": {"from": attendance_range[0], "to": attendance_range[1]},
         },
         "qualityCounts": quality,
         "sourceCatalogFingerprint": str(generation["catalog_sha256"]),
@@ -594,6 +620,30 @@ class RtaRefreshCoordinator:
                         active_actual_ranges["callByCall"]["to"] if active_actual_ranges else None
                     ),
                 },
+                "attendance": {
+                    "ready": bool(
+                        source_ready
+                        and active_counts
+                        and active_counts["attendanceAgentDays"] > 0
+                        and (
+                            active_counts["agentStatusFiles"] > 0 or active_counts["liloFiles"] > 0
+                        )
+                    ),
+                    "agentDayCount": active_counts["attendanceAgentDays"] if active_counts else 0,
+                    "gapFragmentCount": active_counts["attendanceGapFragments"]
+                    if active_counts
+                    else 0,
+                    "statusPrimaryCount": active_counts["statusPrimaryDays"]
+                    if active_counts
+                    else 0,
+                    "unknownCount": active_counts["attendanceUnknownDays"] if active_counts else 0,
+                    "minDate": (
+                        active_actual_ranges["attendance"]["from"] if active_actual_ranges else None
+                    ),
+                    "maxDate": (
+                        active_actual_ranges["attendance"]["to"] if active_actual_ranges else None
+                    ),
+                },
             },
         }
 
@@ -611,6 +661,7 @@ class RtaRefreshCoordinator:
             schedules = _discover_schedules(root.path, roster)
             actuals, status_policy = _discover_actuals(root.path, roster)
             calls, call_policy = _discover_calls(root.path, roster)
+            attendance_policy: AttendancePolicy = load_attendance_policy()
             snapshot = SourceSnapshot(roster, schedules)
             stage_sources(self.store, generation_id, snapshot)
             stage_findings(self.store, generation_id, snapshot)
@@ -631,6 +682,11 @@ class RtaRefreshCoordinator:
                     actuals,
                     roster=roster,
                     status_policy=status_policy,
+                )
+                build_attendance_model(
+                    connection,
+                    active_generation_id,
+                    policy=attendance_policy,
                 )
                 publish_call_plans(
                     connection,

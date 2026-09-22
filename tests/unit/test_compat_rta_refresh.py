@@ -224,6 +224,15 @@ def test_refresh_publishes_optional_storm_source_health(tmp_path: Path) -> None:
         "minDate": "2026-08-01",
         "maxDate": "2026-08-01",
     }
+    assert health["sources"]["attendance"] == {
+        "ready": True,
+        "agentDayCount": 1,
+        "gapFragmentCount": 0,
+        "statusPrimaryCount": 0,
+        "unknownCount": 0,
+        "minDate": "2026-08-01",
+        "maxDate": "2026-08-01",
+    }
     assert health["activeGeneration"]["counts"]["sourceFiles"] == 5
     assert str(source) not in json.dumps(health)
 

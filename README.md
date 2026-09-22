@@ -66,8 +66,10 @@ credit, local FTE/published-schedule plus optional Agent Status, LILO, and
 Call-by-Call source readiness and refresh, and the working compatibility doctor
 under **Govern**. Call-by-Call now produces deduplicated call legs and additive
 15-minute service components, but the UI does not yet claim a headline SLA.
-Attendance, staffing, and decision results are also not connected. The source
-folder is read in place; there is no upload or copying step.
+Attendance now publishes governed agent-day states and exact gap fragments with
+Agent Status primary and LILO fallback, but employee-level actions are not yet
+exposed. Staffing and decision results are also not connected. The source folder
+is read in place; there is no upload or copying step.
 
 ### Tactical WFM intelligence
 

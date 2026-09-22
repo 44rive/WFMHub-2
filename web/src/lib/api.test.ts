@@ -97,6 +97,15 @@ describe('engine API client', () => {
           minDate: null,
           maxDate: null,
         },
+        attendance: {
+          ready: false,
+          agentDayCount: 0,
+          gapFragmentCount: 0,
+          statusPrimaryCount: 0,
+          unknownCount: 0,
+          minDate: null,
+          maxDate: null,
+        },
       },
     }
     expect(decodeRtaSourceHealth(health).ready).toBe(false)
@@ -130,6 +139,15 @@ describe('engine API client', () => {
           canonicalLegCount: 0,
           serviceIntervalCount: 0,
           fileCount: 0,
+          minDate: null,
+          maxDate: null,
+        },
+        attendance: {
+          ready: false,
+          agentDayCount: 0,
+          gapFragmentCount: 0,
+          statusPrimaryCount: 0,
+          unknownCount: 0,
           minDate: null,
           maxDate: null,
         },

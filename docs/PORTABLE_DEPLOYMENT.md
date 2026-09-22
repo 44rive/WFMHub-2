@@ -71,8 +71,11 @@ evidence and adjusts an earlier logout into the next day, while a range
 filename never invents a missing row date. Both adapters stream in bounded
 batches, scope against the effective roster, and publish inside the same
 generation transaction as roster and schedule. Agent Status is primary
-observed evidence and LILO is fallback only; the attendance model is the next
-slice.
+observed evidence and LILO is fallback only. The derived attendance model keeps
+missing evidence unknown, requires explicit disconnected proof for no-show,
+clips approved PTO/Away, and stores exact late/logged-off/unavailable/early-leave
+gap fragments. Those fragments are evidence only; the preview does not expose
+employee-level attendance actions.
 
 Call-by-Call accepts the legacy bracketed or unbracketed Storm headers and
 streams source rows without loading the file into memory. A row is retained

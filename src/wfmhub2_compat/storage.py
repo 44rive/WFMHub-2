@@ -382,6 +382,67 @@ CREATE TABLE IF NOT EXISTS wfm_service_interval (
     )
 );
 
+CREATE TABLE IF NOT EXISTS wfm_attendance_agent_day (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    agent_day_key TEXT NOT NULL,
+    business_date TEXT NOT NULL,
+    roster_client_id TEXT NOT NULL,
+    assignment TEXT NOT NULL,
+    assignment_type TEXT NOT NULL,
+    scheduled_start TEXT,
+    scheduled_end TEXT,
+    scheduled_minutes INTEGER NOT NULL CHECK(scheduled_minutes >= 0),
+    planned_work_minutes INTEGER NOT NULL CHECK(planned_work_minutes >= 0),
+    planned_time_off_minutes INTEGER NOT NULL CHECK(planned_time_off_minutes >= 0),
+    actual_first_seen TEXT,
+    actual_last_seen TEXT,
+    actual_evidence TEXT NOT NULL CHECK(actual_evidence IN (
+        'NONE', 'LILO', 'AGENT_STATUS', 'LILO+AGENT_STATUS'
+    )),
+    status_covered_minutes INTEGER NOT NULL CHECK(status_covered_minutes >= 0),
+    status_coverage_ratio REAL NOT NULL CHECK(status_coverage_ratio >= 0),
+    status_is_primary INTEGER NOT NULL CHECK(status_is_primary IN (0, 1)),
+    raw_late_minutes INTEGER NOT NULL CHECK(raw_late_minutes >= 0),
+    late_minutes INTEGER NOT NULL CHECK(late_minutes >= 0),
+    early_leave_minutes INTEGER NOT NULL CHECK(early_leave_minutes >= 0),
+    no_show_minutes INTEGER NOT NULL CHECK(no_show_minutes >= 0),
+    attendance_result TEXT NOT NULL,
+    evidence_state TEXT NOT NULL CHECK(evidence_state IN (
+        'NOT_REQUIRED', 'NOT_STARTED', 'PROVISIONAL', 'COMPLETE', 'UNKNOWN'
+    )),
+    status_source_loaded INTEGER NOT NULL CHECK(status_source_loaded IN (0, 1)),
+    lilo_source_loaded INTEGER NOT NULL CHECK(lilo_source_loaded IN (0, 1)),
+    lilo_row_present INTEGER NOT NULL CHECK(lilo_row_present IN (0, 1)),
+    evaluation_as_of TEXT NOT NULL,
+    schedule_source_key TEXT NOT NULL,
+    source_keys_json TEXT NOT NULL,
+    policy_fingerprint TEXT NOT NULL,
+    PRIMARY KEY (generation_id, agent_day_key),
+    FOREIGN KEY (generation_id, roster_client_id)
+        REFERENCES wfm_agent_roster(generation_id, client_id)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_attendance_gap (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    gap_key TEXT NOT NULL,
+    agent_day_key TEXT NOT NULL,
+    business_date TEXT NOT NULL,
+    roster_client_id TEXT NOT NULL,
+    gap_type TEXT NOT NULL CHECK(gap_type IN (
+        'LATE', 'LOGGED_OFF', 'UNAVAILABLE', 'EARLY_LEAVE', 'NO_SHOW'
+    )),
+    gap_start TEXT NOT NULL,
+    gap_end TEXT NOT NULL,
+    gap_minutes INTEGER NOT NULL CHECK(gap_minutes > 0),
+    evidence_basis TEXT NOT NULL,
+    source_keys_json TEXT NOT NULL,
+    is_provisional INTEGER NOT NULL CHECK(is_provisional IN (0, 1)),
+    policy_fingerprint TEXT NOT NULL,
+    PRIMARY KEY (generation_id, gap_key),
+    FOREIGN KEY (generation_id, agent_day_key)
+        REFERENCES wfm_attendance_agent_day(generation_id, agent_day_key)
+);
+
 CREATE INDEX IF NOT EXISTS ix_wfm_roster_active_lookup
 ON wfm_agent_roster(generation_id, client_id, eligible_through);
 
@@ -405,6 +466,12 @@ ON wfm_call_leg(generation_id, business_date, service_scope, queue);
 
 CREATE INDEX IF NOT EXISTS ix_wfm_service_interval_scope
 ON wfm_service_interval(generation_id, interval_start, service_scope);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_attendance_date
+ON wfm_attendance_agent_day(generation_id, business_date, evidence_state);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_attendance_gap_date
+ON wfm_attendance_gap(generation_id, business_date, gap_type);
 """
 
 

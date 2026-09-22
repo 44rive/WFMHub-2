@@ -85,6 +85,7 @@ def test_agent_status_streams_long_duration_and_exact_policy(tmp_path: Path) -> 
             ["2", "Disponible", "07/02/2026 09:00", "Ada Agent", "VERINT-9", "00:30:00", "Q2"],
             ["3", "Available", "07/02/2026 10:00", "Ada Agent", "00123", "00:00:00", "Q2"],
             ["4", "Available", "07/02/2026 10:00", "Outside", "999", "00:30:00", "Q2"],
+            ["5", "Mystery", "07/02/2026 11:00", "Ada Agent", "00123", "00:15:00", "Q2"],
         ],
     )
     policy = load_status_policy()
@@ -96,11 +97,12 @@ def test_agent_status_streams_long_duration_and_exact_policy(tmp_path: Path) -> 
         status_policy=policy,
     )
 
-    assert (plan.accepted_rows, plan.rejected_rows, plan.scoped_out_rows) == (2, 1, 1)
-    assert plan.version.row_count == 2
+    assert (plan.accepted_rows, plan.rejected_rows, plan.scoped_out_rows) == (3, 1, 1)
+    assert plan.version.row_count == 3
     assert {finding.issue_code for finding in plan.findings} == {
         "AGENT_STATUS_REJECTED_ROWS",
         "AGENT_STATUS_OUTSIDE_ROSTER_ROWS",
+        "AGENT_STATUS_UNMAPPED_LABELS",
     }
 
     store = RefreshStore(tmp_path / "control.sqlite")
@@ -128,6 +130,7 @@ def test_agent_status_streams_long_duration_and_exact_policy(tmp_path: Path) -> 
     assert rows[0][1:5] == ("00123", "Productive", 136796, "id")
     assert rows[0][5] == "2026-07-02T21:59:56"
     assert rows[1][1:5] == ("VERINT-9", "Productive", 1800, "name")
+    assert rows[2][1:5] == ("00123", "Auxiliary", 900, "id")
 
 
 def test_lilo_preserves_dated_no_show_and_adjusts_overnight(tmp_path: Path) -> None:
