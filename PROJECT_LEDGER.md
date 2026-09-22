@@ -22,11 +22,11 @@ retaining atomic whole-cut rollback.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 attendance preview `.5` | Published but operationally rejected: real refresh was slow and failed without an actionable cause |
+| `origin/main` at `db35881` | Phase 1 refresh-parity preview `.6` | Qualified and published; managed-target real-data refresh is the next gate |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `fix/refresh-parity` (current) | Emergency refresh correction | Commit `09d7215`; all three jobs in PR run `35774371242` passed, promotion to `main` pending |
+| `fix/refresh-parity` (current) | Emergency refresh correction | Merged by PR #2; retained locally as the ledger-writer worktree |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -395,15 +395,16 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Complete and qualify the emergency refresh correction: unchanged no-op,
-   progress, stage-specific failure diagnostics, source-mutation handling, and
-   attendance indexes.
+1. Extract Preview `.6` into a new managed-target folder, run `SETUP.cmd`, then
+   run one real source refresh and retain its elapsed time/readiness counts. If
+   it fails, retain the displayed stage/code and local
+   `data/diagnostics/refresh-failure.txt`; the previous cut remains safe.
 2. Port known-version reactivation, dependency fingerprints, and
    affected-scope rebuild from old portable `v0.36.0`; do not copy its partial
    mixed-generation publication behavior.
-3. Benchmark the exact Windows ZIP against the real managed dataset. A refresh
-   must either succeed within an operationally acceptable duration or return an
-   actionable local diagnostic while preserving the active cut.
+3. Compare Preview `.6` counts, date ranges, quality outcomes, and attendance /
+   service evidence with old portable `v0.36.0` on the same governed sources;
+   resolve material differences before resuming feature work.
 4. Only after that gate, resume service profiles/metric catalog, Verint Staff
    Type requirement, command-centre read models, and bounded Excel delivery.
 5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
@@ -440,6 +441,10 @@ only through a recorded decision with evidence.
   the separate full-native regression also passed. The CI ZIP is 73,205,968
   bytes, has 98 unique members (152,639,590 bytes extracted), no CRC errors,
   and SHA-256 `f88f693a32c1ee0f360e3656d751788c88f6944870c458cc9c2e825e026346de`.
+  PR #2 merged to main commit `db358815`; main run `35775967376` passed all
+  three jobs and reproduced the same exact ZIP digest. Prerelease
+  `v0.2.0-phase1-source-preview.6` publishes that CI artifact and its checksum:
+  <https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.6>.
   Managed-target production-data timing remains the external release gate.
 
 ### 2026-09-22 — Governed attendance read model implemented locally
