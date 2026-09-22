@@ -26,7 +26,7 @@ retaining atomic whole-cut rollback.
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `fix/refresh-parity` (current) | Emergency refresh correction | Unchanged fast path, diagnostics, progress, hash reduction, and attendance indexes implemented locally; full qualification pending |
+| `fix/refresh-parity` (current) | Emergency refresh correction | Commit `09d7215`; all three jobs in PR run `35774371242` passed, promotion to `main` pending |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -434,8 +434,13 @@ only through a recorded decision with evidence.
   tests, Biome, TypeScript, 18 Vitest tests, and the production React build
   pass. A locally assembled 98-member Preview `.6` ZIP passed checksum/member
   verification and an exact extracted-package source refresh, unchanged no-op,
-  and rollback smoke; the Windows runtime/browser pipeline and managed-target
-  production-data benchmark remain pending.
+  and rollback smoke. PR run `35774371242` passed Linux plus both Windows jobs:
+  the exact target-compatible ZIP passed embedded doctor, packaged refresh /
+  unchanged no-op / rollback, and all five outbound-blocked Edge/WASM probes;
+  the separate full-native regression also passed. The CI ZIP is 73,205,968
+  bytes, has 98 unique members (152,639,590 bytes extracted), no CRC errors,
+  and SHA-256 `f88f693a32c1ee0f360e3656d751788c88f6944870c458cc9c2e825e026346de`.
+  Managed-target production-data timing remains the external release gate.
 
 ### 2026-09-22 — Governed attendance read model implemented locally
 
