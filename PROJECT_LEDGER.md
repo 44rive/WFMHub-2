@@ -435,6 +435,11 @@ only through a recorded decision with evidence.
   managed-target qualification remain pending for this branch. Final
   documentation-only main run `35776913430`
   passed all three CI jobs for the already published Preview `.6` source.
+- PR #3 run `35784402198` passed Linux and built the Preview `.7` hybrid ZIP,
+  then the Windows hybrid job stopped before extraction because the workflow
+  still searched for a `.6` filename. The workflow now matches the unique
+  versioned preview ZIP and uses a version-neutral CI artifact name; exact
+  packaged doctor/source/browser smoke must pass on the corrected run.
 
 ### 2026-09-22 — Preview `.5` refresh regression audited and correction started
 

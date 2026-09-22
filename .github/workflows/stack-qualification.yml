@@ -134,7 +134,7 @@ jobs:
       - name: Expand exact hybrid ZIP
         shell: pwsh
         run: |
-          $Archives = @(Get-ChildItem dist/WFMHub-2-v*-phase1-source-preview.6-windows-x64.zip -File)
+          $Archives = @(Get-ChildItem dist/WFMHub-2-v*-phase1-source-preview.*-windows-x64.zip -File)
           if ($Archives.Count -ne 1) {
             throw "Expected one Phase 1 source preview ZIP, found $($Archives.Count)"
           }
@@ -174,10 +174,10 @@ jobs:
       - name: Upload hybrid Windows release ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: WFMHub-2-phase1-source-preview.6-windows-x64
+          name: WFMHub-2-phase1-source-preview-windows-x64
           path: |
-            dist/WFMHub-2-v*-phase1-source-preview.6-windows-x64.zip
-            dist/WFMHub-2-v*-phase1-source-preview.6-windows-x64.zip.sha256
+            dist/WFMHub-2-v*-phase1-source-preview.*-windows-x64.zip
+            dist/WFMHub-2-v*-phase1-source-preview.*-windows-x64.zip.sha256
           if-no-files-found: error
           compression-level: 0
 
