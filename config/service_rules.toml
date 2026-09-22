@@ -1,0 +1,7 @@
+version = "1.0.0"
+
+[service]
+# Raw component thresholds inherited from the reviewed legacy WFM rules.
+# KPI formulas and targets do not belong in the source adapter.
+target_seconds = 30
+short_abandon_seconds = 5

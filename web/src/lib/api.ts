@@ -62,15 +62,20 @@ export type SourceRefreshSummary = {
     scheduleAssignments: number
     agentStatusRows: number
     liloRows: number
+    rawCallLegs: number
+    canonicalCallLegs: number
+    serviceIntervals: number
     sourceFiles: number
     scheduleFiles: number
     agentStatusFiles: number
     liloFiles: number
+    callFiles: number
   }
   dateRange: { from: string | null; to: string | null }
   actualDateRanges: {
     agentStatus: { from: string | null; to: string | null }
     lilo: { from: string | null; to: string | null }
+    callByCall: { from: string | null; to: string | null }
   }
   qualityCounts: SourceQuality
   failureCode?: string
@@ -87,6 +92,7 @@ export type RtaSourceHealth = {
     publishedSchedules: string
     agentStatus: string
     lilo: string
+    callByCall: string
   }
   sources: {
     roster: { ready: boolean; agentCount: number; timeOffCount: number; fileCount: number }
@@ -107,6 +113,15 @@ export type RtaSourceHealth = {
     lilo: {
       ready: boolean
       rowCount: number
+      fileCount: number
+      minDate: string | null
+      maxDate: string | null
+    }
+    callByCall: {
+      ready: boolean
+      rawLegCount: number
+      canonicalLegCount: number
+      serviceIntervalCount: number
       fileCount: number
       minDate: string | null
       maxDate: string | null
@@ -359,14 +374,19 @@ function isSummary(value: unknown): value is SourceRefreshSummary {
     typeof value.counts.scheduleAssignments === 'number' &&
     typeof value.counts.agentStatusRows === 'number' &&
     typeof value.counts.liloRows === 'number' &&
+    typeof value.counts.rawCallLegs === 'number' &&
+    typeof value.counts.canonicalCallLegs === 'number' &&
+    typeof value.counts.serviceIntervals === 'number' &&
     typeof value.counts.sourceFiles === 'number' &&
     typeof value.counts.scheduleFiles === 'number' &&
     typeof value.counts.agentStatusFiles === 'number' &&
     typeof value.counts.liloFiles === 'number' &&
+    typeof value.counts.callFiles === 'number' &&
     isDateRange(value.dateRange) &&
     isRecord(value.actualDateRanges) &&
     isDateRange(value.actualDateRanges.agentStatus) &&
     isDateRange(value.actualDateRanges.lilo) &&
+    isDateRange(value.actualDateRanges.callByCall) &&
     isQuality(value.qualityCounts)
   )
 }
@@ -385,6 +405,7 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
     typeof value.configuredSources.publishedSchedules !== 'string' ||
     typeof value.configuredSources.agentStatus !== 'string' ||
     typeof value.configuredSources.lilo !== 'string' ||
+    typeof value.configuredSources.callByCall !== 'string' ||
     !isRecord(value.sources) ||
     !isRecord(value.sources.roster) ||
     typeof value.sources.roster.ready !== 'boolean' ||
@@ -403,6 +424,20 @@ export function decodeRtaSourceHealth(value: unknown): RtaSourceHealth {
     ) ||
     !isActualSource(value.sources.agentStatus) ||
     !isActualSource(value.sources.lilo) ||
+    !isRecord(value.sources.callByCall) ||
+    typeof value.sources.callByCall.ready !== 'boolean' ||
+    typeof value.sources.callByCall.rawLegCount !== 'number' ||
+    typeof value.sources.callByCall.canonicalLegCount !== 'number' ||
+    typeof value.sources.callByCall.serviceIntervalCount !== 'number' ||
+    typeof value.sources.callByCall.fileCount !== 'number' ||
+    !(
+      value.sources.callByCall.minDate === null ||
+      typeof value.sources.callByCall.minDate === 'string'
+    ) ||
+    !(
+      value.sources.callByCall.maxDate === null ||
+      typeof value.sources.callByCall.maxDate === 'string'
+    ) ||
     !isQuality(value.quality) ||
     typeof value.ready !== 'boolean'
   ) {

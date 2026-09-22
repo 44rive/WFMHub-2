@@ -188,6 +188,55 @@ CREATE TABLE IF NOT EXISTS wfm_raw_agent_status (
     PRIMARY KEY (generation_id, source_key, source_row)
 );
 
+CREATE TABLE IF NOT EXISTS wfm_raw_call_leg (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    call_key TEXT NOT NULL,
+    interaction_key TEXT NOT NULL,
+    business_date TEXT NOT NULL,
+    call_start TEXT NOT NULL,
+    call_end TEXT,
+    communication_type TEXT,
+    call_direction TEXT,
+    business_partner_id TEXT,
+    lob TEXT,
+    service TEXT,
+    call_reference_number TEXT,
+    call_id TEXT,
+    call_progress TEXT,
+    queue_wait_seconds INTEGER,
+    queue_id TEXT,
+    queue TEXT,
+    call_treatment TEXT,
+    source_agent_id TEXT,
+    roster_client_id TEXT,
+    agent_name TEXT,
+    clearing_party TEXT,
+    talk_seconds INTEGER,
+    hold_seconds INTEGER,
+    wrap_seconds INTEGER,
+    completion_code TEXT,
+    transferred INTEGER CHECK(transferred IS NULL OR transferred IN (0, 1)),
+    shared_call_reference TEXT,
+    ringing_seconds INTEGER,
+    internal INTEGER CHECK(internal IS NULL OR internal IN (0, 1)),
+    direct INTEGER CHECK(direct IS NULL OR direct IN (0, 1)),
+    language TEXT,
+    post_call_survey_mode TEXT,
+    pcs_status TEXT,
+    raw_payload_json TEXT NOT NULL,
+    service_scope TEXT,
+    comparison_scope TEXT,
+    designation TEXT,
+    mapping_status TEXT NOT NULL CHECK(mapping_status IN ('MAPPED', 'FALLBACK_LOB', 'UNMAPPED')),
+    agent_eligible INTEGER NOT NULL CHECK(agent_eligible IN (0, 1)),
+    service_eligible INTEGER NOT NULL CHECK(service_eligible IN (0, 1)),
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name', 'queue')),
+    validation_codes TEXT NOT NULL,
+    PRIMARY KEY (generation_id, source_key, source_row)
+);
+
 -- Generation-keyed Silver facts.  Consumers join these tables to the single
 -- active-generation pointer rather than selecting the newest timestamp.
 CREATE TABLE IF NOT EXISTS wfm_agent_roster (
@@ -252,6 +301,87 @@ CREATE TABLE IF NOT EXISTS wfm_schedule_shift (
         REFERENCES wfm_agent_roster(generation_id, client_id)
 );
 
+CREATE TABLE IF NOT EXISTS wfm_call_leg (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    source_key TEXT NOT NULL,
+    source_row INTEGER NOT NULL CHECK(source_row > 0),
+    call_key TEXT NOT NULL,
+    interaction_key TEXT NOT NULL,
+    business_date TEXT NOT NULL,
+    call_start TEXT NOT NULL,
+    call_end TEXT,
+    communication_type TEXT,
+    call_direction TEXT,
+    business_partner_id TEXT,
+    lob TEXT,
+    service TEXT,
+    call_reference_number TEXT,
+    call_id TEXT,
+    call_progress TEXT,
+    queue_wait_seconds INTEGER,
+    queue_id TEXT,
+    queue TEXT,
+    call_treatment TEXT,
+    source_agent_id TEXT,
+    roster_client_id TEXT,
+    agent_name TEXT,
+    clearing_party TEXT,
+    talk_seconds INTEGER,
+    hold_seconds INTEGER,
+    wrap_seconds INTEGER,
+    completion_code TEXT,
+    transferred INTEGER CHECK(transferred IS NULL OR transferred IN (0, 1)),
+    shared_call_reference TEXT,
+    ringing_seconds INTEGER,
+    internal INTEGER CHECK(internal IS NULL OR internal IN (0, 1)),
+    direct INTEGER CHECK(direct IS NULL OR direct IN (0, 1)),
+    language TEXT,
+    post_call_survey_mode TEXT,
+    pcs_status TEXT,
+    raw_payload_json TEXT NOT NULL,
+    service_scope TEXT,
+    comparison_scope TEXT,
+    designation TEXT,
+    mapping_status TEXT NOT NULL CHECK(mapping_status IN ('MAPPED', 'FALLBACK_LOB', 'UNMAPPED')),
+    agent_eligible INTEGER NOT NULL CHECK(agent_eligible IN (0, 1)),
+    service_eligible INTEGER NOT NULL CHECK(service_eligible IN (0, 1)),
+    scope_match TEXT NOT NULL CHECK(scope_match IN ('id', 'name', 'queue')),
+    validation_codes TEXT NOT NULL,
+    PRIMARY KEY (generation_id, call_key)
+);
+
+CREATE TABLE IF NOT EXISTS wfm_service_interval (
+    generation_id INTEGER NOT NULL REFERENCES wfm_refresh_generation(id),
+    business_date TEXT NOT NULL,
+    interval_start TEXT NOT NULL,
+    interval_end TEXT NOT NULL,
+    source_system TEXT NOT NULL CHECK(source_system = 'CALL_BY_CALL'),
+    service_scope TEXT NOT NULL,
+    comparison_scope TEXT NOT NULL,
+    queue TEXT NOT NULL,
+    designation TEXT NOT NULL,
+    language TEXT NOT NULL,
+    offered INTEGER NOT NULL CHECK(offered >= 0),
+    answered INTEGER NOT NULL CHECK(answered >= 0),
+    abandoned INTEGER NOT NULL CHECK(abandoned >= 0),
+    short_abandoned INTEGER NOT NULL CHECK(short_abandoned >= 0),
+    abandoned_within_target INTEGER NOT NULL CHECK(abandoned_within_target >= 0),
+    answered_within_target INTEGER NOT NULL CHECK(answered_within_target >= 0),
+    talk_seconds INTEGER NOT NULL,
+    hold_seconds INTEGER NOT NULL,
+    wrap_seconds INTEGER NOT NULL,
+    handled_seconds INTEGER NOT NULL,
+    call_legs INTEGER NOT NULL CHECK(call_legs >= 0),
+    transferred_legs INTEGER NOT NULL CHECK(transferred_legs >= 0),
+    source_files_json TEXT NOT NULL,
+    mapping_sha256 TEXT NOT NULL,
+    policy_fingerprint TEXT NOT NULL,
+    PRIMARY KEY (
+        generation_id, interval_start, source_system, service_scope,
+        comparison_scope, queue, designation, language
+    )
+);
+
 CREATE INDEX IF NOT EXISTS ix_wfm_roster_active_lookup
 ON wfm_agent_roster(generation_id, client_id, eligible_through);
 
@@ -266,6 +396,15 @@ ON wfm_raw_lilo(generation_id, extract_date, roster_client_id);
 
 CREATE INDEX IF NOT EXISTS ix_wfm_status_active_interval
 ON wfm_raw_agent_status(generation_id, extract_date, roster_client_id, status_start);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_raw_call_key
+ON wfm_raw_call_leg(generation_id, call_key);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_call_service_date
+ON wfm_call_leg(generation_id, business_date, service_scope, queue);
+
+CREATE INDEX IF NOT EXISTS ix_wfm_service_interval_scope
+ON wfm_service_interval(generation_id, interval_start, service_scope);
 """
 
 

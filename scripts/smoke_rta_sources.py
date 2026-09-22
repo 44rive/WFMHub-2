@@ -83,7 +83,50 @@ def main() -> int:
             writer.writerow(["[Agent]", "[Agent ID]", "[First Log-on Time]", "[Last Log-off Time]"])
             writer.writerow(["Ada Agent", "00123", "07/01/2026 08:00", "07/01/2026 16:00"])
 
-        source_hashes = (_sha256(roster), _sha256(schedule), _sha256(status), _sha256(lilo))
+        calls = sources / "Storm/Call by Call/calls.csv"
+        calls.parent.mkdir(parents=True)
+        with calls.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.writer(stream)
+            writer.writerow(
+                [
+                    "[Call Date/Time]",
+                    "[Call End Date/Time]",
+                    "[Call ID]",
+                    "[Call Reference Number]",
+                    "[Agent ID]",
+                    "[Agent]",
+                    "[Talk Time]",
+                    "[Hold Time]",
+                    "[Total Wrap Time]",
+                    "[Call Direction]",
+                    "[Total Queue Wait Time]",
+                    "[Queue]",
+                ]
+            )
+            writer.writerow(
+                [
+                    "07/01/2026 08:07",
+                    "07/01/2026 08:10",
+                    "call-1",
+                    "ref-1",
+                    "00123",
+                    "Ada Agent",
+                    "00:02:00",
+                    "00:00:10",
+                    "00:00:20",
+                    "I",
+                    "00:00:15",
+                    "APBN_BRU_RSA_INTERNAT_All_FR",
+                ]
+            )
+
+        source_hashes = (
+            _sha256(roster),
+            _sha256(schedule),
+            _sha256(status),
+            _sha256(lilo),
+            _sha256(calls),
+        )
         configure_source_root(home, sources)
         coordinator = RtaRefreshCoordinator(home)
         result = coordinator.refresh()
@@ -102,6 +145,10 @@ def main() -> int:
             raise RuntimeError("packaged Agent Status fact count was incorrect")
         if health["sources"]["lilo"]["rowCount"] != 1:
             raise RuntimeError("packaged LILO fact count was incorrect")
+        if health["sources"]["callByCall"]["canonicalLegCount"] != 1:
+            raise RuntimeError("packaged Call-by-Call canonical count was incorrect")
+        if health["sources"]["callByCall"]["serviceIntervalCount"] != 1:
+            raise RuntimeError("packaged Call-by-Call interval count was incorrect")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
         if source_hashes != (
@@ -109,6 +156,7 @@ def main() -> int:
             _sha256(schedule),
             _sha256(status),
             _sha256(lilo),
+            _sha256(calls),
         ):
             raise RuntimeError("source refresh modified the input files")
 

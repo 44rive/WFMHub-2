@@ -62,11 +62,12 @@ review, and governance concepts are in
 [docs/FULL_PRODUCT_UI.md](docs/FULL_PRODUCT_UI.md).
 
 The Phase 1 UI now has the workbook-green product shell, **by Anass ASSRI**
-credit, local FTE/published-schedule plus optional Agent Status/LILO source
-readiness and refresh, and the working compatibility doctor under **Govern**.
-It does not yet display live service, attendance, staffing, or decision
-results. The source folder is read in place; there is no upload or copying
-step.
+credit, local FTE/published-schedule plus optional Agent Status, LILO, and
+Call-by-Call source readiness and refresh, and the working compatibility doctor
+under **Govern**. Call-by-Call now produces deduplicated call legs and additive
+15-minute service components, but the UI does not yet claim a headline SLA.
+Attendance, staffing, and decision results are also not connected. The source
+folder is read in place; there is no upload or copying step.
 
 ### Tactical WFM intelligence
 

@@ -26,6 +26,14 @@ from wfmhub2_compat.actual_contracts import (
     publish_actual_plans,
     stage_actual_plans,
 )
+from wfmhub2_compat.call_contracts import (
+    CallPolicy,
+    CallSourcePlan,
+    load_call_policy,
+    preflight_call_source,
+    publish_call_plans,
+    stage_call_plans,
+)
 from wfmhub2_compat.refresh_store import RefreshStore
 from wfmhub2_compat.source_contracts import (
     FteSnapshot,
@@ -45,11 +53,12 @@ FTE_DIRECTORY = Path("FTE")
 SCHEDULE_DIRECTORY = Path("Verint/Schedules & Activities")
 AGENT_STATUS_DIRECTORY = Path("Storm/Agent Status")
 LILO_DIRECTORY = Path("Storm/LILO")
+CALL_DIRECTORY = Path("Storm/Call by Call")
 MAX_SOURCE_POINTER_BYTES = 4096
-REFRESH_MODEL_VERSION = "rta-fte-schedule-actuals-v4"
+REFRESH_MODEL_VERSION = "rta-fte-schedule-actuals-calls-v5"
 REFRESH_CATALOG_SHA256 = hashlib.sha256(
     b"WFMHub2|FTE/FTE Count.xlsx|Verint/Schedules & Activities/*.txt|"
-    b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|v4"
+    b"Storm/Agent Status/*.csv|Storm/LILO/*.csv|Storm/Call by Call/*.csv|v5"
 ).hexdigest()
 
 
@@ -304,6 +313,41 @@ def _discover_actuals(
     return tuple(plans), status_policy
 
 
+def _discover_calls(
+    source_root: Path,
+    roster: FteSnapshot,
+) -> tuple[tuple[CallSourcePlan, ...], CallPolicy | None]:
+    paths = _actual_candidates(source_root, CALL_DIRECTORY)
+    if not paths:
+        return (), None
+    try:
+        policy = load_call_policy()
+    except (SourceContractError, ValueError) as exc:
+        raise RefreshFailedError(
+            "INVALID_CALL_POLICY",
+            "The packaged queue mapping or service rules are invalid.",
+        ) from exc
+    plans: list[CallSourcePlan] = []
+    for path in paths:
+        source_key = _source_key(source_root, path)
+        try:
+            plans.append(
+                preflight_call_source(
+                    path,
+                    source_key=source_key,
+                    roster=roster,
+                    policy=policy,
+                )
+            )
+        except SourceContractError as exc:
+            detail = str(exc).replace(str(source_root), "<source-root>")[:240]
+            raise RefreshFailedError(
+                "INVALID_CALL_BY_CALL_SOURCE",
+                f"Call by Call source {source_key} failed: {detail}",
+            ) from exc
+    return tuple(plans), policy
+
+
 def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> dict[str, Any]:
     connection.row_factory = sqlite3.Row
     generation = connection.execute(
@@ -323,6 +367,9 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
           (SELECT count(*) FROM wfm_schedule_shift WHERE generation_id = ?) AS schedule_assignments,
           (SELECT count(*) FROM wfm_raw_agent_status WHERE generation_id = ?) AS agent_status_rows,
           (SELECT count(*) FROM wfm_raw_lilo WHERE generation_id = ?) AS lilo_rows,
+          (SELECT count(*) FROM wfm_raw_call_leg WHERE generation_id = ?) AS raw_call_legs,
+          (SELECT count(*) FROM wfm_call_leg WHERE generation_id = ?) AS canonical_call_legs,
+          (SELECT count(*) FROM wfm_service_interval WHERE generation_id = ?) AS service_intervals,
           (SELECT count(*) FROM wfm_source_manifest
              WHERE generation_id = ? AND state = 'present') AS source_files,
           (SELECT count(*) FROM wfm_source_manifest
@@ -333,9 +380,12 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
                AND source_type = 'agent_status') AS agent_status_files,
           (SELECT count(*) FROM wfm_source_manifest
              WHERE generation_id = ? AND state = 'present'
-               AND source_type = 'lilo') AS lilo_files
+               AND source_type = 'lilo') AS lilo_files,
+          (SELECT count(*) FROM wfm_source_manifest
+             WHERE generation_id = ? AND state = 'present'
+               AND source_type = 'call_by_call') AS call_files
         """,
-        (generation_id,) * 9,
+        (generation_id,) * 13,
     ).fetchone()
     schedule_range = connection.execute(
         """
@@ -355,6 +405,13 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
         """
         SELECT min(extract_date), max(extract_date)
         FROM wfm_raw_lilo WHERE generation_id = ?
+        """,
+        (generation_id,),
+    ).fetchone()
+    call_range = connection.execute(
+        """
+        SELECT min(business_date), max(business_date)
+        FROM wfm_call_leg WHERE generation_id = ?
         """,
         (generation_id,),
     ).fetchone()
@@ -378,10 +435,14 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
             "scheduleAssignments": int(counts["schedule_assignments"]),
             "agentStatusRows": int(counts["agent_status_rows"]),
             "liloRows": int(counts["lilo_rows"]),
+            "rawCallLegs": int(counts["raw_call_legs"]),
+            "canonicalCallLegs": int(counts["canonical_call_legs"]),
+            "serviceIntervals": int(counts["service_intervals"]),
             "sourceFiles": int(counts["source_files"]),
             "scheduleFiles": int(counts["schedule_files"]),
             "agentStatusFiles": int(counts["agent_status_files"]),
             "liloFiles": int(counts["lilo_files"]),
+            "callFiles": int(counts["call_files"]),
         },
         "dateRange": {
             "from": schedule_range[0],
@@ -390,6 +451,7 @@ def _generation_summary(connection: sqlite3.Connection, generation_id: int) -> d
         "actualDateRanges": {
             "agentStatus": {"from": status_range[0], "to": status_range[1]},
             "lilo": {"from": lilo_range[0], "to": lilo_range[1]},
+            "callByCall": {"from": call_range[0], "to": call_range[1]},
         },
         "qualityCounts": quality,
         "sourceCatalogFingerprint": str(generation["catalog_sha256"]),
@@ -465,6 +527,7 @@ class RtaRefreshCoordinator:
                 "publishedSchedules": SCHEDULE_DIRECTORY.as_posix(),
                 "agentStatus": AGENT_STATUS_DIRECTORY.as_posix(),
                 "lilo": LILO_DIRECTORY.as_posix(),
+                "callByCall": CALL_DIRECTORY.as_posix(),
             },
             "activeGeneration": active,
             "activeGenerationId": active["generationId"] if active is not None else None,
@@ -512,6 +575,25 @@ class RtaRefreshCoordinator:
                     else None,
                     "maxDate": active_actual_ranges["lilo"]["to"] if active_actual_ranges else None,
                 },
+                "callByCall": {
+                    "ready": bool(
+                        source_ready and active_counts and active_counts["callFiles"] > 0
+                    ),
+                    "rawLegCount": active_counts["rawCallLegs"] if active_counts else 0,
+                    "canonicalLegCount": (
+                        active_counts["canonicalCallLegs"] if active_counts else 0
+                    ),
+                    "serviceIntervalCount": (
+                        active_counts["serviceIntervals"] if active_counts else 0
+                    ),
+                    "fileCount": active_counts["callFiles"] if active_counts else 0,
+                    "minDate": (
+                        active_actual_ranges["callByCall"]["from"] if active_actual_ranges else None
+                    ),
+                    "maxDate": (
+                        active_actual_ranges["callByCall"]["to"] if active_actual_ranges else None
+                    ),
+                },
             },
         }
 
@@ -528,10 +610,12 @@ class RtaRefreshCoordinator:
             roster = _discover_roster(root.path)
             schedules = _discover_schedules(root.path, roster)
             actuals, status_policy = _discover_actuals(root.path, roster)
+            calls, call_policy = _discover_calls(root.path, roster)
             snapshot = SourceSnapshot(roster, schedules)
             stage_sources(self.store, generation_id, snapshot)
             stage_findings(self.store, generation_id, snapshot)
             stage_actual_plans(self.store, generation_id, actuals)
+            stage_call_plans(self.store, generation_id, calls)
             if any(finding.severity == "error" for finding in snapshot.findings):
                 raise RefreshFailedError(
                     "BLOCKING_SOURCE_QUALITY",
@@ -547,6 +631,13 @@ class RtaRefreshCoordinator:
                     actuals,
                     roster=roster,
                     status_policy=status_policy,
+                )
+                publish_call_plans(
+                    connection,
+                    active_generation_id,
+                    calls,
+                    roster=roster,
+                    policy=call_policy,
                 )
 
             self.store.activate_generation(generation_id, publish=publish)

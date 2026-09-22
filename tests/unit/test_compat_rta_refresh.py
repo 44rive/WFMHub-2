@@ -132,7 +132,7 @@ def test_source_change_marks_previous_generation_stale(tmp_path: Path) -> None:
     assert str(alternate) not in json.dumps(health)
 
 
-def test_refresh_publishes_optional_agent_status_and_lilo_health(tmp_path: Path) -> None:
+def test_refresh_publishes_optional_storm_source_health(tmp_path: Path) -> None:
     source, schedule_dir = _sources(tmp_path)
     _schedule(schedule_dir / "StartEndTimes.txt", "Off")
     status = source / "Storm/Agent Status/status.csv"
@@ -159,6 +159,42 @@ def test_refresh_publishes_optional_agent_status_and_lilo_health(tmp_path: Path)
         writer = csv.writer(stream)
         writer.writerow(["[Agent]", "[Agent ID]", "[First Log-on Time]", "[Last Log-off Time]"])
         writer.writerow(["Ada Agent", "00123", "08/01/2026 08:00", "08/01/2026 16:00"])
+    calls = source / "Storm/Call by Call/calls.csv"
+    calls.parent.mkdir(parents=True)
+    with calls.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(
+            [
+                "[Call Date/Time]",
+                "[Call End Date/Time]",
+                "[Call ID]",
+                "[Call Reference Number]",
+                "[Agent ID]",
+                "[Agent]",
+                "[Talk Time]",
+                "[Hold Time]",
+                "[Total Wrap Time]",
+                "[Call Direction]",
+                "[Total Queue Wait Time]",
+                "[Queue]",
+            ]
+        )
+        writer.writerow(
+            [
+                "08/01/2026 08:07",
+                "08/01/2026 08:10",
+                "call-1",
+                "ref-1",
+                "00123",
+                "Ada Agent",
+                "00:02:00",
+                "00:00:10",
+                "00:00:20",
+                "I",
+                "00:00:15",
+                "APBN_BRU_RSA_INTERNAT_All_FR",
+            ]
+        )
 
     coordinator = RtaRefreshCoordinator(tmp_path)
     result = coordinator.refresh()
@@ -179,7 +215,16 @@ def test_refresh_publishes_optional_agent_status_and_lilo_health(tmp_path: Path)
         "minDate": "2026-08-01",
         "maxDate": "2026-08-01",
     }
-    assert health["activeGeneration"]["counts"]["sourceFiles"] == 4
+    assert health["sources"]["callByCall"] == {
+        "ready": True,
+        "rawLegCount": 1,
+        "canonicalLegCount": 1,
+        "serviceIntervalCount": 1,
+        "fileCount": 1,
+        "minDate": "2026-08-01",
+        "maxDate": "2026-08-01",
+    }
+    assert health["activeGeneration"]["counts"]["sourceFiles"] == 5
     assert str(source) not in json.dumps(health)
 
 

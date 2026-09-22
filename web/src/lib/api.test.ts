@@ -77,6 +77,7 @@ describe('engine API client', () => {
         publishedSchedules: 'Verint/Schedules & Activities',
         agentStatus: 'Storm/Agent Status',
         lilo: 'Storm/LILO',
+        callByCall: 'Storm/Call by Call',
       },
       activeGenerationId: null,
       activeGeneration: null,
@@ -87,6 +88,15 @@ describe('engine API client', () => {
         schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
         agentStatus: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
         lilo: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        callByCall: {
+          ready: false,
+          rawLegCount: 0,
+          canonicalLegCount: 0,
+          serviceIntervalCount: 0,
+          fileCount: 0,
+          minDate: null,
+          maxDate: null,
+        },
       },
     }
     expect(decodeRtaSourceHealth(health).ready).toBe(false)
@@ -103,6 +113,7 @@ describe('engine API client', () => {
         publishedSchedules: 'Verint/Schedules & Activities',
         agentStatus: 'Storm/Agent Status',
         lilo: 'Storm/LILO',
+        callByCall: 'Storm/Call by Call',
       },
       activeGenerationId: null,
       activeGeneration: null,
@@ -113,6 +124,15 @@ describe('engine API client', () => {
         schedule: { ready: false, shiftCount: 0, fileCount: 0, minDate: null, maxDate: null },
         agentStatus: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
         lilo: { ready: false, rowCount: 0, fileCount: 0, minDate: null, maxDate: null },
+        callByCall: {
+          ready: false,
+          rawLegCount: 0,
+          canonicalLegCount: 0,
+          serviceIntervalCount: 0,
+          fileCount: 0,
+          minDate: null,
+          maxDate: null,
+        },
       },
     }
     const fetchMock = vi.fn(

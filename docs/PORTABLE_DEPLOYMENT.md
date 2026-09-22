@@ -54,8 +54,8 @@ untouched. If you prefer a self-contained folder, put the same source tree
 under `extracts` beside `WFMHub.cmd` and skip setup. In Command, select
 **Refresh local sources**. The current cut requires FTE Count and wide
 StartEndTimes and optionally reads `Storm/Agent Status/*.csv` and
-`Storm/LILO/*.csv`; source counts and dates are not service, attendance, or
-staffing KPIs.
+`Storm/LILO/*.csv` and `Storm/Call by Call/*.csv`. Source counts and dates are
+not themselves service, attendance, or staffing KPIs.
 
 The FTE adapter follows the proven old-portable contract. Integral Excel IDs
 are normalized to canonical text, blank roster IDs can use an exact unique-name
@@ -73,6 +73,17 @@ batches, scope against the effective roster, and publish inside the same
 generation transaction as roster and schedule. Agent Status is primary
 observed evidence and LILO is fallback only; the attendance model is the next
 slice.
+
+Call-by-Call accepts the legacy bracketed or unbracketed Storm headers and
+streams source rows without loading the file into memory. A row is retained
+when its dated agent resolves to the effective roster or its queue has an exact
+reviewed mapping in `config/queue_mapping.csv`. These two eligibility lanes
+remain explicit so mapped abandoned demand is retained without widening
+employee scope. Overlapping exports are deduplicated by stable call-leg key and
+newest source version. The current service fact stores additive 15-minute
+components only; headline SLA, routed rate, abandon rate, and AHT will be
+evaluated later from ratio-of-sums metric/profile rules rather than calculated
+inside the adapter or UI.
 
 ## Launch and security contract
 

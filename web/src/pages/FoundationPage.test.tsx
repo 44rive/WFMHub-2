@@ -15,6 +15,7 @@ const readyHealth: RtaSourceHealth = {
     publishedSchedules: 'Verint/Schedules & Activities',
     agentStatus: 'Storm/Agent Status',
     lilo: 'Storm/LILO',
+    callByCall: 'Storm/Call by Call',
   },
   activeGenerationId: 7,
   activeGeneration: {
@@ -28,15 +29,20 @@ const readyHealth: RtaSourceHealth = {
       scheduleAssignments: 33,
       agentStatusRows: 80,
       liloRows: 12,
-      sourceFiles: 4,
+      rawCallLegs: 105,
+      canonicalCallLegs: 100,
+      serviceIntervals: 8,
+      sourceFiles: 6,
       scheduleFiles: 1,
       agentStatusFiles: 1,
       liloFiles: 1,
+      callFiles: 2,
     },
     dateRange: { from: '2026-09-20', to: '2026-09-21' },
     actualDateRanges: {
       agentStatus: { from: '2026-09-20', to: '2026-09-21' },
       lilo: { from: '2026-09-20', to: '2026-09-21' },
+      callByCall: { from: '2026-09-20', to: '2026-09-21' },
     },
     qualityCounts: { error: 0, warning: 1, info: 0 },
   },
@@ -65,6 +71,15 @@ const readyHealth: RtaSourceHealth = {
       minDate: '2026-09-20',
       maxDate: '2026-09-21',
     },
+    callByCall: {
+      ready: true,
+      rawLegCount: 105,
+      canonicalLegCount: 100,
+      serviceIntervalCount: 8,
+      fileCount: 2,
+      minDate: '2026-09-20',
+      maxDate: '2026-09-21',
+    },
   },
 }
 
@@ -86,6 +101,7 @@ describe('RTA source readiness', () => {
     expect(screen.getByText('33 assignments')).toBeTruthy()
     expect(screen.getByText('80 intervals')).toBeTruthy()
     expect(screen.getByText('12 daily records')).toBeTruthy()
+    expect(screen.getByText('100 governed legs · 8 intervals')).toBeTruthy()
     expect(screen.getByText('Generation 7')).toBeTruthy()
     expect(screen.getByText('No operational metrics to display')).toBeTruthy()
     expect(screen.queryByText('Service level:')).toBeNull()

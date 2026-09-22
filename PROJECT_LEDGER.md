@@ -23,11 +23,11 @@ with the useful workflows in WFMHub-Portable.
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-readiness preview `.3` | Optional streaming Agent Status/LILO evidence is published; target validation is next |
+| `origin/main` | Phase 1 source-readiness preview `.3` | Optional streaming Agent Status/LILO evidence is published |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
-| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | FTE/schedule plus optional streaming Agent Status/LILO evidence are integrated; operational RTA outputs remain |
+| `integration/browser-wasm-hybrid-spike` (current) | Phase 1 source-readiness integration | `.4` Call-by-Call/service-evidence candidate is locally green; Windows CI/release is pending |
 | `feature/rta-stdlib-core` at `a144a49` | Isolated first backend increment | Reviewed generation/catalog foundation integrated into current branch |
 | `integration/embedded-runtime` at `aeb5ff1` | Browser-served runtime and full doctor worker | Complete and merged as `f888d7f` |
 | `integration/embedded-packaging` at `e7b8870` | Embedded CPython release/CI worker | Complete and merged as `7be8032` |
@@ -73,6 +73,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-031 | Accept data-free trailing TSV columns in published StartEndTimes exports, retaining physical date-column provenance; reject populated unlabelled cells. Surface a bounded, path-scrubbed contract reason to the local UI. | The exact old-portable July attachment has 31 date columns plus an empty 34th header/cell; the released Phase 1 parser rejected that structural detail, producing the user's 422. This is a verified compatibility correction, not a general relaxation of non-date headers. |
 | D-032 | Normalize lossless integral Excel Client IDs to canonical text, allow blank roster IDs to scope through an exact unique-name match to a populated operational source ID, and quarantine invalid/ambiguous FTE rows as warnings instead of rejecting the complete refresh. | The exact old-portable FTE attachment uses numeric and blank IDs by design. The old product accepts those rows, resolves duplicate IDs deterministically, excludes unsupported statuses from effective scope, and skips malformed PTO/Away rows. The new policy reproduces that behavior while retaining every raw row and quality finding. |
 | D-033 | Add Agent Status and LILO as optional, streaming Bronze evidence in the same atomic refresh generation; Agent Status is primary attendance evidence and LILO remains fallback. | These CSVs can be large and missing evidence must remain unknown. Preflight is bounded-memory and byte-bound; activation replays 5,000-row batches inside the SQLite transaction and rolls back on source mutation. Missing Storm folders do not block roster/schedule readiness, while present malformed files do. Attendance derivation remains a separate governed slice. |
+| D-034 | Admit Call-by-Call through two explicit lanes—effective roster identity or exact reviewed queue mapping—then deduplicate stable legs and publish additive 15-minute service components only. | Mapped abandoned/out-of-roster queue demand must survive without widening employee scope. Ratio KPIs and Flash allowlists require separate metric/profile governance and must not be hard-coded in the adapter or React UI. |
 
 ## Evidence already collected
 
@@ -353,16 +354,17 @@ only through a recorded decision with evidence.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
-- The Phase 1 shell has source-health and refresh APIs and now ingests raw
-  Agent Status/LILO evidence, but still has no attendance read model,
-  call-service facts, or requirement input. Command shows source readiness
-  only, not operational KPIs. A true required-FTE shortage also needs the
-  separate Verint Staff Type requirement source.
-- FTE Count, published StartEndTimes, optional Agent Status, and optional LILO
-  now refresh into byte-bound, generation-keyed evidence. Failed generations
-  retain manifest and quality evidence while attempted fact publication is
-  rolled back. Large actuals are streamed in bounded batches, but incremental
-  planning remains unimplemented and every refresh re-reads configured files.
+- The Phase 1 shell has source-health and refresh APIs and now ingests Agent
+  Status/LILO plus deduplicated Call-by-Call legs and 15-minute service
+  components. It still has no attendance read model, governed service ratio
+  view, or requirement input. Command shows evidence readiness only, not a
+  headline SLA or staffing position. A true required-FTE shortage also needs
+  the separate Verint Staff Type requirement source.
+- FTE Count, published StartEndTimes, and optional Storm sources refresh into
+  byte-bound, generation-keyed evidence. Failed generations retain manifest
+  and quality evidence while attempted fact publication is rolled back. Large
+  event files are streamed in bounded batches, but incremental planning remains
+  unimplemented and every refresh re-reads configured files.
 - Exact preview `.2` launch and source refresh now pass on the managed
   workstation. Its doctor and five Edge probes pass Windows CI; the last full
   on-device capability report remains the accepted Phase 0.4 report.
@@ -387,22 +389,55 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Port Call-by-Call to create governed service/demand facts, then build the
-   status-primary/LILO-fallback attendance read model before exposing
-   operational Command KPIs.
-2. Add Verint Staff Type forecast/requirement before claiming a required-FTE
-   shortage; the first four-source stage may show observed versus scheduled
+1. Add the status-primary/LILO-fallback attendance read model and retain exact
+   gap evidence before exposing attendance actions.
+2. Port the effective-dated service profiles and metric catalog over the raw
+   Call-by-Call components, then expose ratio-of-sums service KPIs without
+   averaging percentages.
+3. Add Verint Staff Type forecast/requirement before claiming a required-FTE
+   shortage; the current source stage may show observed versus scheduled
    coverage only.
-3. Add governed operational read models to Command and bounded Excel export,
+4. Add governed operational read models to Command and bounded Excel export,
    preserving explicit freshness and source-quality states.
-4. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
+5. Rerun DOCTOR plus five Edge probes from the exact current ZIP on the target
    after source refresh and UI/runtime integration.
-5. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
+6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
    a measured RTA workflow; deterministic host logic remains the fallback.
-6. Reach old-portable business parity before declaring WFMHub 2 the operational
+7. Reach old-portable business parity before declaring WFMHub 2 the operational
    replacement; qualify forecasting and optimization separately afterward.
 
 ## Session log
+
+### 2026-09-22 — Streaming Call-by-Call and service components integrated
+
+- Audited the old portable's exact Call-by-Call discovery, bracketed/unbracketed
+  headers, date-aware roster scope, exact queue mapping, stable leg key,
+  overlapping-export precedence, and queue-entry service grain. The reviewed
+  89-row queue catalog was imported as configuration; no operational/customer
+  extract was copied.
+- Added bounded preflight and 5,000-row transactional replay for optional
+  `Storm/Call by Call/*.csv`. Mapped queues retain abandoned and out-of-roster
+  service demand; roster-scoped unmapped calls remain agent evidence. Invalid
+  starts, missing service fields, invalid/negative durations, and scope
+  exclusions are surfaced as aggregate quality evidence.
+- Added generation-keyed raw legs, one deterministic canonical row per stable
+  call key, explicit agent/service eligibility, and additive 15-minute service
+  components. The adapter does not calculate SLA, routed rate, abandon rate,
+  or AHT; effective-dated metric formulas and Flash allowlists remain the next
+  service layer.
+- Source health and Command readiness now report raw/canonical call legs and
+  service intervals. The packaged synthetic smoke verifies FTE, schedule,
+  Agent Status, LILO, Call-by-Call, rollback, and source immutability.
+- Local verification passes Ruff format/lint, strict Pyright, 71 pytest tests,
+  the native-stack probe, 17 Vitest tests, TypeScript, Biome, and the React
+  production build. The deterministic local `.4` candidate has 96 members,
+  passes ZIP CRC/inventory validation and packaged synthetic source smoke, and
+  has SHA-256
+  `ba899bbed6ccb89469ea1b412a2b40ae2cf533ecee79e117d5e4fd1959324d22`.
+  Exact Windows CI/release evidence remains pending.
+- The project-orchestrator's external Claude review could not authenticate due
+  to expired OAuth. A separate native read-only legacy audit completed and its
+  exact contract findings informed the implementation.
 
 ### 2026-09-22 — Streaming Agent Status and LILO evidence integrated
 

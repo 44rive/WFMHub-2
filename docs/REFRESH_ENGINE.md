@@ -96,6 +96,12 @@ Do not blindly partition every table by every dimension.
 
 High-frequency events such as call-by-call/status history should be written in reasonably sized files rather than one file per tiny interval.
 
+The current Phase 1 compatibility host streams Agent Status, LILO, and
+Call-by-Call into generation-keyed SQLite batches and atomically rebuilds their
+canonical facts. Metadata-based changed-file planning and affected-partition
+rebuilds in the target topology remain roadmap work; current refreshes replay
+all configured files to preserve correctness.
+
 Clearing or losing the browser cache must trigger a bounded rebuild from
 authoritative SQLite/source evidence, never data loss.
 

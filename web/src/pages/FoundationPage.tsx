@@ -194,9 +194,9 @@ export function RtaSourcePanel({
         <h2 id="first-slice-heading">RTA source readiness</h2>
       </div>
       <p>
-        Read your existing FTE, Verint schedule, Agent Status, and LILO exports in place. Refresh
-        does not upload, copy, or modify those files. Agent Status and LILO are optional evidence;
-        attendance metrics and action queues are not connected yet.
+        Read your existing FTE, Verint schedule, Agent Status, LILO, and Call-by-Call exports in
+        place. Refresh does not upload, copy, or modify those files. Storm sources are optional;
+        attendance metrics, headline service rates, and action queues are not connected yet.
       </p>
       <div className="source-actions">
         <button
@@ -266,6 +266,14 @@ export function RtaSourcePanel({
             {health?.ready && health.sources.lilo.ready
               ? `${health.sources.lilo.rowCount} daily records`
               : 'Optional fallback not loaded'}
+          </dd>
+        </div>
+        <div>
+          <dt>Call by Call</dt>
+          <dd>
+            {health?.ready && health.sources.callByCall.ready
+              ? `${health.sources.callByCall.canonicalLegCount} governed legs · ${health.sources.callByCall.serviceIntervalCount} intervals`
+              : 'Optional service source not loaded'}
           </dd>
         </div>
         <div>
