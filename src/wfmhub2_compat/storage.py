@@ -477,6 +477,10 @@ ON wfm_call_leg(generation_id, business_date, service_scope, queue);
 CREATE INDEX IF NOT EXISTS ix_wfm_service_interval_scope
 ON wfm_service_interval(generation_id, interval_start, service_scope);
 
+CREATE INDEX IF NOT EXISTS ix_wfm_service_interval_date_scope
+ON wfm_service_interval(generation_id, business_date, service_scope, comparison_scope,
+                        interval_start, interval_end);
+
 CREATE INDEX IF NOT EXISTS ix_wfm_attendance_date
 ON wfm_attendance_agent_day(generation_id, business_date, evidence_state);
 
