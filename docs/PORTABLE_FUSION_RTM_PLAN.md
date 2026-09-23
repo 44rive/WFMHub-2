@@ -1,34 +1,26 @@
-# WFMHub 2 vision delivery and Portable carryover plan
+# Portable fusion and RTM delivery plan
 
-Status: **user-corrected direction; implementation gates remain to be
-validated**, 2026-09-23. This document defines delivery and acceptance; it
-does not claim that the proposed features exist.
+Status: **proposal for user validation**, 2026-09-23. This document defines
+delivery and acceptance; it does not claim that the proposed features exist.
 
 ## Decision and outcome
 
-WFMHub 2's full workforce-management vision in
-[`PROJECT_VISION.md`](../PROJECT_VISION.md) is the objective. WFMHub-Portable is
-a proven donor/reference, not the product to copy wholesale. The user wants
-four Portable products carried into Hub2: **the RTM workbook, clean data
-extracts, PCS (six CSV feeds into one shared coaching workbook), and the
-permanent editable Bonus workflow**. Port the source contracts, formulas,
-mappings, tests, and relevant durable state needed to make those four correct;
-do not make every other Portable report or workflow a prerequisite for Hub2's
-progress or cutover. Current Portable stays the daily production tool until a
-separately approved cutover of those four outputs.
+WFMHub 2 is the target codebase. The current WFMHub-Portable stays the daily
+production tool until a separately approved cutover. We will first qualify
+Hub2's refresh foundation, then bring across only the governed contracts RTM
+needs, build RTM once in Hub2, and finish the remaining operational fusion.
 
-There are three distinct outcomes, not one undifferentiated "fusion":
+There are two distinct outcomes:
 
 | Milestone | What the user has | What it does **not** mean |
 | --- | --- | --- |
-| First usable RTM release | A target-compatible Hub2 ZIP with a governed, source-backed RTM view and primary Excel/Flash workbook computed by the same pure-Python domain service; source freshness, quality and unknown states remain visible. | The other three carryover products and longer-horizon WFM capabilities are not implied. Portable remains the daily tool during the pilot. |
-| Four-product carryover and cutover | The RTM workbook, clean data extracts, PCS shared coaching workbook/six CSV feed, and persistent editable Bonus are accepted in Hub2. Relevant configuration/history is reconciled; a verified, reversible transition makes Hub2 the sole daily writer for these workflows. | Parity with every Portable report or workflow is not required, and this is not completion of the full WFM vision. |
-| WFMHub 2 vision delivery | Governed intraday, tactical, and strategic WFM capabilities grow from observation/explanation through prediction, recommendation, decisions, measurement and learning, with each product validated against its own evidence and performance gates. | A compatible technology probe, mockup, or algorithm alone is not a delivered WFM capability; no LLM feature is part of this plan. |
+| First usable RTM release | A target-compatible Hub2 ZIP with a governed, source-backed RTM view and Excel/Flash output computed by the same pure-Python domain service; source freshness, quality and unknown states remain visible. | It is not yet the replacement for every Portable workflow. Portable remains the daily tool during the pilot. |
+| Full operational fusion and cutover | The agreed current Portable workflows, configuration, durable state and outputs are available and accepted in Hub2; a verified, reversible data transition makes Hub2 the sole daily writer. | It is not the entire long-range six-workspace vision, nor a promise of AI, predictive accuracy or automated decisions. |
 
-The six-workspace architecture (Command, Operate, Plan, Capacity, Review,
-Govern) remains the product shell. Command's functional source-readiness page
-stays visible; new RTM and other pages appear only when their capabilities
-work. Unimplemented pages remain hidden rather than showing placeholder KPIs.
+The existing six-workspace shell is retained. Command's functional source
+readiness page stays visible; new RTM and Govern pages appear only when they
+work. Unimplemented Plan, Capacity, Review and other pages remain hidden
+rather than showing placeholder KPIs.
 
 ## Starting point and authority
 
@@ -45,11 +37,10 @@ work. Unimplemented pages remain hidden rather than showing placeholder KPIs.
   It does **not** yet have governed headline service ratios, Verint Staff Type
   forecast/requirement, a staffing ladder, an operational RTM page or a Flash
   workbook. Current Command shows source readiness, not operational KPIs.
-- The comparison baseline for shared source behavior and the four carried
-  outputs is **current Portable v1.1.2 plus the user's effective
-  configuration**, not the old `v0.36.0` version named in the historical
-  Phase 1 refresh decision. Other Hub2 WFM products get their own governed
-  acceptance contracts; they are not forced to imitate Portable.
+- The comparison baseline is the **current Portable v1.1.2 plus the user's
+  effective configuration**, not the old `v0.36.0` version named in the
+  historical Phase 1 refresh decision. Historical ledger evidence remains
+  intact; this plan supersedes its baseline for future acceptance.
 - Original extracts and the existing Portable database remain untouched.
   Browser OPFS is rebuildable cache, never the source of truth. No real
   workforce data belongs in the repository or a release ZIP.
@@ -85,7 +76,7 @@ affected scope rather than all history; synthetic migration, corruption and
 failure tests preserve the last valid cut. Exact extracted Windows ZIP still
 passes its host doctor and offline browser gates.
 
-### 3. Port the governed inputs RTM needs
+### 3. Fuse only the governed inputs RTM needs
 
 Inventory Portable v1.1.2's effective user mappings, service profiles,
 allowlists, KPI/Flash formulas, source precedence and synthetic tests. Port
@@ -119,92 +110,53 @@ Portable reference cases; no false zeros or fabricated service/attendance;
 usable query/export times and workbook shape are measured on the managed
 machine; exact release ZIP launches offline without admin or installed tools.
 
-### 5. Parallel pilot, then the other three Portable carryover products
+### 5. Parallel pilot, then remaining operational fusion
 
 Run Portable and Hub2 against the same read-only source folders but separate
 SQLite homes. Compare daily RTM results, late/corrected files, refresh time,
 Excel/Flash output and user workflow. Keep Portable as daily production until
-the user accepts the pilot. Then implement and accept the other three carried
-products individually:
+the user accepts the pilot. Inventory and migrate the remaining agreed
+Portable workflows one by one, with a parity matrix and regression fixtures.
 
-- **Clean data extracts:** agree the exact source coverage, columns, grains,
-  formats and quality/provenance contract; compare representative same-cut
-  Portable outputs and validate privacy-safe, repeatable export behavior.
-- **PCS:** preserve its six CSV feeds and **one shared coaching workbook**;
-  verify feed mappings, workbook behavior, state and representative outputs.
-- **Bonus:** preserve a persistent, editable workflow and relevant state;
-  refresh must not overwrite user edits or silently reset history.
+The remaining parity inventory explicitly includes Attendance Review,
+Staffing Preparation, Realisations, Final Absenteeism & Shrinkage, governed
+exports and on-demand analysis, permanent Bonus, the PCS six-CSV feed and
+**one shared coaching workbook**, and CLI/report actions. Each workflow gets
+its own output, state and usability gate; none may be silently dropped,
+reset or reshaped. A proposed per-LOB **RTM Flash workbook** split is an
+**unapproved design decision**; it requires an explicit user choice and output
+contract before implementation. No automatic old-database import is claimed:
+any history/configuration migration is designed, rehearsed and verified
+separately, with a rebuild-from-source path where appropriate.
 
-The RTM workbook contract, including whether Flash uses one combined workbook
-or separate LOB workbooks, needs explicit user acceptance before its shape is
-locked. No automatic old-database import is claimed: migrate/reconcile only
-the effective configuration and history needed by the four carried products,
-with a rehearsed, verified procedure and rebuild-from-source where suitable.
-Portable workflows outside those four are not hidden cutover gates; any useful
-contracts they contain may still inform Hub2's new WFM capabilities.
-
-**Gate:** all four carried outputs have accepted output, state and usability
-behavior (or an explicitly approved change), and daily RTM pilot discrepancies
-are resolved.
+**Gate:** each agreed workflow has accepted output and state parity (or an
+explicitly approved change), and daily RTM pilot discrepancies are resolved.
 
 ### 6. Separate, reversible cutover
 
-Only after the pilot and four-product carryover acceptance, stop Portable
-writes for those workflows, take verified backups, rehearse and verify the
-selected migration/rebuild, then make Hub2 the **one writer** of their
-production state. Never point two running products at the same SQLite
-database. Retain the prior Portable
+Only after the pilot and remaining operational parity: stop Portable writes,
+take verified backups, rehearse and verify the selected migration/rebuild,
+then make Hub2 the **one writer** of its production state. Never point two
+running products at the same SQLite database. Retain the prior Portable
 installation and backup for rollback; reconcile any Hub2-only writes before
-reverting so workbook edits, decisions or Bonus state are not silently lost.
-The user signs off on cutover after the exact extracted ZIP passes on the
-managed PC. This gate does not require migrating unrelated Portable reports.
+reverting so decisions or Bonus state are not silently lost. The user signs
+off on cutover after the exact extracted ZIP passes on the managed PC.
 
 **Gate:** record counts, date ranges, effective config, workbook/CSV outputs,
 integrity checks, refresh and recovery procedure, and user acceptance. If any
 gate fails, Portable remains production and Hub2 remains a pilot.
 
-### 7. Deliver the wider WFMHub 2 vision in validated increments
-
-The four carried products are an operational floor, not a ceiling on Hub2.
-Continue the six-workspace product loop in this order, reusing one governed
-domain model across UI, reports and future interfaces:
-
-1. **Observe and explain intraday:** complete the service/staffing ladder,
-   attendance uncertainty, gap decomposition, agent and interval drill-down,
-   and measurable 2–4 hour risk horizon around RTM. Do not call a source-ready
-   screen an operational command center.
-2. **Forecast, requirement, schedule and capacity:** store forecast vintages;
-   measure bias/accuracy; implement independently auditable staffing need,
-   shrinkage uplift and schedule-fit analysis; extend to tactical and then
-   strategic workload, headcount, hiring, attrition, cost and skill-mix views.
-3. **Scenarios and interventions:** run what-if changes through the same
-   production requirement logic; expose feasible candidate actions with
-   assumptions, constraints, expected impact and uncertainty. Optimization
-   output is a proposal, not an automatically authorized decision.
-4. **Decisions, outcomes and learning:** record human decisions and subsequent
-   outcomes, evaluate forecast/intervention quality, and improve ranking only
-   when sufficient governed history supports it.
-
-Every increment needs source authority, natural-grain contracts, deterministic
-tests, calibration or backtesting where relevant, and usable target-machine
-performance. Self-hosted DuckDB-Wasm, Pyodide and HiGHS-Wasm remain
-capability-gated options where they add value; none may block the deterministic
-core. The blocked native stack is not a dependency of the corporate portable
-profile. No LLM feature is part of this plan.
-
 ## User checkpoints and boundaries
 
 The user validates the effective Portable configuration and representative
-outputs for the four carried products locally; reviews the RTM metric and
-workbook contracts; shares sanitized refresh timing/count/quality results from
-the managed workstation; and approves the RTM pilot and four-product cutover
-separately. New Hub2 WFM capabilities have their own product/data acceptance
-criteria. No operational extracts or employee data need to be sent to the
-repository.
+RTM/Flash outputs locally; reviews the metric and workbook contracts; shares
+sanitized refresh timing/count/quality results from the managed workstation;
+and approves the pilot and eventual cutover separately. No operational
+extracts or employee data need to be sent to the repository.
 
 Principal risks are changed-source performance at real volume, scope/formula
 drift from effective Portable settings, cross-midnight dependency expansion,
 locked-down Windows/Edge policy changes, and state migration. Each is a
-measured gate above, not an assumption. Browser accelerators remain optional;
-forecast quality, optimization benefit and whole-vision completion require
-their later validation rather than being implied by the first RTM release.
+measured gate above, not an assumption. Optional DuckDB-Wasm, Pyodide and
+HiGHS remain optional; no AI, predictive forecast quality, optimization
+benefit, cloud sync or whole-suite completion is promised by this plan.

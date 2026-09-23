@@ -238,9 +238,7 @@ formulas.
 5. Build Attendance & Coverage, including the schedule/observed inspector.
 6. Build the deterministic risk explanation and decision record.
 7. Add schedule integrity, outcome review, readiness, refresh history, and
-   governed report delivery for Hub2's WFM vision. Accept the four required
-   Portable carryovers separately; unrelated old-product reports are not a
-   general parity gate.
+   report delivery until useful old-product parity is reached.
 8. Add Plan and optional browser-WASM enhancements only after measured value
    and production-scale qualification.
 

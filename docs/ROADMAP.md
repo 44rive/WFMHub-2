@@ -5,29 +5,17 @@ The roadmap is organized by **WFM capability**, not by framework implementation.
 ## Current status
 
 The portable foundation passed its exact managed-workstation Phase 0.4 gate on
-2026-09-20. The active delivery is refresh qualification and the first
-governed RTM/RTA vertical slice. WFMHub 2's full intraday, tactical and
-strategic vision in [`PROJECT_VISION.md`](../PROJECT_VISION.md) remains the
-objective. WFMHub-Portable is a reference and donor for governed contracts,
-not the scope of Hub2: only the RTM workbook, clean data extracts, PCS and
-Bonus are required Portable product carryovers. Browser analytics and
-advanced models remain capability-gated rather than prerequisites for core
-RTA operation.
+2026-09-20. The active delivery is the first governed RTA vertical slice and
+then useful-workflow parity with WFMHub-Portable. Browser analytics,
+forecasting, and optimization remain optional capabilities rather than
+prerequisites for core RTA operation.
 
 The proposed delivery order and acceptance gates are in
-[WFMHub 2 vision delivery and Portable carryover plan](PORTABLE_FUSION_RTM_PLAN.md).
-Hub2 is the target codebase; current Portable v1.1.2 with the user's effective
-configuration is the comparison baseline for shared source behavior and those
-four outputs. It remains the daily tool until a separately approved,
-reversible **four-product cutover**. First RTM, four-product cutover, and full
-WFM vision delivery are different milestones. Neither cutover nor progress on
-new WFM capabilities requires parity with every Portable report.
-
-The capability sequence is **Observe/Explain → Predict/requirement →
-Recommend/scenario → Decide → Measure → Learn**. The workspaces below are
-product areas, not claims that their features already exist. Each later phase
-depends on governed inputs, validation and acceptable performance on the
-managed workstation; no LLM or autonomous operational action is required.
+[Portable fusion and RTM delivery plan](PORTABLE_FUSION_RTM_PLAN.md). Hub2 is
+the target codebase; current Portable v1.1.2 with the user's effective
+configuration remains the daily production baseline until a separately
+approved, reversible cutover. The first usable RTM release and full
+operational fusion are different milestones.
 
 ## Foundation — platform and governed data
 
@@ -42,10 +30,6 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Intraday / RTA
 
-- first RTM milestone: source-backed service/staffing evidence, primary Excel
-  workbook and matching Operate drill-down from one deterministic domain path;
-- separate carryover gates: clean data extracts, PCS six-CSV/shared coaching
-  workbook, permanent editable Bonus state;
 - RTA Command Center;
 - current service and workload;
 - required/scheduled/present/effective staffing ladder;
@@ -58,7 +42,7 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Forecast and staffing
 
-- governed forecast vintages and source authority;
+- forecast-vintage storage;
 - bias/WAPE/MAE/RMSE;
 - weekday/interval error patterns;
 - explainable pure-Python seasonal baselines;
@@ -69,7 +53,6 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Schedule intelligence
 
-- governed published schedules, skill/eligibility and constraint inputs;
 - schedule vs requirement coverage fit;
 - over/understaffed FTE-hours;
 - break/lunch concentration;
@@ -81,7 +64,6 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Scenario lab
 
-- validated reuse of the production requirement calculation;
 - volume/AHT/shrinkage/FTE deltas;
 - absence scenarios;
 - cross-skill movement;
@@ -91,7 +73,6 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Tactical capacity
 
-- governed productivity, cost, PTO/training and hiring lead-time assumptions;
 - weekly/monthly workload;
 - shrinkage and productivity assumptions;
 - required headcount;
@@ -101,7 +82,6 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Strategic workforce planning
 
-- governed attrition, demand, cost/budget and skill-mix assumptions;
 - 12–18+ month demand/capacity horizon;
 - hiring plans;
 - budget/cost assumptions;
@@ -111,8 +91,7 @@ managed workstation; no LLM or autonomous operational action is required.
 
 ## Decision learning
 
-Once sufficient governed decision/outcome history and measured intervention
-results exist:
+Once sufficient governed decision/outcome history exists:
 
 - intervention effectiveness by context;
 - expected recovery distributions;
@@ -120,7 +99,4 @@ results exist:
 - operational-cost modelling;
 - recommendation ranking based on observed outcomes.
 
-No LLM feature or dependency is part of this plan; deterministic forecasting
-and optimization remain evidence-gated WFM capabilities. Pyodide,
-DuckDB-Wasm and HiGHS-Wasm remain optional, target-qualified tools, not
-discarded technology or automatic product promises.
+AI/LLM explanation may sit on top of these governed products, but it should not become the metric calculation engine.
