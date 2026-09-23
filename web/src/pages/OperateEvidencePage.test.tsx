@@ -93,6 +93,24 @@ describe('read-only Operate evidence', () => {
     expect(screen.queryByText(/AHT/)).toBeNull()
   })
 
+  it('makes an overnight interval end date visible', () => {
+    render(
+      <ServiceEvidence
+        evidence={{
+          ...evidence,
+          serviceIntervals: [
+            {
+              ...evidence.serviceIntervals[0],
+              intervalStart: '2026-09-20T23:45:00',
+              intervalEnd: '2026-09-21T00:00:00',
+            },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByRole('rowheader', { name: '23:45–00:00 (2026-09-21)' })).toBeTruthy()
+  })
+
   it('keeps attendance explicitly date-wide and distinguishes missing service from zero', () => {
     render(
       <>

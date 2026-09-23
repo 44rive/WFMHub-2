@@ -429,9 +429,10 @@ only through a recorded decision with evidence.
   cut; a failed refresh leaves the previous validated cut inspectable.
 - Added the first functional Operate navigation page with business-date and
   service-scope controls, dense evidence table, unknown/empty/stale states,
-  generation provenance, and a warning when the latest refresh failed. The
-  latest actual date is the default; future published schedule dates are not.
-- Local integration checks pass: 94 Python tests, 24 browser tests, Ruff,
+  generation provenance, a visible next-day label for overnight intervals,
+  and a warning when the latest refresh failed. The latest actual date is the
+  default; future published schedule dates are not.
+- Local integration checks pass: 94 Python tests, 25 browser tests, Ruff,
   strict Pyright, Biome, TypeScript, and production React build. Exact packaged
   Windows/browser qualification and real-data comparison remain pending.
 - External Claude review could not authenticate (expired OAuth). A backup

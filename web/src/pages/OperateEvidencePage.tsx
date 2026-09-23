@@ -55,6 +55,11 @@ function formatIntervalTime(value: string): string {
   return match?.[1] ?? value
 }
 
+function formatIntervalLabel(start: string, end: string): string {
+  const nextDate = start.slice(0, 10) === end.slice(0, 10) ? '' : ` (${end.slice(0, 10)})`
+  return `${formatIntervalTime(start)}–${formatIntervalTime(end)}${nextDate}`
+}
+
 export function OperateEvidencePage() {
   const [chosenDate, setChosenDate] = useState<string | null>(null)
   const [chosenScope, setChosenScope] = useState<ServiceScope | null>(null)
@@ -297,9 +302,7 @@ export function ServiceEvidence({ evidence }: { evidence: RtaOperateEvidence }) 
             <tbody>
               {evidence.serviceIntervals.map((row) => (
                 <tr key={`${row.intervalStart}-${row.intervalEnd}`}>
-                  <th scope="row">
-                    {formatIntervalTime(row.intervalStart)}–{formatIntervalTime(row.intervalEnd)}
-                  </th>
+                  <th scope="row">{formatIntervalLabel(row.intervalStart, row.intervalEnd)}</th>
                   <td>{numberFormat.format(row.offered)}</td>
                   <td>{numberFormat.format(row.answered)}</td>
                   <td>{numberFormat.format(row.abandoned)}</td>
