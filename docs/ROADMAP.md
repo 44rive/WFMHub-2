@@ -10,13 +10,6 @@ then useful-workflow parity with WFMHub-Portable. Browser analytics,
 forecasting, and optimization remain optional capabilities rather than
 prerequisites for core RTA operation.
 
-The proposed delivery order and acceptance gates are in
-[Portable fusion and RTM delivery plan](PORTABLE_FUSION_RTM_PLAN.md). Hub2 is
-the target codebase; current Portable v1.1.2 with the user's effective
-configuration remains the daily production baseline until a separately
-approved, reversible cutover. The first usable RTM release and full
-operational fusion are different milestones.
-
 ## Foundation — platform and governed data
 
 - official embedded-CPython runtime + CMD/localhost-browser lifecycle;
