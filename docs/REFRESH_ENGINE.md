@@ -130,6 +130,15 @@ reduces event-file I/O and Bronze duplication, but it does not yet meet the
 full affected-scope cost contract above. Preview `.6` does not contain this
 change.
 
+Preview `.8` adds a read-only Operate query over the committed active
+generation. It accepts one business date and, optionally, one exact
+service/comparison scope pair. SQLite returns additive 15-minute service
+components for that pair and separate date-wide attendance-state and gap
+aggregates. The query uses a consistent read snapshot, a bounded result, and
+an index on generation/date/scope; it does not return employee identifiers,
+source paths, raw rows, SLA, AHT, or staffing conclusions. A missing or changed
+source root suppresses the result rather than presenting an old cut as current.
+
 During a rebuild, `/api/rta/source-health` exposes bounded in-memory stage,
 relative source key, elapsed time, and file progress. Unexpected failures keep
 their stage and exception class in the safe failure code, print the traceback

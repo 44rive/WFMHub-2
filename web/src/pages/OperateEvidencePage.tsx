@@ -33,6 +33,10 @@ export function isCurrentOperateCut(
   )
 }
 
+export function hasFailedLatestRefresh(health: RtaSourceHealth | undefined): boolean {
+  return health?.latestRefresh?.status === 'failed'
+}
+
 function reasonMessage(reason: RtaOperateEvidence['reason']): string {
   switch (reason) {
     case 'NO_ACTIVE_GENERATION':
@@ -96,7 +100,12 @@ export function OperateEvidencePage() {
   const sourceChanged = sourceHealth.data?.status === 'source_changed'
   const notReady = result?.status === 'not_ready'
   const validatingCut = connection.isFetching || sourceHealth.isFetching || evidence.isFetching
-  const cutCurrent = !validatingCut && isCurrentOperateCut(sourceHealth.data, result)
+  const cutCurrent =
+    !validatingCut &&
+    !connection.error &&
+    !sourceHealth.error &&
+    !evidence.error &&
+    isCurrentOperateCut(sourceHealth.data, result)
   const cutMismatch = !validatingCut && result?.status === 'ready' && !cutCurrent
 
   return (
@@ -220,6 +229,12 @@ export function OperateEvidencePage() {
           <p className="operate-notice operate-warning" role="alert">
             Source readiness and the returned evidence do not identify the same active validated
             generation. Refresh source readiness before relying on this view.
+          </p>
+        ) : null}
+        {cutCurrent && hasFailedLatestRefresh(sourceHealth.data) ? (
+          <p className="operate-notice operate-warning" role="status">
+            The last refresh failed. This view still uses the previous validated generation; it does
+            not include the attempted new sources.
           </p>
         ) : null}
 

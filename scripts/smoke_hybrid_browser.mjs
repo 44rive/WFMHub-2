@@ -52,6 +52,24 @@ async function evaluate(expression) {
 }
 
 await command('Runtime.enable')
+const operateDeadline = Date.now() + 30_000
+let openedOperate = false
+while (Date.now() < operateDeadline && !openedOperate) {
+  openedOperate = await evaluate(`(() => {
+    if (location.pathname === '/operate/evidence') {
+      return document.body.innerText.includes('No actual-source date is available') &&
+        document.querySelector('table.operate-table') === null;
+    }
+    const link = [...document.querySelectorAll('a')]
+      .find((candidate) => candidate.getAttribute('href') === '/operate/evidence');
+    if (!link || location.hash.includes('wfmhub_token')) return false;
+    link.click();
+    return false;
+  })()`)
+  if (!openedOperate) await new Promise((resolve) => setTimeout(resolve, 250))
+}
+if (!openedOperate) throw new Error('Read-only Operate page did not show its safe empty state')
+
 const doctorDeadline = Date.now() + 30_000
 let openedDoctor = false
 while (Date.now() < doctorDeadline && !openedDoctor) {

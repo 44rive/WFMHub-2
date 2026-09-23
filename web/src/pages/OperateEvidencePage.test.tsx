@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { RtaOperateEvidence, RtaSourceHealth } from '../lib/api'
 import {
   AttendanceEvidence,
+  hasFailedLatestRefresh,
   isCurrentOperateCut,
   latestActualDate,
   ServiceEvidence,
@@ -64,6 +65,22 @@ describe('read-only Operate evidence', () => {
     expect(isCurrentOperateCut({ ...current, activeGenerationId: 8 }, evidence)).toBe(false)
     expect(isCurrentOperateCut(undefined, evidence)).toBe(false)
     expect(isCurrentOperateCut(current, { ...evidence, status: 'not_ready' })).toBe(false)
+  })
+
+  it('distinguishes a failed refresh from the previous validated cut', () => {
+    const active = {
+      generationId: 7,
+      status: 'succeeded',
+    } as NonNullable<RtaSourceHealth['activeGeneration']>
+    const health = {
+      ready: true,
+      activeGenerationId: 7,
+      activeGeneration: active,
+      latestRefresh: { ...active, generationId: 8, status: 'failed' },
+    } as RtaSourceHealth
+    expect(isCurrentOperateCut(health, evidence)).toBe(true)
+    expect(hasFailedLatestRefresh(health)).toBe(true)
+    expect(hasFailedLatestRefresh({ ...health, latestRefresh: active })).toBe(false)
   })
 
   it('renders only additive service components with accessible interval headings', () => {

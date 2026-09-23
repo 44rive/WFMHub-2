@@ -1,6 +1,6 @@
 # WFMHub 2 Project Ledger
 
-Last updated: 2026-09-22
+Last updated: 2026-09-24
 
 This is the durable project handoff. Read it before exploring the repository.
 Update it after material work so the next human or AI session starts from known
@@ -12,17 +12,17 @@ Build a trustworthy, portable WFM decision layer, beginning with an RTA product
 and expanding only after the governed evidence and operational workflow work.
 
 **Active milestone: Phase 1 — refresh parity and reliability.** Phase 0.4 is
-accepted. Preview `.5` exposed an operational regression on the real managed
-dataset: refresh was slow, opaque, and collapsed an unexpected exception to
-`REFRESH_FAILED`. New WFM features are frozen until the new engine matches the
-released WFMHub-Portable ingestion behavior closely enough for daily use while
-retaining atomic whole-cut rollback.
+accepted. Preview `.7` passed the user's first managed refresh and immediate
+unchanged-generation reuse, but exact output parity and changed-source cost
+remain unmeasured. New WFM KPI and decision features stay frozen; a read-only
+evidence inspector is being qualified to make that parity review practical.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
 | `origin/main` | Phase 1 source-version reuse Preview `.7` | PR #3 merged as `895fd08`; CI passed and prerelease `.7` published; user reports first managed refresh green and immediate unchanged refresh reused the active cut; metrics/parity pending |
+| `feat/operate-evidence-read-model` | Preview `.8` read-only parity workbench candidate | Local backend and UI integration; CI/exact Windows ZIP and target run pending |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -77,6 +77,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-035 | Build attendance as a generation-keyed derived read model with Agent Status primary at 80% elapsed-work coverage, LILO boundary fallback, explicit unknown states, PTO/Away clipping, and exact gap fragments; do not expose employee actions yet. | Missing rows are not proof of absence. A no-show requires an agent-specific blank LILO row or sufficiently covered Logged Off status, while late/early/internal gaps must retain their physical intervals for later read-only reconciliation. |
 | D-036 | Freeze feature work and treat released WFMHub-Portable `v0.36.0` as the executable ingestion/parity specification while retaining WFMHub 2's policy-compatible shell and atomic generation pointer. | Preview `.5` rereads each large Storm file four times for hashing and twice for parsing, rebuilds unchanged generations, shows no progress, and destroys the original unexpected exception. Preview `.6` adds an exact unchanged fast path, one-hash/one-parse Bronze staging, live progress, actionable local diagnostics, and attendance indexes. The old portable proves immutable source-version reactivation, but its model builders do not automatically determine affected dates; WFMHub 2 must design that separately. |
 | D-037 | Reference immutable successful Bronze versions for unchanged Status, LILO, and Call by Call files, while preserving a complete manifest and one atomic active-generation pointer. | A local source-version implementation reuses only matching root, key, SHA-256, adapter, policy, and roster evidence; metadata-only matches to the active cut skip hashing, and older A→B→A matches hash once. Derived attendance and service facts still rebuild in full, so affected-scope cost parity remains open. |
+| D-038 | Add only a read-only, date-scoped Operate evidence inspector while business parity is open. | It exposes additive service components for one exact service/comparison pair and separate date-wide attendance states/gap aggregates from the committed active cut. This aids comparison without inventing SLA, AHT, staffing gaps, or employee actions. The old portable remains the daily-use reference. |
 
 ## Evidence already collected
 
@@ -398,11 +399,13 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Capture the first Preview `.7` refresh duration and active-generation
-   counts/date ranges/quality if available; the user report supplied no values.
-2. Compare Preview `.7` counts, date ranges, quality outcomes, and attendance /
-   service evidence with old portable `v0.36.0` on the same governed sources;
-   resolve material differences before resuming feature work.
+1. Qualify the Preview `.8` candidate in Windows CI: exact extracted hybrid ZIP,
+   embedded host doctor, packaged source/Operate smoke, browser Operate empty
+   state and five offline capability probes. Publish only that qualified ZIP.
+2. Compare the new read-only Operate counts, intervals, attendance states and
+   gaps with old portable `v0.36.0` on the same governed sources. Capture the
+   first-refresh duration and active-generation counts/date ranges/quality if
+   available; the user report supplied no values. Resolve material differences.
 3. At the next normal source export/update, observe one changed-source refresh:
    elapsed time, readiness, counts, and any stage/code or local diagnostic if
    it fails. Do not modify operational extracts to create this test.
@@ -415,6 +418,25 @@ only through a recorded decision with evidence.
    a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
+
+### 2026-09-24 — Read-only Operate evidence candidate
+
+- Integrated a bounded, authenticated, date-scoped active-generation read model
+  for additive 15-minute Call-by-Call components and date-wide attendance
+  evidence/gap aggregates. Service selection is an exact service/comparison
+  scope pair. No source paths, employee IDs/names, raw rows, ratio KPIs, or
+  staffing claims are returned. Missing or changed source root suppresses the
+  cut; a failed refresh leaves the previous validated cut inspectable.
+- Added the first functional Operate navigation page with business-date and
+  service-scope controls, dense evidence table, unknown/empty/stale states,
+  generation provenance, and a warning when the latest refresh failed. The
+  latest actual date is the default; future published schedule dates are not.
+- Local integration checks pass: 94 Python tests, 24 browser tests, Ruff,
+  strict Pyright, Biome, TypeScript, and production React build. Exact packaged
+  Windows/browser qualification and real-data comparison remain pending.
+- External Claude review could not authenticate (expired OAuth). A backup
+  native read-only review hit its usage limit, so no independent review is
+  claimed for this candidate; the lead inspected the diff and tests directly.
 
 ### 2026-09-22 — Managed Preview `.7` first and unchanged refresh report
 
