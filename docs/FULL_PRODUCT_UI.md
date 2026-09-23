@@ -171,17 +171,19 @@ shell, evidence strip, panel language, and typed domain contracts.
 | Model/Scenario Registry | Can a result be reproduced? | Model/features, training/validation windows, metrics, scenario inputs, solver status and versions. |
 | Reports & Archive | Which governed output is current? | Generation, lineage, timestamp, product catalog and archived copy; generate/download locally. |
 
-Useful old-product adjacencies are retained without shaping the main WFM
-navigation: PCS Performance/Coaching and controlled Bonus Management are
-optional Review/Govern modules. They need their own legacy-parity and data
-handling gates before appearing in the new product.
+The Portable PCS Performance/Coaching and controlled Bonus Management
+workflows are required carryovers without shaping the main WFM navigation.
+They need their own output/state, privacy and data-handling gates before
+appearing in the new product, alongside the RTM workbook and clean data
+extracts. Other Portable reports may donate governed logic but are not
+required carryovers.
 
 ## Capability honesty
 
 | Capability | Current evidence | UI rule |
 | --- | --- | --- |
 | Portable shell, SQLite, Edge Workers, WASM | Exact Phase 0.4 doctor/browser compatibility passed on the target | Platform may support these screens; it does not prove their WFM logic exists. |
-| Old-product parity: service, attendance, schedule review, staffing preparation, final absence/shrinkage, reports, mappings | Governed contracts and implementations exist in WFMHub-Portable | Port selectively with synthetic tests and exact business validation. |
+| Portable donor contracts and four carryover outputs | Governed service, attendance, schedule, mappings and report logic exist in WFMHub-Portable | Port selectively with synthetic tests; require output/state parity only for RTM workbook, clean extracts, PCS and Bonus, subject to approved changes. |
 | Forecast vintages and rolling-origin model selection | Architecture and compatibility model fits exist, not production backtests | Mark as planned until canonical vintages and evaluation pass. |
 | Independent staffing requirement | Domain objective exists; independent formula/model not yet accepted | Do not treat visual numbers as calculation authority. |
 | Schedule-quality score and scenario optimizer | UI concepts and small HiGHS-Wasm compatibility MIP exist | No operational recommendation until model, constraints, scale and invariants pass. |
@@ -222,18 +224,21 @@ converts null/unknown to zero.
 
 1. Keep the **full six-workspace shell** and typed route/capability metadata
    from the start; initially expose only working RTA and governance pages.
-2. Port old governed source contracts, migrations, formulas, mappings,
-   parity tests and outputs; complete the RTA vertical slice.
+2. Port selected governed source contracts, migrations, formulas and mappings;
+   complete the RTA vertical slice and RTM workbook using one domain path.
 3. Add forecast/requirement data contracts and real rolling-origin evaluation;
    then build Forecast, Staffing Requirements and Schedule Quality.
-4. Add finalized shrinkage/realisations and decision/outcome persistence;
-   measure old-product parity before claiming replacement.
+4. Add finalized shrinkage/realisations where governed evidence supports new
+   Hub2 WFM capabilities, and decision/outcome persistence under its own
+   contract. Do not require every Portable workflow's output parity.
 5. Add scenario/optimization only after domain invariants, solver formulation,
    target-scale performance and human-review workflow pass.
 6. Add tactical and strategic capacity after governed hiring/attrition/ramp,
    productivity, skill, cost and sourcing assumptions exist.
-7. Expose optional PCS/Bonus products only after their own controlled parity
-   and privacy review.
+7. Deliver the other required Portable carryovers—clean data extracts, PCS's
+   six CSV feeds and shared workbook, and permanent editable Bonus—after
+   their own controlled parity, state and privacy reviews; cut over only after
+   all four carried products are accepted.
 
 At every step, production UI acceptance requires accessible keyboard/table
 interaction, legible dense text, loading/empty/stale/partial-evidence states,

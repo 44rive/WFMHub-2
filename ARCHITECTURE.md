@@ -195,14 +195,19 @@ proposal; domain validation remains authoritative.
 
 1. **Complete:** the exact Phase 0.4 hybrid ZIP passed all five probes on the
    target corporate workstation under Edge 153.
-2. Port the old product's governed source contracts, SQLite migrations,
-   formulas, mappings, upgrades, and synthetic tests.
+2. Selectively port the old product's governed source contracts, formulas,
+   mappings, migrations and synthetic tests needed for the four carried
+   outputs and Hub2's WFM domain; do not copy unrelated workflows wholesale.
 3. Deliver one RTA vertical slice: refresh -> service/attendance -> staffing
    gap -> command-centre UI -> Excel export.
-4. Reach old-product operational parity before declaring WFMHub 2 its
-   replacement.
-5. Add browser analytics, forecasting, and optimization only behind measured
-   capability and business-value gates.
+4. Accept the RTM workbook, clean data extracts, PCS six-CSV/shared workbook,
+   and permanent editable Bonus with a verified, reversible one-writer cutover.
+   Other Portable reports are not a replacement prerequisite.
+5. Grow the full WFMHub 2 vision from intraday explanation to governed
+   forecasting, requirements, schedule/capacity, scenarios, interventions,
+   decisions, outcomes and learning. Use browser analytics, forecasting and
+   optimization behind measured capability and business-value gates. No LLM
+   feature or automatic operational decision is part of this delivery plan.
 
 ## Future team/server edition
 

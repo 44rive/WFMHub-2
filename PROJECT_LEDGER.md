@@ -8,8 +8,10 @@ state instead of repeating discovery.
 
 ## Mission and current milestone
 
-Build a trustworthy, portable WFM decision layer, beginning with an RTA product
-and expanding only after the governed evidence and operational workflow work.
+Build the full trustworthy, portable WFM decision layer in `PROJECT_VISION.md`,
+beginning with an RTA product and expanding through forecasting, requirements,
+scheduling, capacity, scenarios, interventions, decisions, outcomes and
+learning as their governed evidence and validation become ready.
 
 **Active milestone: Phase 1 — refresh parity and reliability.** Phase 0.4 is
 accepted. Preview `.5` exposed an operational regression on the real managed
@@ -18,11 +20,13 @@ dataset: refresh was slow, opaque, and collapsed an unexpected exception to
 released WFMHub-Portable ingestion behavior closely enough for daily use while
 retaining atomic whole-cut rollback.
 
-The current forward acceptance baseline is Portable **v1.1.2 plus the user's
-effective configuration** (D-038), superseding the older `v0.36.0` baseline
-in D-036 without changing historical evidence. Hub2 is the target codebase,
-while Portable remains the daily production tool until a separate cutover.
-The proposed sequence and deliverables are in
+The current forward comparison baseline for shared source behavior and the
+four carried outputs is Portable **v1.1.2 plus the user's effective
+configuration** (D-038/D-040), superseding the older `v0.36.0` baseline in
+D-036 without changing historical evidence. Hub2 is the target codebase;
+Portable remains the daily production tool until a separate, reversible
+four-product cutover. Hub2's wider WFM vision continues beyond that gate. The
+corrected sequence and deliverables are in
 [`docs/PORTABLE_FUSION_RTM_PLAN.md`](docs/PORTABLE_FUSION_RTM_PLAN.md).
 
 ## Repository and branch state
@@ -86,6 +90,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-037 | Reference immutable successful Bronze versions for unchanged Status, LILO, and Call by Call files, while preserving a complete manifest and one atomic active-generation pointer. | A local source-version implementation reuses only matching root, key, SHA-256, adapter, policy, and roster evidence; metadata-only matches to the active cut skip hashing, and older A→B→A matches hash once. Derived attendance and service facts still rebuild in full, so affected-scope cost parity remains open. |
 | D-038 | Use current WFMHub-Portable v1.1.2 and the user's effective configuration as the forward RTM/fusion parity baseline; Hub2 is the target codebase and Portable remains production until cutover. | This supersedes only D-036's `v0.36.0` comparison baseline. The older release remains historical evidence; a later effective contract cannot be inferred from it. |
 | D-039 | Preserve PCS's six-CSV feed and one shared coaching workbook, plus permanent Bonus workflow/state, during fusion; do not assume old SQLite schemas merge automatically. | A per-LOB RTM Flash workbook split is unapproved and needs explicit user choice. Each remaining Portable workflow needs its own parity gate; database migration/rebuild and one-writer cutover need separate rehearsal, backup, verification and acceptance. |
+| D-040 | Deliver the full Hub2 WFM vision; use Portable as a selective donor/reference and require carryover parity only for the RTM workbook, clean data extracts, PCS's six CSV feeds/one shared coaching workbook, and persistent editable Bonus. | The user explicitly rejected reducing Hub2 to four outputs **and** rejected migrating every Portable workflow. This supersedes D-039's "each remaining Portable workflow" gate and narrows D-038's comparison baseline to shared source behavior and the four carryovers. Preserve necessary governed contracts/configuration/history; cutover is separately accepted and reversible. Future forecast, requirement, schedule/capacity, scenario/intervention, and decision-learning products require their own data, quality, validation and target-performance gates. |
 
 ## Evidence already collected
 
@@ -360,12 +365,17 @@ only through a recorded decision with evidence.
 ## Current risks and fallbacks
 
 - Phase 0.4 proves runtime compatibility, not that the RTA product is built or
-  that it is better than WFMHub-Portable in daily use. Product parity remains
-  a hard delivery gate.
+  that it is better than WFMHub-Portable in daily use. Parity/approved-change
+  gates apply to the four carried outputs; unrelated Portable workflow parity
+  is not a Hub2 delivery or cutover gate.
 - The full-product mockups are design references, not finished capabilities.
   Forecast vintages/backtesting, independent requirement, optimization,
   decision outcomes, and strategic hiring/attrition/cost inputs need governed
   contracts, domain tests and production-scale qualification before release.
+  In particular, future products need authoritative forecast vintages,
+  skill/eligibility, cost/budget, attrition/hiring-lead-time and
+  decision/outcome inputs; the four Portable carryovers do not supply all of
+  these by themselves.
 - The Phase 1 shell has source-health and refresh APIs, ingests Agent
   Status/LILO plus deduplicated Call-by-Call legs and 15-minute service
   components, and now derives governed attendance agent-days and exact gaps.
@@ -407,9 +417,11 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Validate the proposed scope, two milestones and user checkpoints in
-   `docs/PORTABLE_FUSION_RTM_PLAN.md`; agree the effective Portable v1.1.2
-   configuration and representative output comparisons without moving user data.
+1. Confirm D-040's corrected scope with the user: first RTM, four-product
+   carryover and cutover, then the continuing WFM vision. Capture the
+   effective Portable v1.1.2 configuration and representative comparisons
+   for shared source behavior and those four products without moving user
+   data.
 2. Capture Preview `.7` managed refresh duration, active-generation counts,
    date ranges and quality; compare the same cut with Portable v1.1.2 and its
    effective mappings. Resolve material differences before feature work.
@@ -419,16 +431,42 @@ only through a recorded decision with evidence.
 4. Add affected-date/service ownership and derived rebuild for attendance and
    service while preserving whole-cut activation; benchmark and verify the
    exact extracted target-compatible ZIP.
-5. Then port only RTM-needed governed rules/configuration and Verint Staff
-   Type forecast/requirement, agree the metric/Flash contract, and build one
-   pure-Python domain calculation used by React and Excel.
-6. Pilot RTM alongside Portable, then gate Attendance Review, Staffing
-   Preparation, Realisations, Final Absenteeism & Shrinkage, governed exports
-   and on-demand analysis, permanent Bonus, PCS's six-CSV/shared-workbook
-   workflow, and CLI/report actions individually. Treat old-state migration
-   and one-writer cutover as separate user-accepted gates; keep WASM optional.
+5. Then port RTM-needed governed rules/configuration and Verint Staff Type
+   forecast/requirement, agree the metric and primary workbook/Flash contract,
+   and build one pure-Python calculation used by React and Excel.
+6. Pilot RTM alongside Portable; implement and validate clean data extracts,
+   PCS's six-CSV/shared-workbook workflow, and persistent editable Bonus. Gate
+   only these four outputs for a rehearsed, backed-up, user-accepted one-writer
+   cutover. Do not migrate unrelated Portable reports by default.
+7. Continue the WFMHub 2 vision through governed forecast vintages and
+   accuracy, independent requirement, schedule/capacity intelligence,
+   scenarios/interventions, and decisions/outcomes/learning. Define each new
+   source/assumption, model evaluation and target-machine performance gate
+   before treating a feature as delivered; retain optional WASM accelerators.
+   No LLM feature or dependency is part of this plan.
 
 ## Session log
+
+### 2026-09-23 — User corrected Hub2 vision and Portable carryover scope
+
+- The user clarified that **the full WFMHub 2 vision is the project**, not a
+  four-feature version of Portable. Portable is a donor/reference, and only
+  the RTM workbook, clean data extracts, PCS's six CSV feeds/one shared
+  coaching workbook, and permanent editable Bonus must be carried forward.
+  This supersedes the previous proposal's requirement for every remaining
+  Portable workflow to reach parity before cutover; earlier entries below
+  remain historical, not current scope.
+- The corrected plan and roadmap distinguish first usable RTM, reversible
+  four-product cutover, and continuing intraday/tactical/strategic WFM
+  delivery. Hub2 keeps the policy-compatible stdlib/SQLite/React/Excel core;
+  DuckDB-Wasm, Pyodide and HiGHS-Wasm remain optional capability-gated tools,
+  not discarded or required at startup. No LLM feature or automated action is
+  part of this plan.
+- Wider forecasting, requirement, scheduling, capacity, scenarios and
+  decision learning are planned, **not delivered**. They need their own
+  governed source/assumption contracts, backtesting or model validation,
+  target-workstation performance checks and human decision controls. No
+  runtime, SQLite schema or operational extract changed in this correction.
 
 ### 2026-09-23 — Portable fusion and RTM plan proposed
 
