@@ -20,8 +20,8 @@ _DATE_PATTERN = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
 _MAX_QUERY_CHARS = 1024
 _MAX_SCOPE_LABEL_CHARS = 160
 _MAX_SCOPE_OPTIONS = 128
-# A 25-hour DST fall-back day can contain 100 quarter-hours. Leave a small
-# bounded margin for source-local business-day conventions crossing midnight.
+# Allow a bounded extended source business day (up to 26 hours); this does not
+# itself resolve repeated local timestamps during a daylight-saving transition.
 _MAX_INTERVALS = 104
 
 

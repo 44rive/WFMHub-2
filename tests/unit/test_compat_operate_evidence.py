@@ -279,7 +279,9 @@ def test_changed_source_pointer_suppresses_previous_cut(tmp_path: Path) -> None:
     assert str(alternate) not in json.dumps(result)
 
 
-def test_dst_length_day_is_not_truncated_and_oversized_cut_fails_closed(tmp_path: Path) -> None:
+def test_extended_business_day_is_not_truncated_and_oversized_cut_fails_closed(
+    tmp_path: Path,
+) -> None:
     extracts = tmp_path / "extracts"
     extracts.mkdir()
     store = RefreshStore(tmp_path / "data/control.sqlite")
