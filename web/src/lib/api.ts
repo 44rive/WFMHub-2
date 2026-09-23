@@ -164,6 +164,40 @@ export type RtaRefreshResult = {
   sourceHealth: RtaSourceHealth
 }
 
+export type ServiceScope = { serviceScope: string; comparisonScope: string }
+
+export type ServiceInterval = {
+  intervalStart: string
+  intervalEnd: string
+  offered: number
+  answered: number
+  abandoned: number
+  shortAbandoned: number
+  abandonedWithinTarget: number
+  answeredWithinTarget: number
+  talkSeconds: number
+  holdSeconds: number
+  wrapSeconds: number
+  handledSeconds: number
+  callLegs: number
+  transferredLegs: number
+}
+
+export type RtaOperateEvidence = {
+  status: 'ready' | 'not_ready'
+  reason: null | 'NO_ACTIVE_GENERATION' | 'SOURCE_ROOT_UNAVAILABLE' | 'SOURCE_ROOT_CHANGED'
+  businessDate: string
+  generationId: number | null
+  serviceScopes: ServiceScope[]
+  selectedScope: ServiceScope | null
+  serviceIntervals: ServiceInterval[]
+  attendance: {
+    scope: 'date-wide'
+    evidenceStates: { state: string; agentDays: number }[]
+    gapTypes: { type: string; fragments: number; minutes: number }[]
+  }
+}
+
 const sessionTokenFragmentKey = 'wfmhub_token'
 const sessionTokenStorageKey = 'wfmhub2.session-token'
 
@@ -353,7 +387,112 @@ export function createEngineClient(connection: EngineConnection) {
     getRtaSourceHealth: async () =>
       decodeRtaSourceHealth(await request<unknown>('/rta/source-health')),
     refreshRtaSources: async () => decodeRtaRefreshResult(await post<unknown>('/rta/refresh', {})),
+    getRtaOperateEvidence: async (date: string, scope?: ServiceScope) => {
+      if (!isBusinessDate(date)) throw new Error('Select a valid business date')
+      const parameters = new URLSearchParams({ date })
+      if (scope) {
+        if (!scope.serviceScope || !scope.comparisonScope) {
+          throw new Error('Select both parts of a service scope')
+        }
+        parameters.set('serviceScope', scope.serviceScope)
+        parameters.set('comparisonScope', scope.comparisonScope)
+      }
+      const evidence = decodeRtaOperateEvidence(
+        await request<unknown>(`/rta/operate-evidence?${parameters.toString()}`),
+      )
+      if (
+        evidence.businessDate !== date ||
+        (scope &&
+          evidence.status === 'ready' &&
+          (evidence.selectedScope?.serviceScope !== scope.serviceScope ||
+            evidence.selectedScope?.comparisonScope !== scope.comparisonScope))
+      ) {
+        throw new Error('Local Operate evidence did not match the selected date and scope')
+      }
+      return evidence
+    },
   }
+}
+
+export function isBusinessDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+}
+
+function isSeconds(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+function isServiceScope(value: unknown): value is ServiceScope {
+  return (
+    isRecord(value) &&
+    typeof value.serviceScope === 'string' &&
+    value.serviceScope.length > 0 &&
+    typeof value.comparisonScope === 'string' &&
+    value.comparisonScope.length > 0
+  )
+}
+
+function isServiceInterval(value: unknown): value is ServiceInterval {
+  return (
+    isRecord(value) &&
+    typeof value.intervalStart === 'string' &&
+    typeof value.intervalEnd === 'string' &&
+    isCount(value.offered) &&
+    isCount(value.answered) &&
+    isCount(value.abandoned) &&
+    isCount(value.shortAbandoned) &&
+    isCount(value.abandonedWithinTarget) &&
+    isCount(value.answeredWithinTarget) &&
+    isSeconds(value.talkSeconds) &&
+    isSeconds(value.holdSeconds) &&
+    isSeconds(value.wrapSeconds) &&
+    isSeconds(value.handledSeconds) &&
+    isCount(value.callLegs) &&
+    isCount(value.transferredLegs)
+  )
+}
+
+export function decodeRtaOperateEvidence(value: unknown): RtaOperateEvidence {
+  if (
+    !isRecord(value) ||
+    !['ready', 'not_ready'].includes(String(value.status)) ||
+    ![null, 'NO_ACTIVE_GENERATION', 'SOURCE_ROOT_UNAVAILABLE', 'SOURCE_ROOT_CHANGED'].includes(
+      value.reason as string | null,
+    ) ||
+    !isBusinessDate(String(value.businessDate)) ||
+    !(value.generationId === null || isCount(value.generationId)) ||
+    !Array.isArray(value.serviceScopes) ||
+    !value.serviceScopes.every(isServiceScope) ||
+    !(value.selectedScope === null || isServiceScope(value.selectedScope)) ||
+    !Array.isArray(value.serviceIntervals) ||
+    !value.serviceIntervals.every(isServiceInterval) ||
+    !isRecord(value.attendance) ||
+    value.attendance.scope !== 'date-wide' ||
+    !Array.isArray(value.attendance.evidenceStates) ||
+    !value.attendance.evidenceStates.every(
+      (item: unknown) =>
+        isRecord(item) && typeof item.state === 'string' && isCount(item.agentDays),
+    ) ||
+    !Array.isArray(value.attendance.gapTypes) ||
+    !value.attendance.gapTypes.every(
+      (item: unknown) =>
+        isRecord(item) &&
+        typeof item.type === 'string' &&
+        isCount(item.fragments) &&
+        isSeconds(item.minutes),
+    ) ||
+    (value.status === 'ready' && (value.reason !== null || value.generationId === null)) ||
+    (value.status === 'not_ready' && value.reason === null)
+  ) {
+    throw new Error('Local Operate evidence response did not match the supported contract')
+  }
+  return value as RtaOperateEvidence
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -5,5 +5,6 @@ describe('product routes', () => {
   it('retains a working home route and a dedicated compatibility route', () => {
     expect(router.routesByPath['/']).toBeDefined()
     expect(router.routesByPath['/compatibility']).toBeDefined()
+    expect(router.routesByPath['/operate/evidence']).toBeDefined()
   })
 })

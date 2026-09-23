@@ -9,10 +9,12 @@ import json
 import sqlite3
 import tempfile
 from contextlib import closing
+from datetime import date
 from pathlib import Path
 
 from openpyxl import Workbook
 
+from wfmhub2_compat.operate_evidence import read_operate_evidence
 from wfmhub2_compat.rta_refresh import RefreshFailedError, RtaRefreshCoordinator
 from wfmhub2_compat.setup import configure_source_root
 
@@ -165,6 +167,19 @@ def main() -> int:
             raise RuntimeError("packaged attendance gap count was incorrect")
         if health["sources"]["attendance"]["unknownCount"] != 0:
             raise RuntimeError("packaged attendance unexpectedly converted evidence to unknown")
+        operate = read_operate_evidence(coordinator.store.path, home, date(2026, 7, 1))
+        if operate["status"] != "ready" or operate["generationId"] != result["generationId"]:
+            raise RuntimeError("packaged Operate evidence did not read the active cut")
+        if len(operate["serviceScopes"]) != 1 or len(operate["serviceIntervals"]) != 1:
+            raise RuntimeError("packaged Operate evidence lost the service scope or interval")
+        interval = operate["serviceIntervals"][0]
+        if interval["offered"] != 1 or interval["answered"] != 1:
+            raise RuntimeError("packaged Operate service components were incorrect")
+        states = operate["attendance"]["evidenceStates"]
+        if sum(item["agentDays"] for item in states) != 1:
+            raise RuntimeError("packaged Operate attendance aggregate was incorrect")
+        if "Ada Agent" in json.dumps(operate) or str(sources) in json.dumps(operate):
+            raise RuntimeError("packaged Operate evidence leaked a source row or path")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
         if source_hashes != (
@@ -255,6 +270,9 @@ def main() -> int:
             raise RuntimeError("invalid source was incorrectly published")
         if coordinator.source_health()["activeGenerationId"] != active_id:
             raise RuntimeError("failed refresh replaced the previous active cut")
+        retained = read_operate_evidence(coordinator.store.path, home, date(2026, 7, 1))
+        if retained["status"] != "ready" or retained["generationId"] != active_id:
+            raise RuntimeError("failed refresh displaced the packaged Operate evidence cut")
         print("WFMHUB2_RTA_SOURCE_SMOKE_PASS")
     return 0
 

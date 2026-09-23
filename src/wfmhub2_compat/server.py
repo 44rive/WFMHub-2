@@ -7,6 +7,7 @@ import os
 import secrets
 import shutil
 import socket
+import sqlite3
 import subprocess
 import sys
 import webbrowser
@@ -19,6 +20,12 @@ from typing import Any, cast
 from urllib.parse import urlencode, urlsplit
 
 from wfmhub2_compat import __version__
+from wfmhub2_compat.operate_evidence import (
+    OperateQueryError,
+    OperateReadError,
+    parse_operate_query,
+    read_operate_evidence,
+)
 from wfmhub2_compat.rta_refresh import (
     RefreshBusyError,
     RefreshFailedError,
@@ -122,6 +129,9 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if self._reject_invalid_host():
             return
         path = urlsplit(self.path).path
+        if path == "/api/rta/operate-evidence":
+            self._get_operate_evidence()
+            return
         if path == "/api/rta/source-health":
             if not self._require_api_auth():
                 return
@@ -149,6 +159,9 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if self._reject_invalid_host():
             return
         path = urlsplit(self.path).path
+        if path == "/api/rta/operate-evidence":
+            self._get_operate_evidence()
+            return
         if path == "/api/rta/source-health":
             if not self._require_api_auth():
                 return
@@ -163,6 +176,30 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
             self._json_response(HTTPStatus.NOT_FOUND, {"error": "unknown endpoint"})
             return
         super().do_HEAD()
+
+    def _get_operate_evidence(self) -> None:
+        if not self._require_api_auth():
+            return
+        try:
+            business_date, scope = parse_operate_query(urlsplit(self.path).query)
+            result = read_operate_evidence(
+                self.compatibility_server.rta.store.path,
+                self.compatibility_server.home,
+                business_date,
+                scope,
+            )
+        except OperateQueryError:
+            self._json_response(
+                HTTPStatus.BAD_REQUEST, {"error": "invalid operate evidence selection"}
+            )
+            return
+        except (OperateReadError, sqlite3.DatabaseError, OSError):
+            self._json_response(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"error": "committed operate evidence is unavailable"},
+            )
+            return
+        self._json_response(HTTPStatus.OK, result)
 
     def do_POST(self) -> None:
         if self._reject_invalid_host():

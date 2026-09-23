@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createEngineClient,
+  decodeRtaOperateEvidence,
   decodeRtaSourceHealth,
   type EngineConnection,
   resolveEngineConnection,
@@ -67,6 +68,75 @@ describe('browser engine discovery', () => {
 })
 
 describe('engine API client', () => {
+  it('validates and authenticates the read-only Operate date and composite scope', async () => {
+    const payload = {
+      status: 'ready',
+      reason: null,
+      businessDate: '2026-09-20',
+      generationId: 7,
+      serviceScopes: [{ serviceScope: 'RSA', comparisonScope: 'Belgium' }],
+      selectedScope: { serviceScope: 'RSA', comparisonScope: 'Belgium' },
+      serviceIntervals: [
+        {
+          intervalStart: '2026-09-20T09:00:00',
+          intervalEnd: '2026-09-20T09:15:00',
+          offered: 20,
+          answered: 18,
+          abandoned: 2,
+          shortAbandoned: 1,
+          abandonedWithinTarget: 1,
+          answeredWithinTarget: 16,
+          talkSeconds: 2200,
+          holdSeconds: 100,
+          wrapSeconds: 150,
+          handledSeconds: 2450,
+          callLegs: 21,
+          transferredLegs: 1,
+        },
+      ],
+      attendance: {
+        scope: 'date-wide',
+        evidenceStates: [{ state: 'unknown', agentDays: 2 }],
+        gapTypes: [{ type: 'late', fragments: 3, minutes: 45 }],
+      },
+    }
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      createEngineClient(readyConnection).getRtaOperateEvidence('2026-09-20', {
+        serviceScope: 'RSA',
+        comparisonScope: 'Belgium',
+      }),
+    ).resolves.toMatchObject({ generationId: 7, serviceIntervals: [{ offered: 20 }] })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:43127/api/rta/operate-evidence?date=2026-09-20&serviceScope=RSA&comparisonScope=Belgium',
+      { headers: { 'X-WFMHub-Token': 'launch-secret' } },
+    )
+    expect(() =>
+      decodeRtaOperateEvidence({ ...payload, attendance: { scope: 'service' } }),
+    ).toThrow()
+    expect(() =>
+      decodeRtaOperateEvidence({ ...payload, serviceIntervals: [{ offered: -1 }] }),
+    ).toThrow()
+    expect(() => decodeRtaOperateEvidence({ ...payload, reason: 'UNKNOWN' })).toThrow()
+    await expect(
+      createEngineClient(readyConnection).getRtaOperateEvidence('2026-02-30'),
+    ).rejects.toThrow()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ...payload, businessDate: '2026-09-21' }), { status: 200 }),
+      ),
+    )
+    await expect(
+      createEngineClient(readyConnection).getRtaOperateEvidence('2026-09-20'),
+    ).rejects.toThrow(/did not match the selected date/)
+  })
+
   it('decodes the governed source-health contract and rejects drift', () => {
     const health = {
       status: 'not_ready',

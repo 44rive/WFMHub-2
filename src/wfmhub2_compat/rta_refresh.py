@@ -137,7 +137,7 @@ def _source_inventory(source_root: Path) -> tuple[SourceInventoryEntry, ...]:
     return tuple(sorted(inventory, key=lambda item: (item.source_type, item.source_key)))
 
 
-def _catalog_fingerprint(root: Path) -> str:
+def catalog_fingerprint(root: Path) -> str:
     """Bind a published generation to the selected local source directory."""
     material = f"{REFRESH_CATALOG_SHA256}|{root.resolve()}".encode()
     return hashlib.sha256(material).hexdigest()
@@ -823,7 +823,7 @@ class RtaRefreshCoordinator:
             if (
                 generation is None
                 or generation["status"] != "succeeded"
-                or generation["catalog_sha256"] != _catalog_fingerprint(source_root)
+                or generation["catalog_sha256"] != catalog_fingerprint(source_root)
                 or generation["model_version"] != REFRESH_MODEL_VERSION
             ):
                 return None
@@ -917,7 +917,7 @@ class RtaRefreshCoordinator:
         try:
             root = resolve_source_root(self.home)
             root_value: dict[str, Any] = root.api_value()
-            selected_fingerprint = _catalog_fingerprint(root.path)
+            selected_fingerprint = catalog_fingerprint(root.path)
         except RefreshFailedError as exc:
             root_value = {
                 "mode": "invalid",
@@ -1091,14 +1091,14 @@ class RtaRefreshCoordinator:
                 }
                 return result
             generation_id = self.store.start_generation(
-                catalog_sha256=_catalog_fingerprint(root.path),
+                catalog_sha256=catalog_fingerprint(root.path),
                 model_version=REFRESH_MODEL_VERSION,
             )
             stage = "roster"
             roster = _discover_roster(root.path, self._progress_callback)
             reuse = SourceReuseCatalog(
                 self.store.path,
-                catalog_sha256=_catalog_fingerprint(root.path),
+                catalog_sha256=catalog_fingerprint(root.path),
                 model_version=REFRESH_MODEL_VERSION,
                 roster=roster.version,
             )

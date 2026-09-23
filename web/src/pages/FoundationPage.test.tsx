@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { RtaSourceHealth } from '../lib/api'
 import { RtaSourcePanel } from './FoundationPage'
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}))
 
 afterEach(cleanup)
 
@@ -119,6 +124,11 @@ describe('RTA source readiness', () => {
     expect(screen.getByText('100 governed legs · 8 intervals')).toBeTruthy()
     expect(screen.getByText('24 agent-days · 3 exact gaps · 1 unknown')).toBeTruthy()
     expect(screen.getByText('Generation 7')).toBeTruthy()
+    expect(
+      screen
+        .getByRole('link', { name: /Inspect service and attendance evidence/ })
+        .getAttribute('href'),
+    ).toBe('/operate/evidence')
     expect(screen.getByText('No operational metrics to display')).toBeTruthy()
     expect(screen.queryByText('Service level:')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Refresh local sources' }))
