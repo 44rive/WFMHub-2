@@ -15,14 +15,14 @@ and expanding only after the governed evidence and operational workflow work.
 accepted. Preview `.7` passed the user's first managed refresh and immediate
 unchanged-generation reuse, but exact output parity and changed-source cost
 remain unmeasured. New WFM KPI and decision features stay frozen; a read-only
-evidence inspector is being qualified to make that parity review practical.
+evidence inspector is now released for managed-target parity review.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 source-version reuse Preview `.7` | PR #3 merged as `895fd08`; CI passed and prerelease `.7` published; user reports first managed refresh green and immediate unchanged refresh reused the active cut; metrics/parity pending |
-| `feat/operate-evidence-read-model` | Preview `.8` read-only parity workbench candidate | Local backend and UI integration; CI/exact Windows ZIP and target run pending |
+| `origin/main` | Phase 1 read-only Operate evidence Preview `.8` | PR #4 merged as `b64c963`; all three main CI jobs passed; prerelease `.8` published; managed-target Operate and business parity pending |
+| `feat/operate-evidence-read-model` | Preview `.8` read-only parity workbench | Merged by PR #4 as `b64c963` |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
 | `integration/python313-policy-compat` | Phase 0.3 isolated 3.13.7 trial | Run `35526661488` passed; prerelease `v0.2.0-phase0.3` published |
@@ -399,13 +399,13 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Qualify the Preview `.8` candidate in Windows CI: exact extracted hybrid ZIP,
-   embedded host doctor, packaged source/Operate smoke, browser Operate empty
-   state and five offline capability probes. Publish only that qualified ZIP.
-2. Compare the new read-only Operate counts, intervals, attendance states and
-   gaps with old portable `v0.36.0` on the same governed sources. Capture the
-   first-refresh duration and active-generation counts/date ranges/quality if
-   available; the user report supplied no values. Resolve material differences.
+1. Test the exact Preview `.8` release ZIP on the managed workstation in a new
+   writable folder; keep the working Preview `.7` folder intact. Configure the
+   same read-only source root, refresh, and inspect Operate for one date/scope.
+2. Compare Operate counts, intervals, attendance states and gaps with old
+   portable `v0.36.0` on the same governed sources. Capture the first-refresh
+   duration and active-generation counts/date ranges/quality if available;
+   the user report supplied no values. Resolve material differences.
 3. At the next normal source export/update, observe one changed-source refresh:
    elapsed time, readiness, counts, and any stage/code or local diagnostic if
    it fails. Do not modify operational extracts to create this test.
@@ -438,6 +438,17 @@ only through a recorded decision with evidence.
 - External Claude review could not authenticate (expired OAuth). A backup
   native read-only review hit its usage limit, so no independent review is
   claimed for this candidate; the lead inspected the diff and tests directly.
+- PR #4 run `35929844873` passed all three jobs. The target-compatible Windows
+  job extracted the exact hybrid ZIP, passed the packaged source/Operate smoke,
+  opened the safe-empty Operate route in Edge with outbound resolution blocked,
+  and passed all five browser probes. Main run `35930548400` passed the same
+  three jobs after merge `b64c963`, including the separate full-native
+  regression. The main and PR hybrid ZIPs are byte-for-byte identical.
+- Published [prerelease `v0.2.0-phase1-source-preview.8`](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.8)
+  from merge commit `b64c963` using the exact main-run ZIP and checksum.
+  Archive size is 73,216,046 bytes; SHA-256 is
+  `36beb122e5277e29ec48216b7b7cce96aa25827cfe61fb41553d9b9d1c68dc65`.
+  Managed-workstation Operate behavior and real WFM output parity remain open.
 
 ### 2026-09-22 — Managed Preview `.7` first and unchanged refresh report
 
