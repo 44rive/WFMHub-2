@@ -1,6 +1,6 @@
 # WFMHub 2 Project Ledger
 
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 This is the durable project handoff. Read it before exploring the repository.
 Update it after material work so the next human or AI session starts from known
@@ -17,6 +17,13 @@ dataset: refresh was slow, opaque, and collapsed an unexpected exception to
 `REFRESH_FAILED`. New WFM features are frozen until the new engine matches the
 released WFMHub-Portable ingestion behavior closely enough for daily use while
 retaining atomic whole-cut rollback.
+
+The current forward acceptance baseline is Portable **v1.1.2 plus the user's
+effective configuration** (D-038), superseding the older `v0.36.0` baseline
+in D-036 without changing historical evidence. Hub2 is the target codebase,
+while Portable remains the daily production tool until a separate cutover.
+The proposed sequence and deliverables are in
+[`docs/PORTABLE_FUSION_RTM_PLAN.md`](docs/PORTABLE_FUSION_RTM_PLAN.md).
 
 ## Repository and branch state
 
@@ -77,6 +84,8 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-035 | Build attendance as a generation-keyed derived read model with Agent Status primary at 80% elapsed-work coverage, LILO boundary fallback, explicit unknown states, PTO/Away clipping, and exact gap fragments; do not expose employee actions yet. | Missing rows are not proof of absence. A no-show requires an agent-specific blank LILO row or sufficiently covered Logged Off status, while late/early/internal gaps must retain their physical intervals for later read-only reconciliation. |
 | D-036 | Freeze feature work and treat released WFMHub-Portable `v0.36.0` as the executable ingestion/parity specification while retaining WFMHub 2's policy-compatible shell and atomic generation pointer. | Preview `.5` rereads each large Storm file four times for hashing and twice for parsing, rebuilds unchanged generations, shows no progress, and destroys the original unexpected exception. Preview `.6` adds an exact unchanged fast path, one-hash/one-parse Bronze staging, live progress, actionable local diagnostics, and attendance indexes. The old portable proves immutable source-version reactivation, but its model builders do not automatically determine affected dates; WFMHub 2 must design that separately. |
 | D-037 | Reference immutable successful Bronze versions for unchanged Status, LILO, and Call by Call files, while preserving a complete manifest and one atomic active-generation pointer. | A local source-version implementation reuses only matching root, key, SHA-256, adapter, policy, and roster evidence; metadata-only matches to the active cut skip hashing, and older A→B→A matches hash once. Derived attendance and service facts still rebuild in full, so affected-scope cost parity remains open. |
+| D-038 | Use current WFMHub-Portable v1.1.2 and the user's effective configuration as the forward RTM/fusion parity baseline; Hub2 is the target codebase and Portable remains production until cutover. | This supersedes only D-036's `v0.36.0` comparison baseline. The older release remains historical evidence; a later effective contract cannot be inferred from it. |
+| D-039 | Preserve PCS's six-CSV feed and one shared coaching workbook, plus permanent Bonus workflow/state, during fusion; do not assume old SQLite schemas merge automatically. | A per-LOB RTM Flash workbook split is unapproved and needs explicit user choice. Each remaining Portable workflow needs its own parity gate; database migration/rebuild and one-writer cutover need separate rehearsal, backup, verification and acceptance. |
 
 ## Evidence already collected
 
@@ -398,23 +407,50 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Capture the first Preview `.7` refresh duration and active-generation
-   counts/date ranges/quality if available; the user report supplied no values.
-2. Compare Preview `.7` counts, date ranges, quality outcomes, and attendance /
-   service evidence with old portable `v0.36.0` on the same governed sources;
-   resolve material differences before resuming feature work.
-3. At the next normal source export/update, observe one changed-source refresh:
-   elapsed time, readiness, counts, and any stage/code or local diagnostic if
-   it fails. Do not modify operational extracts to create this test.
-4. Add date-scoped ownership and rebuild for derived attendance and service
-   facts after measuring the changed-source refresh; preserve whole-cut
-   activation and expand overnight/cross-file dependencies conservatively.
-5. Only after that gate, resume service profiles/metric catalog, Verint Staff
-   Type requirement, command-centre read models, and bounded Excel delivery.
-6. Keep DuckDB-Wasm, Pyodide, and HiGHS optional until each materially improves
-   a measured WFM workflow; deterministic host logic remains the fallback.
+1. Validate the proposed scope, two milestones and user checkpoints in
+   `docs/PORTABLE_FUSION_RTM_PLAN.md`; agree the effective Portable v1.1.2
+   configuration and representative output comparisons without moving user data.
+2. Capture Preview `.7` managed refresh duration, active-generation counts,
+   date ranges and quality; compare the same cut with Portable v1.1.2 and its
+   effective mappings. Resolve material differences before feature work.
+3. At the next normal export, observe a changed-source refresh, timing,
+   readiness and rollback behavior. Do not modify operational extracts to
+   manufacture the test; use synthetic fixtures for injected failures.
+4. Add affected-date/service ownership and derived rebuild for attendance and
+   service while preserving whole-cut activation; benchmark and verify the
+   exact extracted target-compatible ZIP.
+5. Then port only RTM-needed governed rules/configuration and Verint Staff
+   Type forecast/requirement, agree the metric/Flash contract, and build one
+   pure-Python domain calculation used by React and Excel.
+6. Pilot RTM alongside Portable, then gate Attendance Review, Staffing
+   Preparation, Realisations, Final Absenteeism & Shrinkage, governed exports
+   and on-demand analysis, permanent Bonus, PCS's six-CSV/shared-workbook
+   workflow, and CLI/report actions individually. Treat old-state migration
+   and one-writer cutover as separate user-accepted gates; keep WASM optional.
 
 ## Session log
+
+### 2026-09-23 — Portable fusion and RTM plan proposed
+
+- The user chose WFMHub 2 as the target codebase while continuing to use the
+  current Portable for daily work, and requested a plan before implementation.
+  `docs/PORTABLE_FUSION_RTM_PLAN.md` now separates a first usable RTM release
+  from full operational fusion and a later reversible cutover. This is a
+  proposal awaiting user validation; no runtime, schema or extract was changed.
+- The proposed sequence first proves Preview `.7` parity, changed-source
+  performance and rollback, then adds affected-date rebuild and only the
+  RTM-needed governed contracts before a shared pure-Python UI/Excel service.
+  `src/wfmhub2_compat/` is the active portable path; `src/wfmhub2/` is a
+  native/development prototype, not a second supported rules engine.
+- The forward comparison baseline is current Portable v1.1.2 plus effective
+  user configuration. D-038 supersedes D-036's older version reference only
+  for future parity acceptance; prior `.5`–`.7` observations remain historical.
+- The plan retains one active pure-Python portable RTM domain path, functional
+  navigation including existing Command source readiness, PCS's six-CSV feed
+  and one shared coaching workbook, and permanent Bonus state. A per-LOB RTM
+  Flash workbook split remains unapproved. Portable-to-Hub2 database
+  transition is not automatic and needs a rehearsed, verified one-writer
+  procedure. Remaining Portable workflows each require a parity gate.
 
 ### 2026-09-22 — Managed Preview `.7` first and unchanged refresh report
 
