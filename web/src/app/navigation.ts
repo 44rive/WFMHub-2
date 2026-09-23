@@ -5,12 +5,13 @@ export type CapabilityId =
   | 'compatibility-doctor'
   | 'decision-register'
   | 'rta-command'
+  | 'operate-evidence'
   | 'forecast-demand'
   | 'capacity-plan'
   | 'outcome-review'
   | 'data-readiness'
 
-export type ImplementedPath = '/' | '/compatibility'
+export type ImplementedPath = '/' | '/compatibility' | '/operate/evidence'
 
 export type PageDefinition = {
   id: string
@@ -33,6 +34,7 @@ export const capabilityAvailability: Readonly<Record<CapabilityId, boolean>> = {
   'compatibility-doctor': true,
   'decision-register': false,
   'rta-command': false,
+  'operate-evidence': true,
   'forecast-demand': false,
   'capacity-plan': false,
   'outcome-review': false,
@@ -53,7 +55,15 @@ export const workspaces: readonly WorkspaceDefinition[] = [
     id: 'operate',
     label: 'Operate',
     purpose: 'Service and people evidence for today',
-    pages: [{ id: 'rta-command', label: 'RTA Command Center', capability: 'rta-command' }],
+    pages: [
+      {
+        id: 'operate-evidence',
+        label: 'Service & attendance evidence',
+        capability: 'operate-evidence',
+        to: '/operate/evidence',
+      },
+      { id: 'rta-command', label: 'RTA Command Center', capability: 'rta-command' },
+    ],
   },
   {
     id: 'plan',

@@ -315,6 +315,9 @@ export function RtaSourcePanel({
           <dd>{health?.ready ? `Generation ${activeId}` : 'None current'}</dd>
         </div>
       </dl>
+      <Link to="/operate/evidence" className="text-link">
+        Inspect service and attendance evidence <span aria-hidden="true">→</span>
+      </Link>
       <p className="source-help">
         Run <code>SETUP.cmd</code> once to select your existing WFM Database folder, or place
         extracts under <code>extracts/FTE</code> and{' '}
