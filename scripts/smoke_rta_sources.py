@@ -14,6 +14,7 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
+from wfmhub2_compat.flash_parity import read_flash_parity
 from wfmhub2_compat.operate_evidence import read_operate_evidence
 from wfmhub2_compat.rta_refresh import RefreshFailedError, RtaRefreshCoordinator
 from wfmhub2_compat.setup import configure_source_root
@@ -180,6 +181,15 @@ def main() -> int:
             raise RuntimeError("packaged Operate attendance aggregate was incorrect")
         if "Ada Agent" in json.dumps(operate) or str(sources) in json.dumps(operate):
             raise RuntimeError("packaged Operate evidence leaked a source row or path")
+        flash = read_flash_parity(coordinator.store.path, home, date(2026, 7, 1), "rsa_be")
+        if flash["status"] != "ready" or flash["generationId"] != result["generationId"]:
+            raise RuntimeError("packaged Flash parity did not read the active cut")
+        if flash["totals"] is None or flash["totals"]["offered"] != 1:
+            raise RuntimeError("packaged Flash queue population lost the synthetic call")
+        if len(flash["serviceHours"]) != 1 or flash["serviceHours"][0]["answered"] != 1:
+            raise RuntimeError("packaged Flash hourly service components were incorrect")
+        if "Ada Agent" in json.dumps(flash) or str(sources) in json.dumps(flash):
+            raise RuntimeError("packaged Flash parity leaked a source row or path")
         if str(sources) in json.dumps(health):
             raise RuntimeError("source-health response leaked the local folder path")
         if source_hashes != (
@@ -273,6 +283,9 @@ def main() -> int:
         retained = read_operate_evidence(coordinator.store.path, home, date(2026, 7, 1))
         if retained["status"] != "ready" or retained["generationId"] != active_id:
             raise RuntimeError("failed refresh displaced the packaged Operate evidence cut")
+        retained_flash = read_flash_parity(coordinator.store.path, home, date(2026, 7, 1), "rsa_be")
+        if retained_flash["status"] != "ready" or retained_flash["generationId"] != active_id:
+            raise RuntimeError("failed refresh displaced the packaged Flash parity cut")
         print("WFMHUB2_RTA_SOURCE_SMOKE_PASS")
     return 0
 

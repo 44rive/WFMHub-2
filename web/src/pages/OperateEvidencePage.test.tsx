@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { RtaOperateEvidence, RtaSourceHealth } from '../lib/api'
+import type { FlashParityEvidence, RtaOperateEvidence, RtaSourceHealth } from '../lib/api'
 import {
   AttendanceEvidence,
+  FlashParityPanel,
   hasFailedLatestRefresh,
   isCurrentOperateCut,
   latestActualDate,
@@ -123,5 +124,30 @@ describe('read-only Operate evidence', () => {
     expect(screen.getByRole('rowheader', { name: 'unknown' })).toBeTruthy()
     expect(screen.getByRole('rowheader', { name: 'late' })).toBeTruthy()
     expect(screen.getByText('45')).toBeTruthy()
+  })
+
+  it('shows exact legacy Flash population as counts without claiming KPI parity', () => {
+    const changed: string[] = []
+    const flash: FlashParityEvidence = {
+      status: 'ready',
+      reason: null,
+      businessDate: '2026-09-20',
+      generationId: 7,
+      catalogSha256: 'a'.repeat(64),
+      profiles: [
+        { id: 'rsa_be', label: 'RSA Belgium' },
+        { id: 'ford_nl', label: 'Ford Netherlands' },
+      ],
+      selectedProfile: { id: 'rsa_be', label: 'RSA Belgium' },
+      serviceHours: [{ hourStart: '2026-09-20T09:00:00', ...evidence.serviceIntervals[0] }],
+      totals: { ...evidence.serviceIntervals[0] },
+    }
+    render(<FlashParityPanel evidence={flash} onProfileChange={(value) => changed.push(value)} />)
+    expect(screen.getByRole('columnheader', { name: 'Answered within target' })).toBeTruthy()
+    expect(screen.getByRole('rowheader', { name: 'Day total' })).toBeTruthy()
+    expect(screen.getByText(/both RSA Belgium service scopes/)).toBeTruthy()
+    expect(screen.queryByText(/SLA/)).toBeNull()
+    fireEvent.change(screen.getByLabelText('Old Flash profile'), { target: { value: 'ford_nl' } })
+    expect(changed).toEqual(['ford_nl'])
   })
 })

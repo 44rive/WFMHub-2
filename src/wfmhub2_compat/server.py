@@ -20,6 +20,7 @@ from typing import Any, cast
 from urllib.parse import urlencode, urlsplit
 
 from wfmhub2_compat import __version__
+from wfmhub2_compat.flash_parity import parse_flash_query, read_flash_parity
 from wfmhub2_compat.operate_evidence import (
     OperateQueryError,
     OperateReadError,
@@ -132,6 +133,9 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         if path == "/api/rta/operate-evidence":
             self._get_operate_evidence()
             return
+        if path == "/api/rta/flash-parity":
+            self._get_flash_parity()
+            return
         if path == "/api/rta/source-health":
             if not self._require_api_auth():
                 return
@@ -161,6 +165,9 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path == "/api/rta/operate-evidence":
             self._get_operate_evidence()
+            return
+        if path == "/api/rta/flash-parity":
+            self._get_flash_parity()
             return
         if path == "/api/rta/source-health":
             if not self._require_api_auth():
@@ -197,6 +204,28 @@ class CompatibilityHandler(SimpleHTTPRequestHandler):
             self._json_response(
                 HTTPStatus.SERVICE_UNAVAILABLE,
                 {"error": "committed operate evidence is unavailable"},
+            )
+            return
+        self._json_response(HTTPStatus.OK, result)
+
+    def _get_flash_parity(self) -> None:
+        if not self._require_api_auth():
+            return
+        try:
+            day, profile = parse_flash_query(urlsplit(self.path).query)
+            result = read_flash_parity(
+                self.compatibility_server.rta.store.path,
+                self.compatibility_server.home,
+                day,
+                profile,
+            )
+        except OperateQueryError:
+            self._json_response(HTTPStatus.BAD_REQUEST, {"error": "invalid Flash parity selection"})
+            return
+        except (OperateReadError, sqlite3.DatabaseError, OSError):
+            self._json_response(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"error": "committed Flash parity evidence is unavailable"},
             )
             return
         self._json_response(HTTPStatus.OK, result)

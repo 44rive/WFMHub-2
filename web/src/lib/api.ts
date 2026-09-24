@@ -198,6 +198,21 @@ export type RtaOperateEvidence = {
   }
 }
 
+export type FlashProfileOption = { id: string; label: string }
+export type ServiceComponents = Omit<ServiceInterval, 'intervalStart' | 'intervalEnd'>
+export type FlashServiceHour = ServiceComponents & { hourStart: string }
+export type FlashParityEvidence = {
+  status: 'ready' | 'not_ready'
+  reason: RtaOperateEvidence['reason']
+  businessDate: string
+  generationId: number | null
+  catalogSha256: string | null
+  profiles: FlashProfileOption[]
+  selectedProfile: FlashProfileOption | null
+  serviceHours: FlashServiceHour[]
+  totals: ServiceComponents | null
+}
+
 const sessionTokenFragmentKey = 'wfmhub_token'
 const sessionTokenStorageKey = 'wfmhub2.session-token'
 
@@ -411,6 +426,24 @@ export function createEngineClient(connection: EngineConnection) {
       }
       return evidence
     },
+    getFlashParityEvidence: async (date: string, profile?: string) => {
+      if (!isBusinessDate(date)) throw new Error('Select a valid business date')
+      if (profile && !/^[a-z0-9_]{1,40}$/.test(profile)) {
+        throw new Error('Select a valid Flash profile')
+      }
+      const parameters = new URLSearchParams({ date })
+      if (profile) parameters.set('profile', profile)
+      const result = decodeFlashParityEvidence(
+        await request<unknown>(`/rta/flash-parity?${parameters.toString()}`),
+      )
+      if (
+        result.businessDate !== date ||
+        (profile && result.status === 'ready' && result.selectedProfile?.id !== profile)
+      ) {
+        throw new Error('Local Flash evidence did not match the selected date and profile')
+      }
+      return result
+    },
   }
 }
 
@@ -438,11 +471,9 @@ function isServiceScope(value: unknown): value is ServiceScope {
   )
 }
 
-function isServiceInterval(value: unknown): value is ServiceInterval {
+function isServiceComponents(value: unknown): value is ServiceComponents {
   return (
     isRecord(value) &&
-    typeof value.intervalStart === 'string' &&
-    typeof value.intervalEnd === 'string' &&
     isCount(value.offered) &&
     isCount(value.answered) &&
     isCount(value.abandoned) &&
@@ -456,6 +487,59 @@ function isServiceInterval(value: unknown): value is ServiceInterval {
     isCount(value.callLegs) &&
     isCount(value.transferredLegs)
   )
+}
+
+function isServiceInterval(value: unknown): value is ServiceInterval {
+  return (
+    isRecord(value) &&
+    typeof value.intervalStart === 'string' &&
+    typeof value.intervalEnd === 'string' &&
+    isServiceComponents(value)
+  )
+}
+
+function isFlashProfileOption(value: unknown): value is FlashProfileOption {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    /^[a-z0-9_]{1,40}$/.test(value.id) &&
+    typeof value.label === 'string' &&
+    value.label.length > 0
+  )
+}
+
+export function decodeFlashParityEvidence(value: unknown): FlashParityEvidence {
+  if (
+    !isRecord(value) ||
+    !['ready', 'not_ready'].includes(String(value.status)) ||
+    ![null, 'NO_ACTIVE_GENERATION', 'SOURCE_ROOT_UNAVAILABLE', 'SOURCE_ROOT_CHANGED'].includes(
+      value.reason as string | null,
+    ) ||
+    !isBusinessDate(String(value.businessDate)) ||
+    !(value.generationId === null || isCount(value.generationId)) ||
+    !(
+      value.catalogSha256 === null ||
+      (typeof value.catalogSha256 === 'string' && /^[0-9a-f]{64}$/.test(value.catalogSha256))
+    ) ||
+    !Array.isArray(value.profiles) ||
+    !value.profiles.every(isFlashProfileOption) ||
+    !(value.selectedProfile === null || isFlashProfileOption(value.selectedProfile)) ||
+    !Array.isArray(value.serviceHours) ||
+    !value.serviceHours.every(
+      (hour: unknown) =>
+        isRecord(hour) && typeof hour.hourStart === 'string' && isServiceComponents(hour),
+    ) ||
+    !(value.totals === null || isServiceComponents(value.totals)) ||
+    (value.status === 'ready' &&
+      (value.reason !== null ||
+        value.generationId === null ||
+        value.catalogSha256 === null ||
+        value.selectedProfile === null)) ||
+    (value.status === 'not_ready' && value.reason === null)
+  ) {
+    throw new Error('Local Flash parity response did not match the supported contract')
+  }
+  return value as FlashParityEvidence
 }
 
 export function decodeRtaOperateEvidence(value: unknown): RtaOperateEvidence {

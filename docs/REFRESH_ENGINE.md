@@ -139,6 +139,14 @@ an index on generation/date/scope; it does not return employee identifiers,
 source paths, raw rows, SLA, AHT, or staffing conclusions. A missing or changed
 source root suppresses the result rather than presenting an old cut as current.
 
+Preview `.9` adds a separate read-only legacy Flash parity query. It uses the
+exact queue allowlists in released old portable `v0.36.0` to sum additive
+service components by hour and day across all queues in a selected Flash.
+This matters because the ordinary Operate selector is one service/comparison
+pair while a Flash, notably RSA Belgium, can combine pairs. The query does not
+evaluate service ratios, forecast, staffing, or attendance and does not alter
+refresh or generation activation.
+
 During a rebuild, `/api/rta/source-health` exposes bounded in-memory stage,
 relative source key, elapsed time, and file progress. Unexpected failures keep
 their stage and exception class in the safe failure code, print the traceback

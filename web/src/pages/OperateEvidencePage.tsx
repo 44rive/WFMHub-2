@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   createEngineClient,
+  type FlashParityEvidence,
   getEngineConnection,
   isBusinessDate,
   type RtaOperateEvidence,
@@ -63,6 +64,7 @@ function formatIntervalLabel(start: string, end: string): string {
 export function OperateEvidencePage() {
   const [chosenDate, setChosenDate] = useState<string | null>(null)
   const [chosenScope, setChosenScope] = useState<ServiceScope | null>(null)
+  const [chosenFlashProfile, setChosenFlashProfile] = useState<string | null>(null)
   const connection = useQuery({
     queryKey: ['engine-connection'],
     queryFn: getEngineConnection,
@@ -96,6 +98,18 @@ export function OperateEvidencePage() {
     enabled: connection.data?.phase === 'ready' && Boolean(date) && isBusinessDate(date ?? ''),
     retry: false,
   })
+  const flashParity = useQuery({
+    queryKey: ['rta-flash-parity', connection.data?.baseUrl, date, chosenFlashProfile],
+    queryFn: () => {
+      if (!connection.data || !date) throw new Error('Flash comparison evidence is unavailable')
+      return createEngineClient(connection.data).getFlashParityEvidence(
+        date,
+        chosenFlashProfile ?? undefined,
+      )
+    },
+    enabled: connection.data?.phase === 'ready' && Boolean(date) && isBusinessDate(date ?? ''),
+    retry: false,
+  })
   const result = evidence.data
   const selectedIndex = result?.serviceScopes.findIndex(
     (scope) =>
@@ -112,6 +126,12 @@ export function OperateEvidencePage() {
     !evidence.error &&
     isCurrentOperateCut(sourceHealth.data, result)
   const cutMismatch = !validatingCut && result?.status === 'ready' && !cutCurrent
+  const flashCurrent =
+    cutCurrent &&
+    flashParity.data?.status === 'ready' &&
+    flashParity.data.generationId === result?.generationId &&
+    flashParity.data.businessDate === result?.businessDate &&
+    !flashParity.isFetching
 
   return (
     <main id="main-content" className="product-main">
@@ -161,6 +181,7 @@ export function OperateEvidencePage() {
                 onChange={(event) => {
                   setChosenDate(event.target.value)
                   setChosenScope(null)
+                  setChosenFlashProfile(null)
                 }}
                 disabled={connection.data?.phase !== 'ready'}
               />
@@ -246,6 +267,34 @@ export function OperateEvidencePage() {
         {cutCurrent && !sourceChanged && result ? (
           <>
             <ServiceEvidence evidence={result} />
+            {flashParity.isPending || flashParity.isFetching ? (
+              <p className="operate-notice" role="status">
+                Loading legacy Flash comparison…
+              </p>
+            ) : null}
+            {flashParity.error ? (
+              <p className="operate-notice operate-error" role="alert">
+                {flashParity.error instanceof Error
+                  ? flashParity.error.message
+                  : 'Flash comparison evidence could not be loaded.'}
+              </p>
+            ) : null}
+            {flashParity.data?.status === 'not_ready' ? (
+              <p className="operate-notice operate-warning" role="alert">
+                {reasonMessage(flashParity.data.reason)}
+              </p>
+            ) : null}
+            {flashParity.data?.status === 'ready' && !flashCurrent && !flashParity.isFetching ? (
+              <p className="operate-notice operate-warning" role="alert">
+                Flash comparison and Operate evidence are not from the same current generation.
+              </p>
+            ) : null}
+            {flashCurrent && flashParity.data ? (
+              <FlashParityPanel
+                evidence={flashParity.data}
+                onProfileChange={setChosenFlashProfile}
+              />
+            ) : null}
             <AttendanceEvidence evidence={result} />
           </>
         ) : null}
@@ -256,6 +305,90 @@ export function OperateEvidencePage() {
         </p>
       </div>
     </main>
+  )
+}
+
+export function FlashParityPanel({
+  evidence,
+  onProfileChange,
+}: {
+  evidence: FlashParityEvidence
+  onProfileChange: (profile: string) => void
+}) {
+  return (
+    <section className="panel operate-section" aria-labelledby="flash-parity-title">
+      <div className="panel-heading">
+        <p className="eyebrow">Legacy Flash / exact queue population</p>
+        <h2 id="flash-parity-title">Flash comparison counts</h2>
+      </div>
+      <p className="operate-section-copy">
+        Match the old portable’s Flash tab for the same date and profile. These hourly and daily
+        values use that tab’s exact queue allowlist, including both RSA Belgium service scopes. They
+        are additive Call-by-Call components only; this does not reproduce the old Flash’s ratios,
+        forecast, staffing, or attendance.
+      </p>
+      <label className="operate-field">
+        <span>Old Flash profile</span>
+        <select
+          value={evidence.selectedProfile?.id ?? ''}
+          onChange={(event) => onProfileChange(event.target.value)}
+        >
+          {evidence.profiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {evidence.totals === null ? (
+        <p className="operate-empty" role="status">
+          No calls matched this Flash profile on the selected date. This is not a zero-service
+          claim; check source coverage and the old tab before comparing.
+        </p>
+      ) : (
+        <section className="operate-table-scroll" aria-label="Legacy Flash comparison table">
+          <table className="operate-table">
+            <caption>
+              Hourly and daily additive counts for {evidence.selectedProfile?.label} on{' '}
+              {evidence.businessDate}; generation {evidence.generationId}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Hour</th>
+                <th scope="col">Offered</th>
+                <th scope="col">Answered</th>
+                <th scope="col">Abandoned</th>
+                <th scope="col">Answered within target</th>
+                <th scope="col">Abandoned within target</th>
+                <th scope="col">Handled sec</th>
+              </tr>
+            </thead>
+            <tbody>
+              {evidence.serviceHours.map((hour) => (
+                <tr key={hour.hourStart}>
+                  <th scope="row">{formatIntervalTime(hour.hourStart)}</th>
+                  <td>{numberFormat.format(hour.offered)}</td>
+                  <td>{numberFormat.format(hour.answered)}</td>
+                  <td>{numberFormat.format(hour.abandoned)}</td>
+                  <td>{numberFormat.format(hour.answeredWithinTarget)}</td>
+                  <td>{numberFormat.format(hour.abandonedWithinTarget)}</td>
+                  <td>{numberFormat.format(hour.handledSeconds)}</td>
+                </tr>
+              ))}
+              <tr>
+                <th scope="row">Day total</th>
+                <td>{numberFormat.format(evidence.totals.offered)}</td>
+                <td>{numberFormat.format(evidence.totals.answered)}</td>
+                <td>{numberFormat.format(evidence.totals.abandoned)}</td>
+                <td>{numberFormat.format(evidence.totals.answeredWithinTarget)}</td>
+                <td>{numberFormat.format(evidence.totals.abandonedWithinTarget)}</td>
+                <td>{numberFormat.format(evidence.totals.handledSeconds)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      )}
+    </section>
   )
 }
 

@@ -181,7 +181,7 @@ handling gates before appearing in the new product.
 | Capability | Current evidence | UI rule |
 | --- | --- | --- |
 | Portable shell, SQLite, Edge Workers, WASM | Exact Phase 0.4 doctor/browser compatibility passed on the target | Platform may support these screens; it does not prove their WFM logic exists. |
-| Read-only Operate evidence | Preview `.8` candidate reads active-cut additive service intervals and date-wide attendance aggregates | Permit date/scope inspection and parity review; do not label it live service, a full RTA Command Center, or an employee action queue. |
+| Read-only Operate evidence | Preview `.8` reads active-cut additive service intervals and date-wide attendance aggregates; Preview `.9` adds exact legacy-Flash-profile hourly/day counts | Permit date/scope and old-Flash population comparison; do not label it live service, a full RTA Command Center, or an employee action queue. |
 | Old-product parity: service, attendance, schedule review, staffing preparation, final absence/shrinkage, reports, mappings | Governed contracts and implementations exist in WFMHub-Portable | Port selectively with synthetic tests and exact business validation. |
 | Forecast vintages and rolling-origin model selection | Architecture and compatibility model fits exist, not production backtests | Mark as planned until canonical vintages and evaluation pass. |
 | Independent staffing requirement | Domain objective exists; independent formula/model not yet accepted | Do not treat visual numbers as calculation authority. |
