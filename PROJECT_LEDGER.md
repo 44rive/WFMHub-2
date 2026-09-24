@@ -14,16 +14,16 @@ and expanding only after the governed evidence and operational workflow work.
 **Active milestone: Phase 1 — refresh parity and reliability.** Phase 0.4 is
 accepted. Preview `.7` passed the user's first managed refresh and immediate
 unchanged-generation reuse. The user reports Preview `.8` works on the managed
-workstation, but supplied no numeric parity or changed-source timing. New WFM
-KPI and decision features stay frozen; read-only evidence and legacy-Flash
-population comparison support the managed-target parity review.
+workstation. Preview `.9` now offers exact legacy-Flash-population comparison,
+but no numeric old/new parity or changed-source timing has been supplied. New
+WFM KPI and decision features stay frozen pending those managed-target gates.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 read-only Operate evidence Preview `.8` | PR #4 merged as `b64c963`; all three main CI jobs passed; prerelease `.8` published; user reports managed-target launch works, but numeric parity pending |
-| `feat/legacy-flash-parity-view` | Exact old-Flash-population comparison candidate `.9` | Local checks and ZIP assembly passed; Windows CI and managed-target parity pending |
+| `origin/main` | Phase 1 legacy-Flash-population parity Preview `.9` | PR #5 merged as `e9c5960`; all three main CI jobs passed; exact prerelease `.9` published; managed-target numeric parity pending |
+| `feat/legacy-flash-parity-view` | Exact old-Flash-population comparison | Merged by PR #5 as `e9c5960` |
 | `feat/operate-evidence-read-model` | Preview `.8` read-only parity workbench | Merged by PR #4 as `b64c963` |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
@@ -402,10 +402,10 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Finish candidate `.9` local/package/Windows CI gates and publish only the
-   exact CI ZIP if green. The user's Preview `.8` "it works" report confirms
-   managed launch only; no counts, date/scope, or numeric parity were supplied.
-2. On the managed target, compare `.9` Flash-profile additive hour/day counts
+1. On the managed target, extract the exact Preview `.9` release ZIP to a new
+   writable folder, leaving working `.8` intact. Configure the same read-only
+   source root and refresh; verify Operate and the Flash profile selector open.
+2. Compare `.9` Flash-profile additive hour/day counts
    with old portable `v0.36.0` on the same governed sources and date. Also
    compare Operate attendance states/gaps. Capture first-refresh duration and
    active-generation counts/date ranges/quality if available; resolve material
@@ -422,6 +422,23 @@ only through a recorded decision with evidence.
    a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
+
+### 2026-09-24 — Preview `.9` promoted after exact Windows qualification
+
+- PR #5 merged as `e9c5960` after run `35998441046` passed Linux source,
+  target-compatible Windows ZIP/embedded doctor/source smoke/offline browser,
+  and separate full-native Windows regression. Main run `35999334375` passed
+  the same three jobs on the merge commit.
+- Independently downloaded the exact main-run hybrid ZIP and verified its
+  adjacent SHA-256, 102 unique members, and CRC. Published
+  [prerelease `v0.2.0-phase1-source-preview.9`](https://github.com/44rive/WFMHub-2/releases/tag/v0.2.0-phase1-source-preview.9)
+  from `e9c5960`; asset size is 73,221,859 bytes and SHA-256 is
+  `53286a42856dcee0d22cd7efafbca43f668365a530b264ded85fdb5a5031540c`.
+  GitHub reports the same ZIP digest. This is the downloadable build, not the
+  earlier local candidate ZIP or GitHub's automatic source-code archive.
+- Managed-workstation `.9` launch, exact old/new additive counts, attendance
+  parity, and changed-source refresh cost remain unverified. Preview `.8`
+  launch success is user-reported and does not close those gates.
 
 ### 2026-09-24 — Managed Operate launch reported; Flash population parity candidate
 
