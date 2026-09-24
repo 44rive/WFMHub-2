@@ -64,7 +64,7 @@ def parse_operate_query(query: str) -> tuple[date, tuple[str, str] | None]:
     return business_date, (service[0], comparison[0])
 
 
-def _catalog_for_home(home: Path) -> str | None:
+def catalog_for_home(home: Path) -> str | None:
     try:
         root = resolve_source_root(home)
         if not root.path.is_dir():
@@ -111,7 +111,7 @@ def read_operate_evidence(
         if active is None or active["status"] != "succeeded":
             return _empty_result(business_date, "NO_ACTIVE_GENERATION")
 
-        catalog = _catalog_for_home(home)
+        catalog = catalog_for_home(home)
         if catalog is None:
             return _empty_result(business_date, "SOURCE_ROOT_UNAVAILABLE")
         if active["catalog_sha256"] != catalog:
@@ -237,7 +237,7 @@ def read_operate_evidence(
             )
         ]
 
-    if _catalog_for_home(home) != catalog:
+    if catalog_for_home(home) != catalog:
         return _empty_result(business_date, "SOURCE_ROOT_CHANGED")
     return {
         "status": "ready",

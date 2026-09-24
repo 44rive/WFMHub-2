@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createEngineClient,
+  decodeFlashParityEvidence,
   decodeRtaOperateEvidence,
   decodeRtaSourceHealth,
   type EngineConnection,
@@ -68,6 +69,48 @@ describe('browser engine discovery', () => {
 })
 
 describe('engine API client', () => {
+  it('authenticates and validates legacy Flash population evidence', async () => {
+    const components = {
+      offered: 3,
+      answered: 2,
+      abandoned: 1,
+      shortAbandoned: 0,
+      abandonedWithinTarget: 1,
+      answeredWithinTarget: 2,
+      talkSeconds: 30,
+      holdSeconds: 2,
+      wrapSeconds: 3,
+      handledSeconds: 35,
+      callLegs: 3,
+      transferredLegs: 0,
+    }
+    const payload = {
+      status: 'ready',
+      reason: null,
+      businessDate: '2026-09-20',
+      generationId: 7,
+      catalogSha256: 'a'.repeat(64),
+      profiles: [{ id: 'rsa_be', label: 'RSA Belgium' }],
+      selectedProfile: { id: 'rsa_be', label: 'RSA Belgium' },
+      serviceHours: [{ hourStart: '2026-09-20T09:00:00', ...components }],
+      totals: components,
+    }
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify(payload), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(
+      createEngineClient(readyConnection).getFlashParityEvidence('2026-09-20', 'rsa_be'),
+    ).resolves.toMatchObject({ totals: { offered: 3 } })
+    expect(fetchMock).toHaveBeenCalledWith(
+      'http://127.0.0.1:43127/api/rta/flash-parity?date=2026-09-20&profile=rsa_be',
+      { headers: { 'X-WFMHub-Token': 'launch-secret' } },
+    )
+    expect(() => decodeFlashParityEvidence({ ...payload, totals: { offered: -1 } })).toThrow()
+    expect(() => decodeFlashParityEvidence({ ...payload, generationId: null })).toThrow()
+    await expect(
+      createEngineClient(readyConnection).getFlashParityEvidence('2026-09-20', '../../bad'),
+    ).rejects.toThrow()
+  })
+
   it('validates and authenticates the read-only Operate date and composite scope', async () => {
     const payload = {
       status: 'ready',

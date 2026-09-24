@@ -13,6 +13,11 @@ from typing import Any
 
 import pytest
 
+from wfmhub2_compat.flash_parity import (
+    load_flash_profiles,
+    parse_flash_query,
+    read_flash_parity,
+)
 from wfmhub2_compat.operate_evidence import (
     OperateQueryError,
     OperateReadError,
@@ -180,6 +185,89 @@ def test_query_contract_rejects_ambiguous_or_invalid_selections() -> None:
     ):
         with pytest.raises(OperateQueryError):
             parse_operate_query(query)
+
+
+def test_flash_parity_uses_exact_legacy_queue_lists_across_service_scopes(tmp_path: Path) -> None:
+    catalog_sha, profiles = load_flash_profiles()
+    assert catalog_sha == "b4e7fe5a93350c57a72d7bb4e9dbd900220f9695c804b8aa85f83cf60d72e0e7"
+    assert {profile.profile_id for profile in profiles} == {
+        "ford_oem_fr",
+        "ford_nl",
+        "rsa_be",
+        "rsa_nl",
+    }
+    assert parse_flash_query(f"date={DAY}&profile=rsa_be") == (date(2026, 8, 1), "rsa_be")
+    for query in ("date=2026-02-29", f"date={DAY}&profile=", f"date={DAY}&profile=x&profile=y"):
+        with pytest.raises(OperateQueryError):
+            parse_flash_query(query)
+
+    store, generation = _published_store(tmp_path)
+    with closing(sqlite3.connect(store.path)) as connection:
+        _insert_interval(
+            connection,
+            generation,
+            service="RSA BE FR",
+            comparison="RSA BE",
+            queue="APBN_BRU_RSA_INSURAN_All_FR",
+            offered=3,
+        )
+        _insert_interval(
+            connection,
+            generation,
+            service="RSA BE VL",
+            comparison="RSA BE",
+            queue="APBN_BRU_RSA_INSURAN_All_VL",
+            offered=4,
+        )
+        _insert_interval(
+            connection,
+            generation,
+            service="RSA BE FR",
+            comparison="RSA BE",
+            queue="Some Other Mapped Queue",
+            offered=100,
+        )
+        _insert_interval(
+            connection,
+            generation,
+            service="RSA BE FR",
+            comparison="RSA BE",
+            queue="APBN_BRU_RSA_INTERNAT_All_FR",
+            start="09:00:00",
+            offered=5,
+        )
+        connection.commit()
+    result = read_flash_parity(store.path, tmp_path, date(2026, 8, 1), "rsa_be")
+    assert result["status"] == "ready"
+    assert result["selectedProfile"] == {"id": "rsa_be", "label": "RSA Belgium"}
+    assert result["totals"]["offered"] == 12
+    assert result["totals"]["answered"] == 3
+    assert len(result["serviceHours"]) == 2
+    assert result["serviceHours"][0]["hourStart"] == f"{DAY}T08:00:00"
+    assert result["serviceHours"][0]["offered"] == 7
+    assert result["serviceHours"][1]["hourStart"] == f"{DAY}T09:00:00"
+    assert result["serviceHours"][1]["offered"] == 5
+    assert "serviceLevel" not in json.dumps(result)
+    assert "Some Other Mapped Queue" not in json.dumps(result)
+    assert "Secret" not in json.dumps(result)
+    empty = read_flash_parity(store.path, tmp_path, date(2026, 8, 1), "ford_nl")
+    assert empty["totals"] is None
+    failed = store.start_generation(
+        catalog_sha256=catalog_fingerprint(tmp_path / "extracts"), model_version="synthetic"
+    )
+    store.fail_generation(failed, reason="synthetic failure")
+    retained = read_flash_parity(store.path, tmp_path, date(2026, 8, 1), "rsa_be")
+    assert retained["generationId"] == generation
+    assert retained["totals"]["offered"] == 12
+    with pytest.raises(OperateQueryError):
+        read_flash_parity(store.path, tmp_path, date(2025, 8, 1), "rsa_be")
+
+
+def test_flash_parity_suppresses_changed_source_root(tmp_path: Path) -> None:
+    store, _ = _published_store(tmp_path)
+    (tmp_path / "extracts").rmdir()
+    result = read_flash_parity(store.path, tmp_path, date(2026, 8, 1))
+    assert result["reason"] == "SOURCE_ROOT_UNAVAILABLE"
 
 
 def test_no_cut_and_missing_source_root_return_bounded_not_ready(tmp_path: Path) -> None:
@@ -360,6 +448,7 @@ def test_api_requires_token_and_returns_only_bounded_evidence(tmp_path: Path) ->
     try:
         assert _request(port, f"/api/rta/operate-evidence?date={DAY}", token=None)[0] == 401
         assert _request(port, f"/api/rta/operate-evidence?date={DAY}", token="wrong")[0] == 401
+        assert _request(port, f"/api/rta/flash-parity?date={DAY}", token=None)[0] == 401
         status, payload = _request(port, f"/api/rta/operate-evidence?date={DAY}")
         assert status == 200
         assert payload["reason"] == "NO_ACTIVE_GENERATION"
@@ -383,6 +472,12 @@ def test_api_requires_token_and_returns_only_bounded_evidence(tmp_path: Path) ->
             == 400
         )
         assert _request(port, f"/api/rta/operate-evidence?date={DAY}", method="HEAD") == (200, {})
+        flash_status, flash = _request(port, f"/api/rta/flash-parity?date={DAY}&profile=rsa_be")
+        assert flash_status == 200
+        assert flash["totals"] is None
+        assert "flash_queues" not in json.dumps(flash)
+        assert _request(port, f"/api/rta/flash-parity?date={DAY}&profile=invalid")[0] == 400
+        assert _request(port, f"/api/rta/flash-parity?date={DAY}", method="HEAD") == (200, {})
     finally:
         server.shutdown()
         server.server_close()

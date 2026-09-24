@@ -21,7 +21,7 @@ PYTHON_VERSION = "3.13.7"
 PYTHON_ARCHIVE = f"python-{PYTHON_VERSION}-embed-amd64.zip"
 PYTHON_URL = f"https://www.python.org/ftp/python/{PYTHON_VERSION}/{PYTHON_ARCHIVE}"
 PYTHON_SHA256 = "f6cca216a359be84797cabb54149ce5e062afb16cc7567eb7fc51cacb2d86b65"
-PRODUCT_VERSION = "0.2.0-phase1-source-preview.8"
+PRODUCT_VERSION = "0.2.0-phase1-source-preview.9"
 TOP_LEVEL = "WFMHub-2"
 NATIVE_SUFFIXES = (".dll", ".exe", ".pyd", ".so", ".duckdb_extension")
 HASH_LINE = re.compile(r"^([0-9a-f]{64})  (.+)$")
@@ -217,6 +217,8 @@ def validate_stage(stage: Path, cpython_native: dict[str, str]) -> None:
     service_rules = stage / "_system/config/service_rules.toml"
     if not queue_mapping.is_file() or not service_rules.is_file():
         raise RuntimeError("hybrid host is missing governed Call-by-Call configuration")
+    if not (stage / "_system/config/legacy_flash_profiles.toml").is_file():
+        raise RuntimeError("hybrid host is missing legacy Flash profile configuration")
     actual_native = native_manifest(stage)
     expected_prefixed = {f"_system/runtime/{name}": value for name, value in cpython_native.items()}
     if actual_native != expected_prefixed:
@@ -294,6 +296,7 @@ def build_stage(web_dist: Path) -> Path:
                 "5. Select Refresh local sources on Command to inspect roster, schedule,",
                 "   Agent Status, LILO, and Call-by-Call evidence. Storm sources are optional.",
                 "6. Open Operate to inspect read-only service and attendance evidence by date.",
+                "   Select an old Flash profile to compare exact-queue hourly/day counts.",
                 "   No SLA, staffing gap, or employee action is calculated in this preview.",
                 "7. Govern > Compatibility Doctor still runs the five browser probes.",
                 "8. Close the browser tab and press Ctrl+C in the WFMHub console.",

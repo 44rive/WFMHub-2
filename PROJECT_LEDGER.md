@@ -13,15 +13,17 @@ and expanding only after the governed evidence and operational workflow work.
 
 **Active milestone: Phase 1 — refresh parity and reliability.** Phase 0.4 is
 accepted. Preview `.7` passed the user's first managed refresh and immediate
-unchanged-generation reuse, but exact output parity and changed-source cost
-remain unmeasured. New WFM KPI and decision features stay frozen; a read-only
-evidence inspector is now released for managed-target parity review.
+unchanged-generation reuse. The user reports Preview `.8` works on the managed
+workstation, but supplied no numeric parity or changed-source timing. New WFM
+KPI and decision features stay frozen; read-only evidence and legacy-Flash
+population comparison support the managed-target parity review.
 
 ## Repository and branch state
 
 | Ref | Purpose | State |
 | --- | --- | --- |
-| `origin/main` | Phase 1 read-only Operate evidence Preview `.8` | PR #4 merged as `b64c963`; all three main CI jobs passed; prerelease `.8` published; managed-target Operate and business parity pending |
+| `origin/main` | Phase 1 read-only Operate evidence Preview `.8` | PR #4 merged as `b64c963`; all three main CI jobs passed; prerelease `.8` published; user reports managed-target launch works, but numeric parity pending |
+| `feat/legacy-flash-parity-view` | Exact old-Flash-population comparison candidate `.9` | Local checks and ZIP assembly passed; Windows CI and managed-target parity pending |
 | `feat/operate-evidence-read-model` | Preview `.8` read-only parity workbench | Merged by PR #4 as `b64c963` |
 | local `main` at `e943a05` | Pre-update governed contracts and storage work | Dirty/divergent user worktree; preserve and do not use for integration |
 | `integration/stack-qualification` at `3927ecd` | Phase 0.2 diagnosis and improved launcher error | Run `35526214507` passed and commit was fast-forwarded to GitHub `main` |
@@ -78,6 +80,7 @@ local `main`. Integrate reviewed logical changes on the qualification branch.
 | D-036 | Freeze feature work and treat released WFMHub-Portable `v0.36.0` as the executable ingestion/parity specification while retaining WFMHub 2's policy-compatible shell and atomic generation pointer. | Preview `.5` rereads each large Storm file four times for hashing and twice for parsing, rebuilds unchanged generations, shows no progress, and destroys the original unexpected exception. Preview `.6` adds an exact unchanged fast path, one-hash/one-parse Bronze staging, live progress, actionable local diagnostics, and attendance indexes. The old portable proves immutable source-version reactivation, but its model builders do not automatically determine affected dates; WFMHub 2 must design that separately. |
 | D-037 | Reference immutable successful Bronze versions for unchanged Status, LILO, and Call by Call files, while preserving a complete manifest and one atomic active-generation pointer. | A local source-version implementation reuses only matching root, key, SHA-256, adapter, policy, and roster evidence; metadata-only matches to the active cut skip hashing, and older A→B→A matches hash once. Derived attendance and service facts still rebuild in full, so affected-scope cost parity remains open. |
 | D-038 | Add only a read-only, date-scoped Operate evidence inspector while business parity is open. | It exposes additive service components for one exact service/comparison pair and separate date-wide attendance states/gap aggregates from the committed active cut. This aids comparison without inventing SLA, AHT, staffing gaps, or employee actions. The old portable remains the daily-use reference. |
+| D-039 | Add a read-only legacy Flash population view using exact `v0.36.0` profile queue allowlists; still withhold ratios and actions. | Old Flash totals can span multiple service/comparison pairs (RSA Belgium) and include only approved queues. Comparing the ordinary Operate pair directly to the old tab can create false mismatches. A profile-aligned additive hour/day view is a parity instrument, not a new KPI or parity claim. |
 
 ## Evidence already collected
 
@@ -399,13 +402,14 @@ only through a recorded decision with evidence.
 
 ## Next executable steps
 
-1. Test the exact Preview `.8` release ZIP on the managed workstation in a new
-   writable folder; keep the working Preview `.7` folder intact. Configure the
-   same read-only source root, refresh, and inspect Operate for one date/scope.
-2. Compare Operate counts, intervals, attendance states and gaps with old
-   portable `v0.36.0` on the same governed sources. Capture the first-refresh
-   duration and active-generation counts/date ranges/quality if available;
-   the user report supplied no values. Resolve material differences.
+1. Finish candidate `.9` local/package/Windows CI gates and publish only the
+   exact CI ZIP if green. The user's Preview `.8` "it works" report confirms
+   managed launch only; no counts, date/scope, or numeric parity were supplied.
+2. On the managed target, compare `.9` Flash-profile additive hour/day counts
+   with old portable `v0.36.0` on the same governed sources and date. Also
+   compare Operate attendance states/gaps. Capture first-refresh duration and
+   active-generation counts/date ranges/quality if available; resolve material
+   differences without sending source extracts or employee data.
 3. At the next normal source export/update, observe one changed-source refresh:
    elapsed time, readiness, counts, and any stage/code or local diagnostic if
    it fails. Do not modify operational extracts to create this test.
@@ -418,6 +422,34 @@ only through a recorded decision with evidence.
    a measured WFM workflow; deterministic host logic remains the fallback.
 
 ## Session log
+
+### 2026-09-24 — Managed Operate launch reported; Flash population parity candidate
+
+- The user says Preview `.8` "works" on the managed workstation. Treat this as
+  a user-reported launch/Operate result, not numeric business parity; no
+  aggregate values, selected date/scope, or timing were supplied.
+- Audited released WFMHub-Portable `v0.36.0` (`758de71`): its four Flash tabs
+  filter Call-by-Call hourly service to exact queue allowlists from
+  `config/default_service_profiles.toml`; RSA Belgium includes both FR and VL
+  queues. The old metric catalog has separate effective-dated ratio-of-sums
+  methods, so no SLA/AHT formula belongs in this parity read model.
+- Candidate `.9` imports only the old profile configuration, never source
+  extracts, and adds an authenticated, active-cut, date/profile-bounded
+  read-only hourly/day additive comparison under Operate. Empty is not zero;
+  stale source root suppresses results. Refresh behavior is unchanged.
+- Local checks: 96 Python tests, strict Pyright, Ruff; 27 web tests, Biome,
+  TypeScript, React build, and synthetic source smoke pass. The locally built
+  `.9` hybrid ZIP has 102 verified members and SHA-256
+  `cd456462400436f18ba7267350f80634305346dd9729ca6e3cc40e930c4ad928`;
+  this is not a release asset. Exact packaged Windows CI and managed-target
+  additive comparison remain pending.
+- External Claude review was attempted after a healthy dispatcher status but
+  returned expired OAuth, so it supplied no review. A native read-only audit
+  found no code-level release blocker, confirmed the exact old catalog/queue
+  map, and identified test gaps. Added a pinned catalog SHA, same-hour and
+  multi-hour sum, and failed-refresh retention regression; focused Python
+  tests, Ruff, and Pyright pass after those additions. User-edited old profile
+  catalogs may differ from shipped `v0.36.0` defaults.
 
 ### 2026-09-24 — Read-only Operate evidence candidate
 
